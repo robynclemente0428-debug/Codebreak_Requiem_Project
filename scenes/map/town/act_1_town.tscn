@@ -1,0 +1,132 @@
+[gd_scene format=3 uid="uid://de57t2qg8my1n"]
+
+[ext_resource type="Script" uid="uid://chcl1w027nx4n" path="res://scenes/map/town/town_area.gd" id="1_5a5ii"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="2_4lkov"]
+[ext_resource type="Resource" uid="uid://bjsg34670e4e1" path="res://dungeon_generation/rendering/mesh_library/resources/hardfault_town.tres" id="3_7315m"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="3_08110"]
+[ext_resource type="MeshLibrary" uid="uid://c8fj8v2pce55c" path="res://dungeon_generation/rendering/mesh_library/hardfault_town_meshes.tres" id="4_0spvh"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="6_ns84f"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_0spvh"]
+[ext_resource type="PackedScene" uid="uid://c8xae3fagfdfj" path="res://scenes/loot/shop_npc/general_vendor.tscn" id="8_4ttov"]
+[ext_resource type="PackedScene" uid="uid://brcgbkbio4vce" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="9_rkjhf"]
+[ext_resource type="Resource" uid="uid://c58lpqc0ep3fj" path="res://data/shops/gem_vendor.tres" id="10_85p20"]
+[ext_resource type="PackedScene" path="res://scenes/npc/warden_brack.tscn" id="10_brack"]
+[ext_resource type="PackedScene" uid="uid://dir4ecj6nb042" path="res://scenes/npc/examiner_sudo.tscn" id="11_sudo"]
+[ext_resource type="Resource" uid="uid://cj7ruy6fmca7e" path="res://data/dialogue/gem_vendor.tres" id="11_t87ck"]
+[ext_resource type="Resource" uid="uid://bw1olxgfgunn5" path="res://data/shops/weapon_vendor.tres" id="13_wgwnr"]
+[ext_resource type="PackedScene" uid="uid://cenh85fsfixuv" path="res://scenes/loot/shop_npc/weapon_vendor.tscn" id="14_iaabq"]
+[ext_resource type="Resource" uid="uid://wdprfnpkerqq" path="res://data/shops/armour_vendor.tres" id="14_wgwnr"]
+[ext_resource type="PackedScene" uid="uid://dmy5yaa517ms6" path="res://scenes/loot/shop_npc/armour_vendor.tscn" id="15_iaabq"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_o8aln"]
+
+[node name="Act1Town" type="Node3D" unique_id=1325620657]
+script = ExtResource("1_5a5ii")
+metadata/_custom_type_script = "uid://chcl1w027nx4n"
+
+[node name="DungeonDirector" type="Node" parent="." unique_id=407779561 node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("2_4lkov")
+grid_width = 100
+grid_height = 100
+min_room_size = 0
+max_room_size = 0
+room_interval = 0
+room_min_gap = 0
+num_branch_rooms = 0
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("3_7315m")
+use_random_seed = false
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+metadata/_custom_type_script = "uid://b5gwgfu4bdnrx"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1332076295]
+navigation_mesh = SubResource("NavigationMesh_o8aln")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D" unique_id=271768502]
+mesh_library = ExtResource("4_0spvh")
+data = {
+"cells": PackedInt32Array(5, 11, 1, 65541, 11, 1, 5, 12, 1, 65541, 12, 1, 5, 13, 1, 65541, 13, 1, 5, 14, 1, 65541, 14, 1, 5, 15, 1, 65541, 15, 1, 5, 16, 1, 65541, 16, 1, 5, 17, 1, 65541, 17, 1, 6, 6, 1, 65542, 6, 1, 6, 7, 1, 65542, 7, 1, 6, 8, 1, 65542, 8, 1, 6, 9, 1, 65542, 9, 1, 6, 10, 1, 65542, 10, 1, 6, 11, 1, 65542, 11, 1, 6, 12, 2, 6, 13, 2, 6, 14, 2, 6, 15, 2, 6, 16, 2, 6, 17, 1, 65542, 17, 1, 7, 4, 1, 65543, 4, 1, 7, 5, 1, 65543, 5, 1, 7, 6, 1, 65543, 6, 1, 7, 7, 2, 7, 8, 2, 7, 9, 2, 7, 10, 2, 7, 11, 2, 7, 12, 2, 7, 13, 2, 7, 14, 2, 7, 15, 2, 7, 16, 2, 7, 17, 1, 65543, 17, 1, 8, 4, 1, 65544, 4, 1, 8, 5, 2, 8, 6, 2, 8, 7, 2, 8, 8, 2, 8, 9, 2, 8, 10, 2, 8, 11, 2, 8, 12, 2, 8, 13, 2, 8, 14, 2, 8, 15, 2, 8, 16, 2, 8, 17, 1, 65544, 17, 1, 9, 4, 1, 65545, 4, 1, 9, 5, 2, 9, 6, 2, 9, 7, 2, 9, 8, 2, 9, 9, 2, 9, 10, 2, 9, 11, 2, 9, 12, 2, 9, 13, 2, 9, 14, 2, 9, 15, 2, 9, 16, 2, 9, 17, 1, 65545, 17, 1, 10, 4, 1, 65546, 4, 1, 10, 5, 2, 10, 6, 2, 10, 7, 2, 10, 8, 2, 10, 9, 2, 10, 10, 2, 10, 11, 2, 10, 12, 2, 10, 13, 2, 10, 14, 2, 10, 15, 2, 10, 16, 2, 10, 17, 1, 65546, 17, 1, 11, 4, 1, 65547, 4, 1, 11, 5, 2, 11, 6, 2, 11, 7, 2, 11, 8, 2, 11, 9, 2, 11, 10, 2, 11, 11, 2, 11, 12, 2, 11, 13, 1, 65547, 13, 1, 11, 14, 1, 65547, 14, 1, 11, 15, 1, 65547, 15, 1, 11, 16, 1, 65547, 16, 1, 11, 17, 1, 65547, 17, 1, 12, 4, 1, 65548, 4, 1, 12, 5, 2, 12, 6, 2, 12, 7, 2, 12, 8, 2, 12, 9, 2, 12, 10, 2, 12, 11, 2, 12, 12, 2, 12, 13, 1, 65548, 13, 1, 13, 4, 1, 65549, 4, 1, 13, 5, 1, 65549, 5, 1, 13, 6, 1, 65549, 6, 1, 13, 7, 1, 65549, 7, 1, 13, 8, 1, 65549, 8, 1, 13, 9, 1, 65549, 9, 1, 13, 10, 1, 65549, 10, 1, 13, 11, 1, 65549, 11, 1, 13, 12, 1, 65549, 12, 1, 13, 13, 1, 65549, 13, 1)
+}
+
+[node name="Layout" type="Node3D" parent="." unique_id=1133112189]
+
+[node name="RoomMarker" type="Marker3D" parent="Layout" unique_id=1496699003]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0, 20)
+script = ExtResource("3_08110")
+room_size = Vector2i(6, 6)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="PortalMarker" type="Marker3D" parent="Layout" unique_id=923531602]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16.892038, 1, 28.662384)
+script = ExtResource("7_0spvh")
+target_area = "uid://vgnxg54ci24w"
+target_spawn = &"act_1_map_1"
+dungeon_level = 1
+arrival_spawn_id = &"act_1_town"
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="from_act_1_map_1" type="Marker3D" parent="Layout" unique_id=2016438431]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 17.773003, 0, 23.949562)
+script = ExtResource("6_ns84f")
+spawn_id = &"_from_act_1_map_1"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="default" type="Marker3D" parent="Layout" unique_id=2113393404]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.982517, 0, 25.7427)
+script = ExtResource("6_ns84f")
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="from_the_gate" type="Marker3D" parent="Layout" unique_id=1449118235]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 17.572794, 0, 24.499607)
+script = ExtResource("6_ns84f")
+spawn_id = &"from_the_gate"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="GeneralVendor" parent="." unique_id=1385360680 instance=ExtResource("8_4ttov")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.565979, 1.1000004, 21.429565)
+stock_level = 10
+model_scene = ExtResource("9_rkjhf")
+npc_id = "general_vendor"
+npc_name = "General Vendor"
+info_title = "General Vendor"
+
+[node name="GemVendor" parent="." unique_id=1899151654 instance=ExtResource("8_4ttov")]
+transform = Transform3D(-0.7442046, 0, 0.66795176, 0, 1, 0, -0.66795176, 0, -0.7442046, 23.925287, 1.1000004, 24.469622)
+shop = ExtResource("10_85p20")
+stock_level = 20
+model_scene = ExtResource("9_rkjhf")
+npc_id = "cache"
+npc_name = "Cache"
+dialogue = ExtResource("11_t87ck")
+info_title = "Gem Vendor"
+
+[node name="WardenBrack" parent="." unique_id=32620220 instance=ExtResource("10_brack")]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 17.28604, 1.1, 21.487211)
+
+[node name="ExaminerSudo" parent="." unique_id=1953112932 instance=ExtResource("11_sudo")]
+transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70710677, 19.767084, 1.1, 18.759182)
+
+[node name="Weaponsmith" parent="." unique_id=1912207264 instance=ExtResource("8_4ttov")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.284399, 1.1000004, 24.729116)
+shop = ExtResource("13_wgwnr")
+stock_level = 10
+model_scene = ExtResource("14_iaabq")
+npc_id = "weaponsmith"
+npc_name = "Weaponsmith"
+dialogue = null
+info_title = "Weapon Vendor"
+
+[node name="Armoursmith" parent="." unique_id=1653674595 instance=ExtResource("8_4ttov")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.838394, 1.1000004, 28.209734)
+shop = ExtResource("14_wgwnr")
+stock_level = 10
+model_scene = ExtResource("15_iaabq")
+npc_id = "armoursmith"
+npc_name = "Armoursmith"
+dialogue = null
+info_title = "Armour Vendor"

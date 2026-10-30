@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://ejuqlxpun5a5"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/glitchling/glitchling_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_2aynx"]
+
+[resource]
+script = ExtResource("1_def")
+id = "glitchling"
+display_name = "Glitchling"
+allowed_modifier_tags = Array[int]([0, 2, 3, 4, 5, 6])
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+capsule_radius = 0.12
+capsule_height = 0.9
+max_health = 8.0
+armour = 0.0
+move_speed = 4.5
+aggro_range = 20.0
+attack_range = 0.8
+min_attack_damage = 5.0
+max_attack_damage = 10.0
+attack_speed = 1.2

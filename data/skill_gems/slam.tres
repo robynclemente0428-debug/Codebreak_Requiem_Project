@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillGemDefinition" format=3 uid="uid://fknn5tyerrs2"]
+
+[ext_resource type="Script" uid="uid://dgggkifvd6x7l" path="res://systems/skills/behaviors/slam_behavior.gd" id="1_aaroa"]
+[ext_resource type="Script" uid="uid://cps3ri322o16r" path="res://systems/equipment/weapon_type_definition.gd" id="1_ea6fj"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="2_aaroa"]
+[ext_resource type="Resource" uid="uid://bafoeeehlxifw" path="res://data/item_types/weapon_types/axe.tres" id="3_r6g47"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="5_jeq0f"]
+[ext_resource type="Resource" uid="uid://crlpj74qynu67" path="res://data/skill_programs/slam_program_limits.tres" id="9_prog"]
+
+[sub_resource type="Resource" id="Resource_strq1"]
+script = ExtResource("5_jeq0f")
+stat = 10
+op = 2
+value = 1.0
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[resource]
+script = ExtResource("2_aaroa")
+id = "slam"
+display_name = "Slam"
+behavior_script = ExtResource("1_aaroa")
+stat_modifiers = Array[ExtResource("5_jeq0f")]([SubResource("Resource_strq1")])
+tags = Array[int]([1, 4, 5])
+animation_keys = ["slam"]
+program_limits = ExtResource("9_prog")
+base_mana_cost = 5.0
+required_weapon_types = Array[ExtResource("1_ea6fj")]([ExtResource("3_r6g47")])
+description = "Swing your weapon at the ground with all your might dealing damage to a large area."
+metadata/_custom_type_script = "uid://bqwv6qt1eh0ic"

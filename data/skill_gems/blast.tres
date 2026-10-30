@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="SkillGemDefinition" format=3 uid="uid://bhvnamfs5xebq"]
+
+[ext_resource type="Script" uid="uid://cps3ri322o16r" path="res://systems/equipment/weapon_type_definition.gd" id="1_c6vtg"]
+[ext_resource type="Script" uid="uid://co3npcpif0mxd" path="res://systems/skills/behaviors/blast_behavior.gd" id="1_v73l2"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="2_v73l2"]
+[ext_resource type="Resource" uid="uid://b6boa5sqabeq3" path="res://data/item_types/weapon_types/orb.tres" id="3_gmk01"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="4_avm4w"]
+[ext_resource type="Resource" uid="uid://da8fbqcmjfpal" path="res://data/item_types/weapon_types/scepter.tres" id="4_ihqij"]
+[ext_resource type="Resource" uid="uid://djgtvi82l1a8s" path="res://data/skill_programs/blast_program_limits.tres" id="9_prog"]
+
+[sub_resource type="Resource" id="Resource_kbh27"]
+script = ExtResource("4_avm4w")
+stat = 10
+op = 2
+value = 0.8
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[resource]
+script = ExtResource("2_v73l2")
+id = "blast"
+display_name = "Blast"
+behavior_script = ExtResource("1_v73l2")
+stat_modifiers = Array[ExtResource("4_avm4w")]([SubResource("Resource_kbh27")])
+tags = Array[int]([2, 5, 6])
+animation_keys = ["magic"]
+program_limits = ExtResource("9_prog")
+base_mana_cost = 5.0
+required_weapon_types = Array[ExtResource("1_c6vtg")]([ExtResource("3_gmk01"), ExtResource("4_ihqij")])
+description = "Launch a projectile, dealing damage to a small area"
+metadata/_custom_type_script = "uid://bqwv6qt1eh0ic"

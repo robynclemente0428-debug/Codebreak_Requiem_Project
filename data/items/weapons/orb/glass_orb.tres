@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://cyp43nyltwaxi"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="PackedScene" uid="uid://c4rx6un6v0nmx" path="res://assets/models/weapons/weapon_scene/orb/orb.tscn" id="1_ydbiy"]
+[ext_resource type="Resource" uid="uid://b6boa5sqabeq3" path="res://data/item_types/weapon_types/orb.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "glass_orb"
+display_name = "Glass Orb"
+mesh = ExtResource("1_ydbiy")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 9.0,
+4: 16.0,
+5: 1.4
+}
+item_level = 8

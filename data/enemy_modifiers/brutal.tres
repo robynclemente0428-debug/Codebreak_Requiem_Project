@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3 uid="uid://dbg3jx7a8aaxv"]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_brutal_0"]
+script = ExtResource("2_mod")
+stat = 3
+op = 1
+value = 0.25
+source_id = "enemy_mod_brutal"
+
+[sub_resource type="Resource" id="Resource_brutal_1"]
+script = ExtResource("2_mod")
+stat = 4
+op = 1
+value = 0.25
+source_id = "enemy_mod_brutal"
+
+[sub_resource type="Resource" id="Resource_brutal_2"]
+script = ExtResource("2_mod")
+stat = 6
+value = 0.1
+source_id = "enemy_mod_brutal"
+
+[sub_resource type="Resource" id="Resource_brutal_3"]
+script = ExtResource("2_mod")
+stat = 7
+value = 0.5
+source_id = "enemy_mod_brutal"
+
+[resource]
+script = ExtResource("1_def")
+id = "brutal"
+display_name_prefix = "Brutal"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_brutal_0"), SubResource("Resource_brutal_1"), SubResource("Resource_brutal_2"), SubResource("Resource_brutal_3")])
+tags = Array[int]([0])
+weight = 50
+min_rarity = "rare"

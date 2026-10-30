@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://cpnd543ijmqip"]
+
+[ext_resource type="Resource" uid="uid://2nxrt2qiihlt" path="res://data/item_types/equipment_types/shield.tres" id="1_rco80"]
+[ext_resource type="PackedScene" uid="uid://dunwk72qtegvx" path="res://assets/models/weapons/weapon_scene/shield/SHIELD.tscn" id="2_24qx1"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="3_8o5dr"]
+
+[resource]
+script = ExtResource("3_8o5dr")
+id = "sturdy_shield"
+display_name = "Sturdy Shield"
+mesh = ExtResource("2_24qx1")
+equipment_type = ExtResource("1_rco80")
+base_stats = {
+0: 28.0,
+1: 18.0
+}
+item_level = 8

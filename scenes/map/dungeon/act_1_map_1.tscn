@@ -1,0 +1,100 @@
+[gd_scene format=3 uid="uid://vgnxg54ci24w"]
+
+[ext_resource type="Script" uid="uid://blbsgtjt3mdxp" path="res://scenes/map/dungeon/dungeon.gd" id="1_mtcht"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="2_7ekqy"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_jr0ed"]
+[ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="3_jr0ed"]
+[ext_resource type="Resource" uid="uid://csp2aspl8pru6" path="res://dungeon_generation/rendering/mesh_library/resources/pbr.tres" id="4_gmcev"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="6_nr2eb"]
+[ext_resource type="MeshLibrary" uid="uid://bktm4q5140ysj" path="res://dungeon_generation/rendering/mesh_library/hardfault_meshes.tres" id="7_23lbc"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="7_h5rev"]
+[ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="11_ph2lf"]
+[ext_resource type="Resource" uid="uid://0romkytgua4l" path="res://data/enemies/raider_boss.tres" id="12_s004p"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_b08ri"]
+agent_height = 1.8
+agent_radius = 0.3
+
+[node name="Act1Map1" type="Node3D" unique_id=1815437507]
+script = ExtResource("1_mtcht")
+respawn_spawn_id = &"act_1_map_1"
+portal_scene = ExtResource("2_jr0ed")
+metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
+
+[node name="DungeonDirector" type="Node" parent="." unique_id=1591079900 node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("2_7ekqy")
+grid_width = 100
+grid_height = 100
+corridor_width = 2
+min_room_size = 5
+max_room_size = 6
+room_interval = 5
+num_branch_rooms = 7
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_gmcev")
+layout_root = NodePath("../Layout")
+straight_corridors = true
+filler_rooms = true
+metadata/_custom_type_script = "uid://b5gwgfu4bdnrx"
+
+[node name="DungeonPopulator" type="Node" parent="." unique_id=1911922813 node_paths=PackedStringArray("director", "enemies_root", "loot_root")]
+script = ExtResource("3_jr0ed")
+director = NodePath("../DungeonDirector")
+enemies_root = NodePath("../Enemies")
+loot_root = NodePath("../Loot")
+metadata/_custom_type_script = "uid://gvonfu37eay0"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=828622924]
+navigation_mesh = SubResource("NavigationMesh_b08ri")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D" unique_id=148703132]
+mesh_library = ExtResource("7_23lbc")
+data = {
+"cells": PackedInt32Array(2, 7, 1, 65538, 7, 1, 2, 8, 1, 65538, 8, 1, 2, 9, 1, 65538, 9, 1, 2, 10, 1, 65538, 10, 1, 2, 11, 1, 65538, 11, 1, 2, 12, 1, 65538, 12, 1, 2, 13, 1, 65538, 13, 1, 3, 7, 1, 65539, 7, 1, 3, 8, 2, 3, 9, 2, 3, 10, 2, 3, 11, 2, 3, 12, 2, 3, 13, 1, 65539, 13, 1, 4, 7, 1, 65540, 7, 1, 4, 8, 2, 4, 9, 2, 4, 10, 2, 4, 11, 2, 4, 12, 2, 4, 13, 1, 65540, 13, 1, 5, 7, 1, 65541, 7, 1, 5, 8, 2, 5, 9, 2, 5, 10, 2, 5, 11, 2, 5, 12, 2, 5, 13, 1, 65541, 13, 1, 6, 7, 1, 65542, 7, 1, 6, 8, 2, 6, 9, 2, 6, 10, 2, 6, 11, 2, 6, 12, 2, 6, 13, 1, 65542, 13, 1, 7, 7, 1, 65543, 7, 1, 7, 8, 2, 7, 9, 2, 7, 10, 2, 7, 11, 2, 7, 12, 2, 7, 13, 1, 65543, 13, 1, 8, 7, 1, 65544, 7, 1, 8, 8, 1, 65544, 8, 1, 8, 9, 0, 8, 10, 0, 8, 11, 1, 65544, 11, 1, 8, 12, 1, 65544, 12, 1, 8, 13, 1, 65544, 13, 1, 9, 8, 1, 65545, 8, 1, 9, 9, 0, 9, 10, 0, 9, 11, 1, 65545, 11, 1, 10, 8, 1, 65546, 8, 1, 10, 9, 0, 10, 10, 0, 10, 11, 1, 65546, 11, 1, 11, 8, 1, 65547, 8, 1, 11, 9, 0, 11, 10, 0, 11, 11, 1, 65547, 11, 1, 12, 8, 1, 65548, 8, 1, 12, 9, 0, 12, 10, 0, 12, 11, 1, 65548, 11, 1, 13, 8, 1, 65549, 8, 1, 13, 9, 0, 13, 10, 0, 13, 11, 1, 65549, 11, 1, 14, 7, 1, 65550, 7, 1, 14, 8, 1, 65550, 8, 1, 14, 9, 0, 14, 10, 0, 14, 11, 1, 65550, 11, 1, 14, 12, 1, 65550, 12, 1, 14, 13, 1, 65550, 13, 1, 15, 7, 1, 65551, 7, 1, 15, 8, 2, 15, 9, 2, 15, 10, 2, 15, 11, 2, 15, 12, 2, 15, 13, 1, 65551, 13, 1, 16, 7, 1, 65552, 7, 1, 16, 8, 2, 16, 9, 2, 16, 10, 2, 16, 11, 2, 16, 12, 2, 16, 13, 1, 65552, 13, 1, 17, 7, 1, 65553, 7, 1, 17, 8, 2, 17, 9, 2, 17, 10, 2, 17, 11, 2, 17, 12, 2, 17, 13, 1, 65553, 13, 1, 18, 7, 1, 65554, 7, 1, 18, 8, 2, 18, 9, 2, 18, 10, 2, 18, 11, 2, 18, 12, 2, 18, 13, 1, 65554, 13, 1, 19, 7, 1, 65555, 7, 1, 19, 8, 2, 19, 9, 2, 19, 10, 2, 19, 11, 2, 19, 12, 2, 19, 13, 1, 65555, 13, 1, 20, 7, 1, 65556, 7, 1, 20, 8, 1, 65556, 8, 1, 20, 9, 0, 20, 10, 0, 20, 11, 1, 65556, 11, 1, 20, 12, 1, 65556, 12, 1, 20, 13, 1, 65556, 13, 1, 21, 8, 1, 65557, 8, 1, 21, 9, 0, 21, 10, 0, 21, 11, 1, 65557, 11, 1, 22, 8, 1, 65558, 8, 1, 22, 9, 0, 22, 10, 0, 22, 11, 1, 65558, 11, 1, 23, 8, 1, 65559, 8, 1, 23, 9, 0, 23, 10, 0, 23, 11, 1, 65559, 11, 1, 24, 8, 1, 65560, 8, 1, 24, 9, 0, 24, 10, 0, 24, 11, 1, 65560, 11, 1, 25, 6, 1, 65561, 6, 1, 25, 7, 1, 65561, 7, 1, 25, 8, 1, 65561, 8, 1, 25, 9, 0, 25, 10, 0, 25, 11, 1, 65561, 11, 1, 25, 12, 1, 65561, 12, 1, 25, 13, 1, 65561, 13, 1, 26, 6, 1, 65562, 6, 1, 26, 7, 2, 26, 8, 2, 26, 9, 2, 26, 10, 2, 26, 11, 2, 26, 12, 2, 26, 13, 1, 65562, 13, 1, 27, 6, 1, 65563, 6, 1, 27, 7, 2, 27, 8, 2, 27, 9, 2, 27, 10, 2, 27, 11, 2, 27, 12, 2, 27, 13, 1, 65563, 13, 1, 28, 6, 1, 65564, 6, 1, 28, 7, 2, 28, 8, 2, 28, 9, 2, 28, 10, 2, 28, 11, 2, 28, 12, 2, 28, 13, 1, 65564, 13, 1, 29, 6, 1, 65565, 6, 1, 29, 7, 2, 29, 8, 2, 29, 9, 2, 29, 10, 2, 29, 11, 2, 29, 12, 2, 29, 13, 1, 65565, 13, 1, 30, 6, 1, 65566, 6, 1, 30, 7, 2, 30, 8, 2, 30, 9, 2, 30, 10, 2, 30, 11, 2, 30, 12, 2, 30, 13, 1, 65566, 13, 1, 31, 6, 1, 65567, 6, 1, 31, 7, 2, 31, 8, 2, 31, 9, 2, 31, 10, 2, 31, 11, 2, 31, 12, 2, 31, 13, 1, 65567, 13, 1, 32, 6, 1, 65568, 6, 1, 32, 7, 1, 65568, 7, 1, 32, 8, 1, 65568, 8, 1, 32, 9, 0, 32, 10, 0, 32, 11, 1, 65568, 11, 1, 32, 12, 1, 65568, 12, 1, 32, 13, 1, 65568, 13, 1, 33, 8, 1, 65569, 8, 1, 33, 9, 0, 33, 10, 0, 33, 11, 1, 65569, 11, 1, 34, 8, 1, 65570, 8, 1, 34, 9, 0, 34, 10, 0, 34, 11, 1, 65570, 11, 1, 35, 8, 1, 65571, 8, 1, 35, 9, 0, 35, 10, 0, 35, 11, 1, 65571, 11, 1, 36, 8, 1, 65572, 8, 1, 36, 9, 0, 36, 10, 0, 36, 11, 1, 65572, 11, 1, 37, 8, 1, 65573, 8, 1, 37, 9, 0, 37, 10, 0, 37, 11, 1, 65573, 11, 1, 38, 8, 1, 65574, 8, 1, 38, 9, 0, 38, 10, 0, 38, 11, 1, 65574, 11, 1, 39, 8, 1, 65575, 8, 1, 39, 9, 0, 39, 10, 0, 39, 11, 1, 65575, 11, 1, 40, 8, 1, 65576, 8, 1, 40, 9, 0, 40, 10, 0, 40, 11, 1, 65576, 11, 1, 40, 12, 1, 65576, 12, 1, 40, 13, 1, 65576, 13, 1, 40, 14, 1, 65576, 14, 1, 40, 15, 1, 65576, 15, 1, 40, 16, 1, 65576, 16, 1, 40, 17, 1, 65576, 17, 1, 40, 18, 1, 65576, 18, 1, 40, 19, 1, 65576, 19, 1, 40, 20, 1, 65576, 20, 1, 40, 21, 1, 65576, 21, 1, 40, 22, 1, 65576, 22, 1, 40, 23, 1, 65576, 23, 1, 41, 8, 1, 65577, 8, 1, 41, 9, 0, 41, 10, 0, 41, 11, 1, 65577, 11, 1, 41, 12, 1, 65577, 12, 1, 41, 13, 2, 41, 14, 2, 41, 15, 2, 41, 16, 2, 41, 17, 2, 41, 18, 2, 41, 19, 2, 41, 20, 2, 41, 21, 2, 41, 22, 2, 41, 23, 1, 65577, 23, 1, 42, 8, 1, 65578, 8, 1, 42, 9, 0, 42, 10, 0, 42, 11, 0, 42, 12, 0, 42, 13, 2, 42, 14, 2, 42, 15, 2, 42, 16, 2, 42, 17, 2, 42, 18, 2, 42, 19, 2, 42, 20, 2, 42, 21, 2, 42, 22, 2, 42, 23, 1, 65578, 23, 1, 43, 8, 1, 65579, 8, 1, 43, 9, 0, 43, 10, 0, 43, 11, 0, 43, 12, 0, 43, 13, 2, 43, 14, 2, 43, 15, 2, 43, 16, 2, 43, 17, 2, 43, 18, 2, 43, 19, 2, 43, 20, 2, 43, 21, 2, 43, 22, 2, 43, 23, 1, 65579, 23, 1, 44, 8, 1, 65580, 8, 1, 44, 9, 1, 65580, 9, 1, 44, 10, 1, 65580, 10, 1, 44, 11, 1, 65580, 11, 1, 44, 12, 1, 65580, 12, 1, 44, 13, 2, 44, 14, 2, 44, 15, 2, 44, 16, 2, 44, 17, 2, 44, 18, 2, 44, 19, 2, 44, 20, 2, 44, 21, 2, 44, 22, 2, 44, 23, 1, 65580, 23, 1, 45, 12, 1, 65581, 12, 1, 45, 13, 2, 45, 14, 2, 45, 15, 2, 45, 16, 2, 45, 17, 2, 45, 18, 2, 45, 19, 2, 45, 20, 2, 45, 21, 2, 45, 22, 2, 45, 23, 1, 65581, 23, 1, 46, 12, 1, 65582, 12, 1, 46, 13, 1, 65582, 13, 1, 46, 14, 1, 65582, 14, 1, 46, 15, 1, 65582, 15, 1, 46, 16, 1, 65582, 16, 1, 46, 17, 1, 65582, 17, 1, 46, 18, 1, 65582, 18, 1, 46, 19, 0, 46, 20, 0, 46, 21, 0, 46, 22, 1, 65582, 22, 1, 46, 23, 1, 65582, 23, 1, 47, 18, 1, 65583, 18, 1, 47, 19, 0, 47, 20, 0, 47, 21, 0, 47, 22, 1, 65583, 22, 1, 48, 18, 1, 65584, 18, 1, 48, 19, 0, 48, 20, 0, 48, 21, 0, 48, 22, 1, 65584, 22, 1, 49, 18, 1, 65585, 18, 1, 49, 19, 0, 49, 20, 0, 49, 21, 0, 49, 22, 1, 65585, 22, 1, 50, 18, 1, 65586, 18, 1, 50, 19, 0, 50, 20, 0, 50, 21, 0, 50, 22, 1, 65586, 22, 1, 51, 18, 1, 65587, 18, 1, 51, 19, 0, 51, 20, 0, 51, 21, 0, 51, 22, 1, 65587, 22, 1, 52, 18, 1, 65588, 18, 1, 52, 19, 0, 52, 20, 0, 52, 21, 0, 52, 22, 1, 65588, 22, 1, 53, 18, 1, 65589, 18, 1, 53, 19, 0, 53, 20, 0, 53, 21, 0, 53, 22, 1, 65589, 22, 1, 53, 23, 1, 65589, 23, 1, 53, 24, 1, 65589, 24, 1, 54, 18, 1, 65590, 18, 1, 54, 19, 2, 54, 20, 2, 54, 21, 2, 54, 22, 2, 54, 23, 2, 54, 24, 1, 65590, 24, 1, 55, 18, 1, 65591, 18, 1, 55, 19, 2, 55, 20, 2, 55, 21, 2, 55, 22, 2, 55, 23, 2, 55, 24, 1, 65591, 24, 1, 56, 18, 1, 65592, 18, 1, 56, 19, 2, 56, 20, 2, 56, 21, 2, 56, 22, 2, 56, 23, 2, 56, 24, 1, 65592, 24, 1, 57, 18, 1, 65593, 18, 1, 57, 19, 2, 57, 20, 2, 57, 21, 2, 57, 22, 2, 57, 23, 2, 57, 24, 1, 65593, 24, 1, 58, 18, 1, 65594, 18, 1, 58, 19, 2, 58, 20, 2, 58, 21, 2, 58, 22, 2, 58, 23, 2, 58, 24, 1, 65594, 24, 1, 59, 18, 1, 65595, 18, 1, 59, 19, 1, 65595, 19, 1, 59, 20, 1, 65595, 20, 1, 59, 21, 1, 65595, 21, 1, 59, 22, 1, 65595, 22, 1, 59, 23, 1, 65595, 23, 1, 59, 24, 1, 65595, 24, 1)
+}
+
+[node name="Enemies" type="Node3D" parent="." unique_id=611317225]
+
+[node name="Loot" type="Node3D" parent="." unique_id=1052016224]
+
+[node name="Layout" type="Node3D" parent="." unique_id=2042129215]
+
+[node name="PortalMarker" type="Marker3D" parent="Layout" unique_id=396833483]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 20)
+script = ExtResource("6_nr2eb")
+target_area = "uid://de57t2qg8my1n"
+target_spawn = &"act_1_town"
+arrival_spawn_id = &"act_1_map_1"
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnMarker" type="Marker3D" parent="Layout" unique_id=1895797142]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.426254, 0, 20)
+script = ExtResource("7_h5rev")
+spawn_id = &"act_1_map_1"
+create_room = false
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="PortalMarker2" type="Marker3D" parent="Layout" unique_id=1783334345]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 112.482, 1, 42.332)
+script = ExtResource("6_nr2eb")
+target_area = "res://scenes/map/dungeon/act_1_spillway.tscn"
+target_spawn = &"spillway_in"
+dungeon_level = 2
+arrival_spawn_id = &"map_1"
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="EnemyMarker" type="Marker3D" parent="Layout" unique_id=1154653317]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 86.86039, 0, 30.061455)
+script = ExtResource("11_ph2lf")
+enemy = ExtResource("12_s004p")
+rarity = "rare"
+create_room = true
+metadata/_custom_type_script = "uid://bri1ph1ms875r"
+
+[node name="SpawnMarker2" type="Marker3D" parent="Layout" unique_id=151136057]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 110.8876, 0, 41.4307)
+script = ExtResource("7_h5rev")
+spawn_id = &"map_1"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://drtmekm517kgm"

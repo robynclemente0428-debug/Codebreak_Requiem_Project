@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://ct551gy2flhe2"]
+
+[ext_resource type="PackedScene" uid="uid://ilp1p8f1cinj" path="res://scenes/enemy/Alien/alien_model.tscn" id="1_8lgb5"]
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_sxbgx"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_2trdi"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_2trdi"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_w2bsa"]
+
+[resource]
+script = ExtResource("1_sxbgx")
+id = "alien"
+display_name = "Alien"
+allowed_modifier_tags = Array[int]([0, 2, 3, 4])
+scene = ExtResource("2_2trdi")
+model_scene = ExtResource("1_8lgb5")
+capsule_radius = 0.2
+capsule_height = 1.5
+max_health = 50.0
+armour = 20.0
+move_speed = 3.0
+attack_range = 1.0
+min_attack_damage = 2.0
+max_attack_damage = 5.0
+attack_speed = 1.0
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

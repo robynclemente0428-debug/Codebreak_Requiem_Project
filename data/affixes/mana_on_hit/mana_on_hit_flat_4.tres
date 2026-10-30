@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://btsuu1oftdw70"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "mana_on_hit_flat_4"
+display_name = "of the Channel"
+affix_type = "suffix"
+tags = Array[int]([11])
+exclusivity_tags = Array[int]([18])
+weight = 20
+min_item_level = 48
+stat = 18
+min_value = 13.0
+max_value = 15.0

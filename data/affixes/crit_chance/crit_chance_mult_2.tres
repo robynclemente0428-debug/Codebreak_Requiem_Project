@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AffixDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "crit_chance_mult_2"
+display_name = "of Certainty"
+affix_type = "suffix"
+shape = 0
+op = 2
+tags = Array[int]([3])
+exclusivity_tags = Array[int]([8])
+min_item_level = 60
+weight = 4
+stat = 6
+min_value = 0.18
+max_value = 0.25

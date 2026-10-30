@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://bpxcfck0tv31w"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "armour_flat_4"
+display_name = "Bulwark"
+tags = Array[int]([4])
+exclusivity_tags = Array[int]([4])
+weight = 20
+min_item_level = 45
+stat = 1
+min_value = 85.0
+max_value = 130.0

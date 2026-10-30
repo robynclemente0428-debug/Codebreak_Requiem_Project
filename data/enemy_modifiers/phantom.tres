@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_phantom_0"]
+script = ExtResource("2_mod")
+stat = 2
+op = 1
+value = 0.5
+source_id = "enemy_mod_phantom"
+
+[sub_resource type="Resource" id="Resource_phantom_1"]
+script = ExtResource("2_mod")
+stat = 5
+op = 1
+value = 0.25
+source_id = "enemy_mod_phantom"
+
+[sub_resource type="Resource" id="Resource_phantom_2"]
+script = ExtResource("2_mod")
+stat = 6
+op = 0
+value = 0.1
+source_id = "enemy_mod_phantom"
+
+[resource]
+script = ExtResource("1_def")
+id = "phantom"
+display_name_prefix = "Phantom"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_phantom_0"), SubResource("Resource_phantom_1"), SubResource("Resource_phantom_2")])
+tags = Array[int]([3, 4])
+weight = 20
+min_rarity = "champion"

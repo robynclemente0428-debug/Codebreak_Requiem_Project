@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://c2xxqr7urv4ad"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "move_speed_add_1"
+display_name = "of Hurry"
+affix_type = "suffix"
+tags = Array[int]([9])
+exclusivity_tags = Array[int]([7])
+stat = 2
+op = 1
+min_value = 0.03
+max_value = 0.05

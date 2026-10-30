@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://b5c8g3t0per2n"]
+
+[ext_resource type="PackedScene" uid="uid://3nm2h7ew3krm" path="res://assets/models/weapons/weapon_scene/sniper/hunting_rifle.tscn" id="1_c0ibs"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://b34i3dusqh65j" path="res://data/item_types/weapon_types/sniper_rifle.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "eclipse_sniper"
+display_name = "Eclipse Sniper"
+mesh = ExtResource("1_c0ibs")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 85.0,
+4: 133.0,
+5: 0.7
+}
+item_level = 45

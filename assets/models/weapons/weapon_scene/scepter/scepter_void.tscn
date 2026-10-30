@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://cif2onfvudsji"]
+
+[ext_resource type="Script" uid="uid://d4jrke4dlvgtw" path="res://assets/models/weapons/weapon_scene/scepter/scepter.gd" id="1_3icw0"]
+[ext_resource type="PackedScene" uid="uid://g56gh8kn3wo0" path="res://assets/models/weapons/weapon_scene/orb/orb02.tscn" id="2_6xdki"]
+[ext_resource type="PackedScene" uid="uid://bke2pnjpfvoyc" path="res://assets/models/weapons/weapon_scene/scepter/scepter_void.glb" id="3_j8k33"]
+
+[node name="ScepterVoid" type="Node3D" unique_id=1327229782]
+transform = Transform3D(-4.371139e-08, 1, -4.371139e-08, 0, -4.371139e-08, -1, -1, -4.371139e-08, 1.9106855e-15, 0, 0, 0)
+script = ExtResource("1_3icw0")
+default_orb = ExtResource("2_6xdki")
+
+[node name="Model" parent="." unique_id=2143628977 instance=ExtResource("3_j8k33")]
+
+[node name="Grip" type="Marker3D" parent="." unique_id=643067220]
+
+[node name="OrbSocket" type="Marker3D" parent="." unique_id=1803093516]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.585, 0)

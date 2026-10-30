@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://2swgdy24gr56"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://bxhgbmwdiulv7" path="res://data/item_types/equipment_types/trinket.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "eternal_sigil"
+display_name = "Eternal Sigil"
+equipment_type = ExtResource("2_type")
+base_stats = {
+13: 24.0
+}
+item_level = 55

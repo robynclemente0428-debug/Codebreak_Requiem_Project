@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://iio123mrdx17"]
+
+[ext_resource type="Script" uid="uid://ce1l3jlwhgibg" path="res://scenes/ui/class_select/class_card.gd" id="1_dc76n"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_o8aln"]
+bg_color = Color(0.039215688, 0.16470589, 0.21960784, 0.8)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.8980392, 1, 0.34901962)
+corner_radius_top_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_b08ri"]
+bg_color = Color(0.08627451, 0.29411766, 0.4, 1)
+border_width_left = 8
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.8980392, 1, 1)
+corner_radius_top_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_5uciv"]
+bg_color = Color(0.07058824, 0.24705882, 0.32156864, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.8980392, 1, 0.8)
+corner_radius_top_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_a0rul"]
+bg_color = Color(0.08627451, 0.29411766, 0.4, 1)
+border_width_left = 8
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.8980392, 1, 1)
+corner_radius_top_right = 24
+corner_radius_bottom_left = 24
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_cr08f"]
+
+[node name="ClassCard" type="Button" unique_id=1906085688]
+custom_minimum_size = Vector2(0, 120)
+size_flags_horizontal = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_o8aln")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_b08ri")
+theme_override_styles/hover = SubResource("StyleBoxFlat_5uciv")
+theme_override_styles/hover_pressed = SubResource("StyleBoxFlat_a0rul")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_cr08f")
+toggle_mode = true
+script = ExtResource("1_dc76n")
+
+[node name="HBox" type="HBoxContainer" parent="." unique_id=1057293057]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Icon" type="TextureRect" parent="HBox" unique_id=1827732407]
+custom_minimum_size = Vector2(80, 80)
+layout_mode = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="VBox" type="VBoxContainer" parent="HBox" unique_id=644704367]
+layout_mode = 2
+mouse_filter = 2
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="HBox/VBox" unique_id=1218958172]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 1, 1, 0.7019608)
+theme_override_font_sizes/font_size = 36
+
+[node name="RoleLabel" type="Label" parent="HBox/VBox" unique_id=1048302459]
+custom_maximum_size = Vector2(440, 50)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 1, 1, 0.7019608)
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3

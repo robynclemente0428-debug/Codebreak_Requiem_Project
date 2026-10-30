@@ -1,0 +1,22 @@
+[gd_scene format=3 uid="uid://bk1qcerygqao5"]
+
+[ext_resource type="Shader" uid="uid://bj1r3k37ybtvy" path="res://assets/shaders/materials/shader/edge_detection.gdshader" id="1_lpvks"]
+
+[sub_resource type="QuadMesh" id="QuadMesh_5uciv"]
+flip_faces = true
+size = Vector2(3, 3)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_gtx3x"]
+render_priority = -1
+shader = ExtResource("1_lpvks")
+shader_parameter/lightIntensity = 1.25
+shader_parameter/lineAlpha = 0.7
+shader_parameter/useLighting = true
+shader_parameter/lineHighlight = 0.2
+shader_parameter/lineShadow = 0.55
+
+[node name="MeshInstance3D" type="MeshInstance3D" unique_id=130288869]
+cast_shadow = 0
+extra_cull_margin = 16384.0
+mesh = SubResource("QuadMesh_5uciv")
+surface_material_override/0 = SubResource("ShaderMaterial_gtx3x")

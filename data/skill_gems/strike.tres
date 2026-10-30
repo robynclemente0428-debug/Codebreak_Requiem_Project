@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="SkillGemDefinition" format=3 uid="uid://dklpmq4u6k78e"]
+
+[ext_resource type="Script" uid="uid://cd7n0q1jd8np1" path="res://systems/skills/behaviors/strike_behavior.gd" id="1_12cyo"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="1_hfnvj"]
+[ext_resource type="Script" uid="uid://cps3ri322o16r" path="res://systems/equipment/weapon_type_definition.gd" id="2_it3q6"]
+[ext_resource type="Resource" uid="uid://cuhqvt0ypdxuk" path="res://data/item_types/weapon_types/sword.tres" id="3_3ocjl"]
+[ext_resource type="Resource" uid="uid://bafoeeehlxifw" path="res://data/item_types/weapon_types/axe.tres" id="4_m3hrv"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="4_mndm5"]
+[ext_resource type="Resource" uid="uid://da8fbqcmjfpal" path="res://data/item_types/weapon_types/scepter.tres" id="5_j65eh"]
+[ext_resource type="Resource" uid="uid://lt55vhra6acp" path="res://data/skill_programs/strike_program_limits.tres" id="9_prog"]
+
+[sub_resource type="Resource" id="Resource_avm4w"]
+script = ExtResource("4_mndm5")
+stat = 10
+op = 2
+value = 0.25
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[sub_resource type="Resource" id="Resource_ss23g"]
+script = ExtResource("4_mndm5")
+stat = 5
+value = 0.5
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[resource]
+script = ExtResource("1_hfnvj")
+id = "strike"
+display_name = "Strike"
+behavior_script = ExtResource("1_12cyo")
+stat_modifiers = Array[ExtResource("4_mndm5")]([SubResource("Resource_avm4w"), SubResource("Resource_ss23g")])
+tags = Array[int]([0, 4])
+animation_keys = ["slash_r", "slash_l"]
+program_limits = ExtResource("9_prog")
+base_mana_cost = 3.0
+required_weapon_types = Array[ExtResource("2_it3q6")]([ExtResource("3_3ocjl"), ExtResource("4_m3hrv"), ExtResource("5_j65eh")])
+description = "Swing your weapon at a small area and deal damage to enemies."
+metadata/_custom_type_script = "uid://bqwv6qt1eh0ic"

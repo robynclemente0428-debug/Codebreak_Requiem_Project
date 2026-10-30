@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://bxhgbmwdiulv7" path="res://systems/equipment/equipment_types/trinket.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "brass_token"
+display_name = "Brass Token"
+equipment_type = ExtResource("2_type")
+base_stats = {
+12: 5.0
+}
+item_level = 8
+allowed_affix_tags = Array[int]([])

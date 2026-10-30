@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dbxjrvtuq5e3a"]
+
+[ext_resource type="Texture2D" uid="uid://cciigs42j6333" path="res://assets/icons/classes/gladiator.png" id="1_j54uh"]
+[ext_resource type="Script" uid="uid://li80knwebkc2" path="res://systems/stats/class_data.gd" id="1_xsf73"]
+[ext_resource type="PackedScene" uid="uid://bxg2jecqbkbm5" path="res://scenes/player/models/gladiator_model.tscn" id="2_v3gpd"]
+[ext_resource type="PackedScene" uid="uid://cohvro8iw8x7a" path="res://assets/models/classes/gladiator/Gladiator.glb" id="3_7tbx4"]
+[ext_resource type="Resource" uid="uid://c0a18plkfjyni" path="res://data/items/gem/strike_gem.tres" id="5_3q68p"]
+[ext_resource type="Resource" uid="uid://ds0o3urv735o3" path="res://data/items/weapons/sword/rusted_sword.tres" id="6_volbf"]
+
+[resource]
+script = ExtResource("1_xsf73")
+id = &"gladiator"
+display_name = "Gladiator"
+description = "Strong and quick, built for the arena."
+icon = ExtResource("1_j54uh")
+sort_order = 3
+tagline = "Armored, agile, undefeated"
+preview_scene = ExtResource("3_7tbx4")
+accent_color = Color(1, 0.7607843, 0.2784314, 1)
+strength = 16
+dexterity = 16
+model_scene = ExtResource("2_v3gpd")
+starting_weapon = ExtResource("6_volbf")
+starting_skill_gem = ExtResource("5_3q68p")

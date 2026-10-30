@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://q2qcs1uuauv5"]
+
+[ext_resource type="Script" uid="uid://iaj7smio6jy8" path="res://scripts/new_test/tag_test.gd" id="1_7s4b7"]
+
+[node name="TagTest" type="Control" unique_id=1587622461]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_7s4b7")

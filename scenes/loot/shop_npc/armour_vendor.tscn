@@ -1,0 +1,85 @@
+[gd_scene format=3 uid="uid://dmy5yaa517ms6"]
+
+[ext_resource type="PackedScene" uid="uid://b0dhf7eo08g6g" path="res://assets/models/classes/raider/Raider_final1.glb" id="1_3yefw"]
+[ext_resource type="Script" uid="uid://616jhum0djnx" path="res://scenes/loot/shop_npc/model_anchor.gd" id="2_vl6l6"]
+[ext_resource type="Shader" uid="uid://dhae0yy0oxusi" path="res://assets/shaders/materials/shader/hologram.gdshader" id="3_0tep5"]
+[ext_resource type="AnimationLibrary" uid="uid://cesyaiefc7pbu" path="res://scenes/player/animations/player_anims.res" id="3_r6spt"]
+[ext_resource type="Shader" uid="uid://cnbxqxikmdvf5" path="res://assets/shaders/materials/shader/red_glitch_overlay.gdshader" id="4_0n7cu"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_in717"]
+render_priority = 0
+shader = ExtResource("3_0tep5")
+shader_parameter/tint = Color(0, 0.9, 1, 1)
+shader_parameter/fade = 1.0
+shader_parameter/body_alpha = 0.32
+shader_parameter/rim_power = 2.2
+shader_parameter/scan_density = 55.0
+shader_parameter/scan_speed = 2.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_y0ocb"]
+render_priority = 0
+shader = ExtResource("4_0n7cu")
+shader_parameter/glitch_color = Color(1, 0.08, 0.12, 1)
+shader_parameter/accent_color = Color(1, 0, 0.55, 1)
+shader_parameter/strength = 1.0
+shader_parameter/rim_power = 2.5
+shader_parameter/rim_strength = 1.2
+shader_parameter/glitch_speed = 12.0
+shader_parameter/burst_chance = 0.3
+shader_parameter/idle_glitch = 0.12
+shader_parameter/slice_count = 18.0
+shader_parameter/slice_shift = 0.18
+shader_parameter/slice_chance = 0.3
+shader_parameter/slice_glow = 2.5
+shader_parameter/scan_density = 60.0
+shader_parameter/scan_strength = 0.35
+shader_parameter/scan_speed = 2.0
+shader_parameter/block_size = 0.18
+shader_parameter/block_chance = 0.06
+
+[node name="Raider_final1" unique_id=508015680 instance=ExtResource("1_3yefw")]
+script = ExtResource("2_vl6l6")
+
+[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(681791302) index="0" unique_id=2047632046]
+bones/0/position = Vector3(0.004855154, 0.00047858804, -0.47979128)
+bones/0/rotation = Quaternion(-0.6709301, -0.21698567, 0.24791974, 0.6643086)
+bones/1/rotation = Quaternion(0.06559427, 0.29462367, 0.95193046, -0.052180897)
+bones/2/rotation = Quaternion(-0.7173287, 0.015580791, -0.024049528, 0.69614536)
+bones/3/rotation = Quaternion(0.58801, -0.09107511, -0.009660199, 0.8036518)
+bones/4/rotation = Quaternion(0.3279605, -0.1409234, 0.05237331, 0.9326519)
+bones/6/rotation = Quaternion(0.01698813, 0.33376968, 0.9422656, 0.021088092)
+bones/7/rotation = Quaternion(-0.57725406, -0.03771277, -0.0274912, 0.81522995)
+bones/8/rotation = Quaternion(0.61234885, 0.08338973, -0.06161501, 0.7837593)
+bones/9/rotation = Quaternion(0.3865456, 0.15313332, -0.049667824, 0.9081112)
+bones/11/rotation = Quaternion(0.0049781017, -0.06461648, 0.0032627801, 0.99789244)
+bones/12/rotation = Quaternion(0.08812154, 0.036462415, 0.04552042, 0.99440086)
+bones/13/rotation = Quaternion(0.08203347, 0.041956328, 0.048572633, 0.99456066)
+bones/14/rotation = Quaternion(-0.6902327, -0.27641335, 0.49165, -0.45327127)
+bones/15/rotation = Quaternion(0.3515135, -0.3310471, 0.12930906, 0.86609775)
+bones/16/rotation = Quaternion(0.75200367, -0.4422316, 0.3508453, 0.34033692)
+bones/17/rotation = Quaternion(-0.12996364, 0.096309274, -0.11984415, 0.97952604)
+bones/18/rotation = Quaternion(0.10900779, 0.093133785, 0.19822317, 0.9696138)
+bones/19/rotation = Quaternion(0.2668098, -0.0007050299, 0.112478755, 0.95716286)
+bones/20/rotation = Quaternion(0.22914533, 0.0069089113, 0.112689085, 0.96682256)
+bones/22/rotation = Quaternion(0.067192346, -0.016644428, 0.25489414, 0.964488)
+bones/23/rotation = Quaternion(0.14814444, 0.0145815015, -0.09853637, 0.98393667)
+bones/24/rotation = Quaternion(-0.26942608, -0.0030528419, 0.1025195, 0.9575438)
+bones/26/rotation = Quaternion(0.02669786, 0.0027288669, 0.004269011, 0.9996307)
+bones/27/rotation = Quaternion(-0.024224589, 0.17137408, -0.14381416, 0.9743519)
+bones/29/rotation = Quaternion(0.50572985, -0.4636973, 0.62337893, 0.37499455)
+bones/30/rotation = Quaternion(0.17334513, -0.2015324, -0.44199646, 0.85672355)
+bones/31/rotation = Quaternion(0.24713407, 0.2149779, -0.8703002, 0.36781344)
+bones/32/rotation = Quaternion(-0.038543012, -0.29039234, 0.205473, 0.93379205)
+bones/33/rotation = Quaternion(-0.025276288, 0.006619765, -0.085707955, 0.99597764)
+bones/34/rotation = Quaternion(0.162049, 0.00011757016, -0.042226754, 0.9858788)
+bones/35/rotation = Quaternion(0.2428157, -0.005894942, -0.12103882, 0.9624737)
+bones/37/rotation = Quaternion(0.014306992, -0.11800467, -0.27452955, 0.95420325)
+bones/38/rotation = Quaternion(0.14754228, 0.0004429794, 0.16669513, 0.97490716)
+bones/39/rotation = Quaternion(-0.059138454, 0.03953389, 0.26224318, 0.96237636)
+
+[node name="tripo_node_36b79a68-970f-4cc4-8ba3-776ea30f83b6" parent="Armature/Skeleton3D" index="0" unique_id=554501165]
+material_override = SubResource("ShaderMaterial_in717")
+material_overlay = SubResource("ShaderMaterial_y0ocb")
+
+[node name="AnimationPlayer" parent="." index="1" unique_id=589221996]
+libraries/player_anims = ExtResource("3_r6spt")

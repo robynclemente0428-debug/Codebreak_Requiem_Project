@@ -1,0 +1,388 @@
+class_name DungeonPopulator
+extends Node
+
+@export var director: DungeonDirector
+@export var enemies_root: Node3D
+@export var loot_root: Node3D
+## Scene dropped for every item. Defaults to the standard pickup, so a new dungeon works
+## without setting it (an empty slot used to crash the first item drop).
+@export var loot_pickup_scene: PackedScene = preload("res://scenes/loot/loot_pickup.tscn")
+@export var loot_level_window: int = 20   # items older than level - window stop dropping
+
+@export_group("Corridor enemies")
+## Small groups wandering the corridors: one group per this many corridor floor tiles.
+## 0 = corridors stay empty.
+@export var corridor_tiles_per_group: int = 30
+@export var corridor_group_min: int = 1
+@export var corridor_group_max: int = 3
+## No corridor groups this close (in tiles) to the start or a portal room.
+@export var corridor_safe_distance: int = 6
+## Rarity weights for corridor enemies (weaker than rooms by default).
+@export var corridor_rarity_weights: Dictionary = {"normal": 75, "magic": 20, "rare": 5}
+
+@export_group("Props")
+## Breakable loot props scattered along room walls. First one is the common pick.
+@export var prop_scenes: Array[PackedScene] = [
+	preload("res://scenes/props/loot_barrel.tscn"),
+	preload("res://scenes/props/supply_cache.tscn"),
+]
+## Chance a prop is the second scene (the supply cache) instead of the first.
+@export_range(0.0, 1.0, 0.01) var rare_prop_chance: float = 0.25
+@export var props_per_room_min: int = 2
+@export var props_per_room_max: int = 5
+## Chance each prop brings 1-2 neighbours along the same wall (barrels come in piles).
+@export_range(0.0, 1.0, 0.01) var prop_cluster_chance: float = 0.45
+## Props along corridors: one per this many corridor floor cells (0 = none in corridors).
+@export var corridor_cells_per_prop: int = 18
+
+var _loot_cache: Array[ItemDefinition] = []
+var _loot_cache_level := -1
+
+const SPAWN_LIFT := Vector3.UP * 0.1
+const DROP_CHANCE := {"normal": 0.10, "magic": 0.35, "rare": 1.0, "champion": 1.0}
+const CREDIT_DROP := {
+    "normal": [1, 4],
+    "magic": [4, 10],
+    "rare": [12, 30],
+    "champion": [30, 60]
+}
+var _level := 1
+## Set by dungeon.gd: the instance record. Enemies killed on an earlier visit are not spawned
+## again. null = don't track (e.g. a test scene).
+var instance: DungeonInstance
+var _enemy_index := 0                   # every spawn attempt gets the next number, in a fixed order
+var _is_floor: Callable      # (Vector3i) -> bool   supplied by dungeon.gd
+var _to_world: Callable      # (Vector2i) -> Vector3  supplied by dungeon.gd
+
+func populate(level: int, skip_rooms: Array, is_floor: Callable, to_world: Callable) -> void:
+	_level = level
+	_is_floor = is_floor
+	_to_world = to_world
+
+	var dungeon_theme := director.dungeon_theme
+	if dungeon_theme.enemy_pool.is_empty():
+		push_warning("Theme has no enemy_pool, no enemies spawned")
+		return
+
+	var rng := director.rng                       # seeded: same seed, same layout and rarities
+	var used: Dictionary = {}
+	var spawned := 0
+	for room: RoomData in director.rooms:
+		if room in skip_rooms:
+			continue
+		var is_branch := room.room_type == "branch"
+		var target := rng.randi_range(
+			dungeon_theme.enemies_per_room_min, dungeon_theme.enemies_per_room_max)
+		if is_branch:
+			target = maxi(1, target / 2)
+		var weights: Dictionary = dungeon_theme.branch_rarity_weights if is_branch \
+			else dungeon_theme.room_rarity_weights
+
+		var placed := 0
+		var attempts := 0
+		while placed < target and attempts < target * 10:
+			attempts += 1
+			var cell := Vector2i(
+				rng.randi_range(room.rect.position.x, room.rect.end.x - 1),
+				rng.randi_range(room.rect.position.y, room.rect.end.y - 1))
+			if used.has(cell) or not _is_floor.call(Vector3i(cell.x, 0, cell.y)):
+				continue
+			used[cell] = true
+			var def: EnemyDefinition = dungeon_theme.enemy_pool[
+				rng.randi() % dungeon_theme.enemy_pool.size()]
+			_spawn_enemy(def, _roll_rarity(weights, rng), cell)
+			placed += 1
+			spawned += 1
+
+		if is_branch:                             # dead ends hold a guaranteed rare item
+			_drop_item(_to_world.call(room.center()), "rare")
+	spawned += _populate_corridors(rng, used)
+	print("[Populator] spawned %d enemies" % spawned)
+
+
+## A few small groups in the corridors, away from where players arrive. Same seeded rng as the
+## rooms, so a dungeon instance always has the same corridor enemies (and dead ones stay dead).
+func _populate_corridors(rng: RandomNumberGenerator, used: Dictionary) -> int:
+	if corridor_tiles_per_group <= 0:
+		return 0
+	var pool := director.dungeon_theme.enemy_pool
+	var in_room := {}
+	var safe: Array[Rect2i] = []
+	for room: RoomData in director.rooms:
+		if room.room_type == "start" or room.room_type == "portal":
+			safe.append(room.rect.grow(corridor_safe_distance))
+		for x in range(room.rect.position.x, room.rect.end.x):
+			for y in range(room.rect.position.y, room.rect.end.y):
+				in_room[Vector2i(x, y)] = true
+	var cells: Array[Vector2i] = []
+	for x in director.grid_width:
+		for y in director.grid_height:
+			var c := Vector2i(x, y)
+			if in_room.has(c) or used.has(c) or not _is_floor.call(Vector3i(x, 0, y)):
+				continue
+			if safe.any(func(r: Rect2i) -> bool: return r.has_point(c)):
+				continue
+			cells.append(c)
+	var groups := cells.size() / corridor_tiles_per_group
+	var spawned := 0
+	for g in groups:
+		if cells.is_empty():
+			break
+		var anchor: Vector2i = cells[rng.randi() % cells.size()]
+		var size := rng.randi_range(corridor_group_min, corridor_group_max)
+		var def: EnemyDefinition = pool[rng.randi() % pool.size()]   # one kind per group
+		for i in size:
+			# members stand on free floor next to the anchor
+			var spot := anchor
+			for attempt in 8:
+				var c := anchor + Vector2i(rng.randi_range(-1, 1), rng.randi_range(-1, 1))
+				if not used.has(c) and _is_floor.call(Vector3i(c.x, 0, c.y)):
+					spot = c
+					break
+			if used.has(spot):
+				continue
+			used[spot] = true
+			_spawn_enemy(def, _roll_rarity(corridor_rarity_weights, rng), spot)
+			spawned += 1
+	return spawned
+
+func _eligible_loot() -> Array[ItemDefinition]:
+	if _loot_cache_level == _level:
+		return _loot_cache
+	var theme := director.dungeon_theme
+	var out: Array[ItemDefinition] = []
+	if theme.auto_loot:
+		out.append_array(ItemCatalog.for_level(_level, loot_level_window,
+				theme.loot_include_gems, theme.loot_folders))
+	for def in theme.loot_pool:                      # hand-placed extras
+		if def not in out and def.item_level <= _level and def.item_level >= _level - loot_level_window:
+			out.append(def)
+	_loot_cache = out
+	_loot_cache_level = _level
+	print("[Populator] loot pool at level %d: %d items" % [_level, out.size()])
+	return out
+
+func _spawn_enemy(def: EnemyDefinition, rarity: String, cell: Vector2i,
+		forced_mods: Variant = null, add_to_random: bool = false) -> void:
+	var enemy := EnemySpawner.spawn_enemy(
+		def, rarity, enemies_root, _to_world.call(cell) + SPAWN_LIFT, _level,
+		forced_mods, add_to_random)
+	if not _track(enemy):
+		return                              # killed on an earlier visit of this instance
+	var numbers : DamageNumbers = get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
+	if numbers:
+		numbers.track(enemy.health)
+	print("[Populator] %s (%s)" % [enemy.display_name, rarity])   # remove once verified
+	enemy.health.died.connect(_on_enemy_died.bind(enemy, rarity, def.id))
+
+## Returns false (and removes the enemy) if it was killed on an earlier visit.
+## The enemy is still created first, so the random numbers stay in step and every later
+## enemy gets the same position, rarity and modifiers as before.
+func _track(enemy: Node3D) -> bool:
+	var index := _enemy_index
+	_enemy_index += 1
+	if instance == null:
+		return true
+	if instance.killed.has(index):
+		enemy.get_parent().remove_child(enemy)
+		enemy.queue_free()
+		return false
+	var inst := instance
+	enemy.health.died.connect(func() -> void: inst.killed[index] = true)
+	return true
+
+
+func _on_enemy_died(enemy: Node3D, rarity: String, enemy_id: String) -> void:
+	# Quest events
+	GameEvents.report("kill", enemy_id)
+	GameEvents.report("kill_rarity", rarity)      # for "kill 3 rare enemies" / "kill a champion"
+
+	# Award credits when the enemy dies
+	_award_credits(rarity, enemy.global_position)
+	# Roll for an item drop
+	if randf() <= DROP_CHANCE.get(rarity, 0.1):
+		_drop_item(enemy.global_position, rarity)
+
+func _award_credits(rarity: String, at: Vector3) -> void:
+	var player := get_tree().get_first_node_in_group("players")
+	if player == null or player.get("currency") == null:
+		return
+	var span: Array = CREDIT_DROP.get(rarity, [1, 3])
+	var amount := randi_range(span[0], span[1])
+	player.currency.add(amount)
+	# floating "+N CR" where the enemy fell
+	get_tree().call_group("damage_numbers", "pop_credits", at + Vector3.UP * 1.4, amount)
+
+
+## Drops one item of this rarity at a world position, using this dungeon's loot rules.
+## Props (barrels, caches) call this.
+func drop_item_at(pos: Vector3, rarity: String) -> void:
+	_drop_item(pos, rarity)
+
+
+## Scatters breakable props along the walls of each room. Uses the seeded rng after the
+## enemies, so the same instance gets the same props; opened ones come back already open.
+func place_props(is_floor: Callable, to_world: Callable) -> void:
+	if prop_scenes.is_empty() or props_per_room_max <= 0:
+		return
+	var root := get_parent()
+	var holder := root.get_node_or_null("Props") as Node3D
+	if holder == null:
+		holder = Node3D.new()
+		holder.name = "Props"
+		root.add_child(holder)
+	var rng := director.rng
+	var counter := [0, 0]                         # [next prop index, placed]
+	var in_room := {}
+	for room: RoomData in director.rooms:
+		for x in range(room.rect.position.x, room.rect.end.x):
+			for y in range(room.rect.position.y, room.rect.end.y):
+				in_room[Vector2i(x, y)] = true
+	var taken := {}
+	# Keep the cells around every enemy free: a barrel right beside an enemy cuts its spot out of
+	# the navmesh (props are baked into it), and an enemy standing off the navmesh can't path.
+	if enemies_root != null and director.grid_map != null:
+		var gm := director.grid_map
+		for e in enemies_root.get_children():
+			if e is Node3D:
+				var m := gm.local_to_map(gm.to_local((e as Node3D).global_position))
+				for dx in range(-1, 2):
+					for dy in range(-1, 2):
+						taken[Vector2i(m.x + dx, m.z + dy)] = true
+	for room: RoomData in director.rooms:
+		if room.room_type == "start" or room.room_type == "portal":
+			continue
+		var spots: Array[Vector2i] = []
+		for x in range(room.rect.position.x, room.rect.end.x):
+			for y in range(room.rect.position.y, room.rect.end.y):
+				var c := Vector2i(x, y)
+				if is_floor.call(Vector3i(x, 0, y)) and _against_wall(c, is_floor):
+					spots.append(c)
+		var want := rng.randi_range(props_per_room_min, props_per_room_max)
+		_scatter(spots, want, holder, to_world, rng, counter, taken)
+	# corridors: floor outside every room
+	if corridor_cells_per_prop > 0:
+		var corridor: Array[Vector2i] = []
+		for x in director.grid_width:
+			for y in director.grid_height:
+				var c := Vector2i(x, y)
+				if not in_room.has(c) and is_floor.call(Vector3i(x, 0, y)) \
+						and _against_wall(c, is_floor) and _leaves_gap(c, is_floor):
+					corridor.append(c)
+		_scatter(corridor, corridor.size() / corridor_cells_per_prop, holder, to_world, rng, counter, taken)
+	var placed: int = counter[1]
+	print("[Populator] placed %d props" % placed)
+
+
+## Places `want` props on random free spots, each maybe with 1-2 neighbours (a pile).
+func _scatter(spots: Array[Vector2i], want: int, holder: Node3D, to_world: Callable,
+		rng: RandomNumberGenerator, counter: Array, taken: Dictionary) -> void:
+	var made := 0
+	while made < want and not spots.is_empty():
+		var cell: Vector2i = spots.pop_at(rng.randi() % spots.size())
+		if taken.has(cell):
+			continue
+		var pile: Array[Vector2i] = [cell]
+		if rng.randf() < prop_cluster_chance:
+			var extra := rng.randi_range(1, 2)
+			for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+				var n: Vector2i = cell + d
+				if pile.size() > extra:
+					break
+				if spots.has(n) and not taken.has(n):
+					pile.append(n)
+					spots.erase(n)
+		for c in pile:
+			taken[c] = true
+			_place_prop(c, holder, to_world, rng, counter)
+			made += 1
+
+
+func _place_prop(cell: Vector2i, holder: Node3D, to_world: Callable,
+		rng: RandomNumberGenerator, counter: Array) -> void:
+	var scene: PackedScene = prop_scenes[0]
+	if prop_scenes.size() > 1 and rng.randf() < rare_prop_chance:
+		scene = prop_scenes[1]
+	var index: int = counter[0]
+	var prop := scene.instantiate() as LootProp
+	prop.index = index
+	holder.add_child(prop)
+	prop.global_position = to_world.call(cell)
+	prop.rotation.y = rng.randf() * TAU
+	if instance != null:
+		if instance.opened.has(index):
+			prop.set_already_open()
+		else:
+			var inst := instance
+			prop.opened.connect(func(_p) -> void: inst.opened[index] = true)
+	counter[0] = index + 1
+	counter[1] += 1
+
+
+## Corridors: only where the corridor is wider than one tile, so a prop never blocks the way.
+## (Walls on both sides of the cell = a 1-wide corridor = no prop.)
+func _leaves_gap(c: Vector2i, is_floor: Callable) -> bool:
+	for d in [Vector2i.LEFT, Vector2i.UP]:
+		var a: Vector2i = c + d
+		var b: Vector2i = c - d
+		if not is_floor.call(Vector3i(a.x, 0, a.y)) and not is_floor.call(Vector3i(b.x, 0, b.y)):
+			return false
+	return true
+
+
+## True if a floor cell has a non-floor cell next to it (so props hug the walls).
+func _against_wall(c: Vector2i, is_floor: Callable) -> bool:
+	for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+		var n: Vector2i = c + d
+		if not is_floor.call(Vector3i(n.x, 0, n.y)):
+			return true
+	return false
+
+func _drop_item(pos: Vector3, rarity: String) -> void:
+	var pool := _eligible_loot()
+	if pool.is_empty():
+		return
+	var def: ItemDefinition = pool[randi() % pool.size()]
+	var is_gem := def.skill_gem != null or def.support_gem != null
+
+	# Gems ignore the enemy's rarity; everything else behaves as before
+	var item_rarity := "normal"
+	if not is_gem:
+		item_rarity = "rare" if rarity == "champion" else rarity
+
+	var item := ItemGenerator.generate_item(def, _level, item_rarity)
+	var pickup := loot_pickup_scene.instantiate() as LootPickup
+	pickup.item = item
+	_place_pickup.call_deferred(pickup, pos + Vector3(0, 0.5, 0))
+
+func _place_pickup(pickup: LootPickup, world_pos: Vector3) -> void:
+	loot_root.add_child(pickup)
+	pickup.global_position = world_pos        # world space, whatever the Loot node's transform is
+
+func _roll_rarity(weights: Dictionary, rng: RandomNumberGenerator) -> String:
+	var total := 0
+	for w in weights.values():
+		total += int(w)
+	var roll := rng.randi_range(0, total - 1)
+	for r in weights.keys():
+		roll -= int(weights[r])
+		if roll < 0:
+			return r
+	return "normal"
+
+func spawn_marked(entries: Array, level: int, is_floor: Callable, to_world: Callable) -> void:
+	_level = level
+	_is_floor = is_floor
+	_to_world = to_world
+	for e in entries:
+		var def: EnemyDefinition = e["definition"]
+		if def == null:
+			continue
+		var cell: Vector2i = e["cell"]
+		if not is_floor.call(Vector3i(cell.x, 0, cell.y)):
+			push_warning("EnemyMarker at %s is not on floor, skipped" % [cell])
+			continue
+		# The marker's own modifiers: exactly these (replace_random), or these on top of the rolled ones
+		var mods: Array = e.get("modifiers", [])
+		var replace: bool = e.get("replace_random", true)
+		_spawn_enemy(def, e["rarity"], cell, mods, not replace)

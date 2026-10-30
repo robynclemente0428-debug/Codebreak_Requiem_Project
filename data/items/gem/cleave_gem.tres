@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://bcvb0jijj5alr"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_asym3"]
+[ext_resource type="Resource" uid="uid://div40rsqwqmu0" path="res://data/support_gems/cleave.tres" id="2_1o4eb"]
+
+[resource]
+script = ExtResource("1_asym3")
+id = "cleave_gem"
+display_name = "Cleave Gem"
+support_gem = ExtResource("2_1o4eb")
+metadata/_custom_type_script = "uid://s1hliskd6ob6"

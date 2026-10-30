@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://ck7fkkbxnvuqc"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "damage_flat_2"
+display_name = "Honed"
+shape = 1
+tags = Array[int]([3])
+exclusivity_tags = Array[int]([3])
+weight = 80
+min_item_level = 20
+min_stat = 3
+max_stat = 4
+added_min_low = 25.0
+added_min_high = 30.0
+added_max_low = 40.0
+added_max_high = 45.0

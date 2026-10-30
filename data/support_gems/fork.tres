@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_fork_count"]
+script = ExtResource("3_knob")
+id = &"fork_count"
+display_name = "Forks"
+kind = 1
+flag_key = "fork_count"
+step = 1.0
+min_steps = -1
+max_steps = 2
+cost_per_step = 3.0
+unit = ""
+
+[sub_resource type="Resource" id="Knob_fork_angle"]
+script = ExtResource("3_knob")
+id = &"fork_angle"
+display_name = "Fork angle"
+kind = 1
+flag_key = "fork_angle"
+step = 10.0
+min_steps = -2
+max_steps = 3
+cost_per_step = 0.25
+unit = "deg"
+
+[resource]
+script = ExtResource("1_def")
+id = "fork_support"
+display_name = "Fork Support"
+allowed_tags = Array[int]([3])
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_fork_count"), SubResource("Knob_fork_angle")])
+mana_cost_increase = 0.2
+description = "Shoot only. A bullet that hits its first enemy splits into 2 bullets, 30 degrees apart, that fly on from it for 60% of the damage. Forked bullets don't fork again. Adds the WHEN forked block, whose effects only change the forked bullets."

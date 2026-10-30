@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://c30pubqifqd4n"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://bcqqrbu7yftq3" path="res://data/item_types/equipment_types/feet_augment.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "jet_treads"
+display_name = "Jet Treads"
+equipment_type = ExtResource("2_type")
+base_stats = {
+1: 30.0,
+2: 0.31
+}
+item_level = 35

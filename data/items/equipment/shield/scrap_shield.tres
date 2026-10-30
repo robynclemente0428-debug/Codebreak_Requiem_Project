@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://c5w0dbasi6aqc"]
+
+[ext_resource type="Resource" uid="uid://2nxrt2qiihlt" path="res://data/item_types/equipment_types/shield.tres" id="1_4ky2f"]
+[ext_resource type="PackedScene" uid="uid://d2ln3e1w2uyjg" path="res://assets/models/weapons/weapon_scene/shield/scrap_shield.tscn" id="2_e7dg0"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="2_sokpo"]
+
+[resource]
+script = ExtResource("2_sokpo")
+id = "scrap_shield"
+display_name = "Scrap Shield"
+mesh = ExtResource("2_e7dg0")
+equipment_type = ExtResource("1_4ky2f")
+base_stats = {
+0: 15.0,
+1: 10.0
+}

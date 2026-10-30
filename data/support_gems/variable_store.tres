@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/variable_store_support.gd" id="2_beh"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_store_capacity"]
+script = ExtResource("3_knob")
+id = &"store_capacity"
+display_name = "Charge capacity"
+kind = 1
+flag_key = "var_store_max"
+step = 2.0
+min_steps = -2
+max_steps = 5
+cost_per_step = 0.5
+unit = ""
+
+[sub_resource type="Resource" id="Knob_store_gain"]
+script = ExtResource("3_knob")
+id = &"store_gain"
+display_name = "Charge per hit"
+kind = 1
+flag_key = "var_store_gain"
+step = 1.0
+min_steps = 0
+max_steps = 2
+cost_per_step = 2.5
+unit = ""
+
+[resource]
+script = ExtResource("1_def")
+id = "variable_store_support"
+display_name = "Variable Store Support"
+allowed_tags = Array[int]([2])
+behavior_script = ExtResource("2_beh")
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_store_capacity"), SubResource("Knob_store_gain")])
+mana_cost_increase = 0.2
+description = "Blast only. Every enemy hit stores 1 charge (up to 10), kept between casts. Spend it with the WHEN charge >= N block: when that rule fires, N charge is used up."

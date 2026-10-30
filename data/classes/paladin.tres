@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://34r5wuyev5e4"]
+
+[ext_resource type="Script" uid="uid://li80knwebkc2" path="res://systems/stats/class_data.gd" id="1_ebhhl"]
+[ext_resource type="Texture2D" uid="uid://bk1imofoasl2c" path="res://assets/icons/classes/paladin.png" id="1_fhai2"]
+[ext_resource type="PackedScene" uid="uid://pc22616d31wr" path="res://scenes/player/models/paladin_model.tscn" id="2_ja1bg"]
+[ext_resource type="PackedScene" uid="uid://cpmjxf3ircpw1" path="res://assets/models/classes/paladin/Paladin_final.glb" id="3_eb5mq"]
+[ext_resource type="Resource" uid="uid://4o32xmg3pnhj" path="res://data/items/gem/blast_gem.tres" id="5_wm3ht"]
+[ext_resource type="Resource" path="res://data/items/weapons/scepter/wooden_scepter.tres" id="6_mj0me"]
+
+[resource]
+script = ExtResource("1_ebhhl")
+id = &"paladin"
+display_name = "Paladin"
+description = "Armoured and focused, part warrior and part spellcaster."
+icon = ExtResource("1_fhai2")
+sort_order = 4
+tagline = "Firewall made flesh"
+preview_scene = ExtResource("3_eb5mq")
+accent_color = Color(0.8784314, 0.3019608, 1, 1)
+strength = 16
+intelligence = 16
+model_scene = ExtResource("2_ja1bg")
+starting_weapon = ExtResource("6_mj0me")
+starting_skill_gem = ExtResource("5_wm3ht")

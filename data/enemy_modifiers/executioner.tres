@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_executioner_0"]
+script = ExtResource("2_mod")
+stat = 6
+op = 0
+value = 0.2
+source_id = "enemy_mod_executioner"
+
+[sub_resource type="Resource" id="Resource_executioner_1"]
+script = ExtResource("2_mod")
+stat = 7
+op = 0
+value = 1.0
+source_id = "enemy_mod_executioner"
+
+[sub_resource type="Resource" id="Resource_executioner_2"]
+script = ExtResource("2_mod")
+stat = 3
+op = 1
+value = 0.25
+source_id = "enemy_mod_executioner"
+
+[sub_resource type="Resource" id="Resource_executioner_3"]
+script = ExtResource("2_mod")
+stat = 4
+op = 1
+value = 0.25
+source_id = "enemy_mod_executioner"
+
+[resource]
+script = ExtResource("1_def")
+id = "executioner"
+display_name_prefix = "Executioner"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_executioner_0"), SubResource("Resource_executioner_1"), SubResource("Resource_executioner_2"), SubResource("Resource_executioner_3")])
+tags = Array[int]([0, 1])
+weight = 18
+min_rarity = "champion"

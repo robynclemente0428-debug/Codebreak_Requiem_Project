@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://6tuwybxdw3bw"]
+
+[ext_resource type="PackedScene" uid="uid://bw827osnp38cl" path="res://assets/models/weapons/weapon_scene/axe/hatchet.tscn" id="1_6qiby"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="2_763a8"]
+[ext_resource type="Resource" uid="uid://bafoeeehlxifw" path="res://data/item_types/weapon_types/axe.tres" id="3_52s26"]
+
+[resource]
+script = ExtResource("2_763a8")
+id = "headsplitter"
+display_name = "Headsplitter"
+mesh = ExtResource("1_6qiby")
+weapon_type = ExtResource("3_52s26")
+base_stats = {
+3: 14.0,
+4: 25.0,
+5: 1.2
+}
+item_level = 8

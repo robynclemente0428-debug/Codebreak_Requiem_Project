@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dlwadctx1jd05"]
+
+[ext_resource type="Texture2D" uid="uid://qoqdkyng5g8d" path="res://assets/icons/classes/assassin.png" id="1_bak5j"]
+[ext_resource type="Script" uid="uid://li80knwebkc2" path="res://systems/stats/class_data.gd" id="1_g1dv3"]
+[ext_resource type="PackedScene" uid="uid://bqp611karqfqg" path="res://scenes/player/models/assassin_model.tscn" id="2_djrud"]
+[ext_resource type="PackedScene" uid="uid://dmocglkjxaik4" path="res://assets/models/classes/assassin/Assassin.glb" id="3_c1ys5"]
+[ext_resource type="Resource" uid="uid://cpf23qoxywjef" path="res://data/items/gem/shoot_gem.tres" id="5_6y1h8"]
+[ext_resource type="Resource" uid="uid://bkrblaghcl1ep" path="res://data/items/weapons/sniper/hunting_rifle.tres" id="6_x23rc"]
+
+[resource]
+script = ExtResource("1_g1dv3")
+id = &"assassin"
+display_name = "Assassin"
+description = "Cunning and agile, striking with skill instead of force."
+icon = ExtResource("1_bak5j")
+sort_order = 5
+tagline = "Breaches systems from range"
+preview_scene = ExtResource("3_c1ys5")
+accent_color = Color(0.18039216, 0.9019608, 0.8392157, 1)
+dexterity = 16
+intelligence = 16
+model_scene = ExtResource("2_djrud")
+starting_weapon = ExtResource("6_x23rc")
+starting_skill_gem = ExtResource("5_6y1h8")

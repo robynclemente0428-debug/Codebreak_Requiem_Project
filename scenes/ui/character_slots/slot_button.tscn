@@ -1,0 +1,122 @@
+[gd_scene format=3 uid="uid://d3g6nsvogbe1r"]
+
+[ext_resource type="Script" uid="uid://rj3irrythrr4" path="res://scenes/ui/character_slots/slot_button.gd" id="1_k7lk4"]
+[ext_resource type="Script" uid="uid://c0a7y8ll20eyt" path="res://scenes/ui/character_slots/plus_icon.gd" id="1_suk4u"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gv306"]
+bg_color = Color(0.05882353, 0.24313726, 0.30980393, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0, 0.8980392, 1, 1)
+corner_radius_top_right = 60
+corner_radius_bottom_left = 60
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_k7lk4"]
+bg_color = Color(0.101960786, 0.41568628, 0.5254902, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0, 0.8980392, 1, 1)
+corner_radius_top_right = 60
+corner_radius_bottom_left = 60
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_suk4u"]
+bg_color = Color(0.08235294, 0.3372549, 0.42352942, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0, 0.8980392, 1, 1)
+corner_radius_top_right = 60
+corner_radius_bottom_left = 60
+shadow_color = Color(0, 1, 1, 0.4)
+shadow_size = 10
+
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_vh1kc"]
+
+[node name="SlotButton" type="Button" unique_id=696776577]
+custom_minimum_size = Vector2(350, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_styles/normal = SubResource("StyleBoxFlat_gv306")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_k7lk4")
+theme_override_styles/hover = SubResource("StyleBoxFlat_suk4u")
+theme_override_styles/focus = SubResource("StyleBoxEmpty_vh1kc")
+script = ExtResource("1_k7lk4")
+
+[node name="SlotNumber" type="Label" parent="." unique_id=1989086361]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = 28.0
+offset_top = 20.0
+offset_right = 68.0
+offset_bottom = 59.0
+theme_override_font_sizes/font_size = 28
+text = "01"
+
+[node name="PlusIcon" type="Control" parent="." unique_id=1489700156]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_suk4u")
+
+[node name="Info" type="VBoxContainer" parent="." unique_id=1782834538]
+custom_minimum_size = Vector2(400, 0)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -0.5
+offset_top = -50.5
+offset_right = 0.5
+offset_bottom = 50.5
+grow_horizontal = 2
+grow_vertical = 2
+offset_transform_enabled = true
+mouse_filter = 2
+
+[node name="NameLabel" type="Label" parent="Info" unique_id=1688141830]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+horizontal_alignment = 1
+
+[node name="ClassLabel" type="Label" parent="Info" unique_id=20300439]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+horizontal_alignment = 1
+
+[node name="DeleteButton" type="Button" parent="." unique_id=544955789]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -60.0
+offset_top = -130.0
+offset_right = -20.0
+offset_bottom = -50.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_colors/font_color = Color(1, 0, 0, 1)
+theme_override_font_sizes/font_size = 52
+text = "X"

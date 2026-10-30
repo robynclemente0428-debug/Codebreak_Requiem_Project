@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EquipmentTypeDefinition" format=3 uid="uid://bxhgbmwdiulv7"]
+
+[ext_resource type="Script" uid="uid://cicrg4fxpcyrg" path="res://systems/equipment/equipment_type_definition.gd" id="1_8w2rm"]
+
+[resource]
+script = ExtResource("1_8w2rm")
+id = "trinket"
+display_name = "Trinket"
+slot = 1
+tags = Array[int]([3, 7, 6, 10, 11])
+metadata/_custom_type_script = "uid://cicrg4fxpcyrg"

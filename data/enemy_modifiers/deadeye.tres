@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3 uid="uid://xh4pu78t8k6w"]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_deadeye_0"]
+script = ExtResource("2_mod")
+stat = 6
+value = 0.15
+source_id = "enemy_mod_deadeye"
+
+[sub_resource type="Resource" id="Resource_deadeye_1"]
+script = ExtResource("2_mod")
+stat = 7
+value = 0.5
+source_id = "enemy_mod_deadeye"
+
+[sub_resource type="Resource" id="Resource_deadeye_2"]
+script = ExtResource("2_mod")
+stat = 3
+op = 1
+value = 0.2
+source_id = "enemy_mod_deadeye"
+
+[sub_resource type="Resource" id="Resource_deadeye_3"]
+script = ExtResource("2_mod")
+stat = 4
+op = 1
+value = 0.2
+source_id = "enemy_mod_deadeye"
+
+[resource]
+script = ExtResource("1_def")
+id = "deadeye"
+display_name_prefix = "Deadeye"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_deadeye_0"), SubResource("Resource_deadeye_1"), SubResource("Resource_deadeye_2"), SubResource("Resource_deadeye_3")])
+tags = Array[int]([1])
+weight = 60
+min_rarity = "rare"

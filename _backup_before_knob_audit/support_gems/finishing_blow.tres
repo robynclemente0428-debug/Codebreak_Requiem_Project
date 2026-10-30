@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/finishing_blow_support.gd" id="2_beh"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_finisher_power"]
+script = ExtResource("3_knob")
+id = &"finisher_power"
+display_name = "Finisher damage"
+kind = 1
+flag_key = "finisher_damage"
+step = 0.1
+min_steps = -4
+max_steps = 4
+cost_per_step = 1.5
+unit = "%"
+
+[sub_resource type="Resource" id="Knob_finisher_reach"]
+script = ExtResource("3_knob")
+id = &"finisher_reach"
+display_name = "Finisher reach"
+kind = 1
+flag_key = "finisher_reach"
+step = 0.25
+min_steps = -2
+max_steps = 4
+cost_per_step = 1.5
+unit = "m"
+
+[resource]
+script = ExtResource("1_def")
+id = "finishing_blow_support"
+display_name = "Finishing Blow Support"
+allowed_tags = Array[int]([0])
+behavior_script = ExtResource("2_beh")
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_finisher_power"), SubResource("Knob_finisher_reach")])
+mana_cost_increase = 0.2
+description = "Strike only. Every 3rd swing of a combo is a finishing blow: 80% more damage, a wider arc and 1 m more reach."

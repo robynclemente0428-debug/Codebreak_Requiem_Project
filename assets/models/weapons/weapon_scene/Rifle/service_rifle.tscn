@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://8hy8utwehk1j"]
+
+[ext_resource type="PackedScene" uid="uid://do2aki0vk7iis" path="res://assets/models/weapons/RIFLE01.glb" id="1_p0grp"]
+
+[node name="ServiceRifle" type="Node3D" unique_id=934250207]
+transform = Transform3D(1, 0, 0, 0, 0.99999994, 0, 0, 0, 0.9999999, 0, 0, 0)
+
+[node name="RIFLE01" parent="." unique_id=910996187 instance=ExtResource("1_p0grp")]
+transform = Transform3D(-0.23690969, 0.89118075, 0.3868729, -0.1649838, 0.3555212, -0.91999185, -0.9574206, -0.28178272, 0.062803976, -0.21121061, 0.39168102, 0.018380977)

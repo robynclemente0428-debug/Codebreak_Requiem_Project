@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" path="res://data/support_gems/explode_on_kill.tres" id="2_sup"]
+
+[resource]
+script = ExtResource("1_item")
+id = "explode_on_kill_gem"
+display_name = "Explode on Kill Gem"
+support_gem = ExtResource("2_sup")
+metadata/_custom_type_script = "uid://s1hliskd6ob6"

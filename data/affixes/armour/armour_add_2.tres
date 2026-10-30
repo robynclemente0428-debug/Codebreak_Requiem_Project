@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://c1sw6m8qemw6e"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "armour_add_2"
+display_name = "Layered"
+tags = Array[int]([4])
+exclusivity_tags = Array[int]([4])
+weight = 70
+min_item_level = 12
+stat = 1
+op = 1
+min_value = 0.35
+max_value = 0.45

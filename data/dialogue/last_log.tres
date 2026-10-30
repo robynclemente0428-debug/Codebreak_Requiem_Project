@@ -1,0 +1,89 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3]
+
+[ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
+
+[resource]
+script = ExtResource("1_dlg")
+source = "# The Last Log: a recorded voice, Act V only. After the Root Process falls it offers the ending choice.
+# The choice reports 'ending' with merge / overwrite / terminate: hook your ending scenes to that event.
+~ start
+@ quest_done:q10_root_process -> choice
+@ quest_ready:q10_root_process -> ready_q10_root_process
+@ quest_ready:q09_core_sentinel -> ready_q09_core_sentinel
+@ quest_active:q10_root_process -> remind_q10_root_process
+@ quest_active:q09_core_sentinel -> remind_q09_core_sentinel
+@ can_start:q09_core_sentinel -> offer_q09_core_sentinel
+@ can_start:q10_root_process -> offer_q10_root_process
+-> idle
+
+~ offer_q09_core_sentinel
+The Last Log: You are the first to arrive. The Sentinel will test you.
+* ACCEPT -> accept_q09_core_sentinel
+* DECLINE -> end
+
+~ accept_q09_core_sentinel
+> start_quest q09_core_sentinel
+The Last Log: It remembers every enemy you have faced.
+-> end
+
+~ remind_q09_core_sentinel
+# NEW line below
+The Last Log: The Sentinel waits.
+
+~ ready_q09_core_sentinel
+The Last Log: Done?
+* TURN IN -> turnin_q09_core_sentinel
+* NOT YET -> end
+
+~ turnin_q09_core_sentinel
+> turn_in q09_core_sentinel
+The Last Log: The Sentinel falls. One guardian remains.
+-> start
+
+~ offer_q10_root_process
+The Last Log: The Root Process is the Core’s last defense. It cannot be reasoned with.
+* ACCEPT -> accept_q10_root_process
+* DECLINE -> end
+
+~ accept_q10_root_process
+> start_quest q10_root_process
+The Last Log: Break it, and the Core is yours to decide.
+-> end
+
+~ remind_q10_root_process
+# NEW line below
+The Last Log: The Root Process still runs.
+
+~ ready_q10_root_process
+The Last Log: Done?
+* TURN IN -> turnin_q10_root_process
+* NOT YET -> end
+
+~ turnin_q10_root_process
+> turn_in q10_root_process
+The Last Log: The Core is open. The choice is yours, Executor.
+-> choice
+
+~ choice
+* MERGE -> merge
+* OVERWRITE -> overwrite
+* TERMINATE -> terminate
+
+~ merge
+Vesper: Let it finish. Let it become something new.
+> report ending merge
+-> end
+
+~ overwrite
+Brack: Save what we can. Keep us alive.
+> report ending overwrite
+-> end
+
+~ terminate
+The Last Log: Shutdown confirmed. Goodbye, Executor.
+> report ending terminate
+-> end
+
+~ idle
+The Last Log: ...signal lost..."
+metadata/_custom_type_script = "uid://dd85gxidfhqxl"

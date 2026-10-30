@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://06bybephhbh0"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "health_mult_2"
+display_name = "Colossal"
+tags = Array[int]([5])
+exclusivity_tags = Array[int]([2])
+weight = 5
+min_item_level = 55
+op = 2
+min_value = 0.1
+max_value = 0.15

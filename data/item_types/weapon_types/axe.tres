@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="WeaponTypeDefinition" format=3 uid="uid://bafoeeehlxifw"]
+
+[ext_resource type="Script" uid="uid://cps3ri322o16r" path="res://systems/equipment/weapon_type_definition.gd" id="1_ss23g"]
+
+[resource]
+script = ExtResource("1_ss23g")
+id = "axe"
+display_name = "Axe"
+tags = Array[int]([0, 1, 3, 6, 7])
+base_range = 0.5
+metadata/_custom_type_script = "uid://cps3ri322o16r"

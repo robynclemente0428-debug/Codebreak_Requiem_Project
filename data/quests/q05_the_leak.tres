@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Script an AREA skill"
+kind = "program_applied_tag"
+target = "area"
+
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Defeat The Leak"
+kind = "kill"
+target = "the_leak"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q05_the_leak"
+title = "THE LEAK"
+description = "Something is eating Checkpoint's memory. It splits every time it is hit.
+BOSS TRAIT: splits into smaller blobs when hit. Use area attacks.
+SCRIPT TASK: script an AREA skill (Slam or Blast)."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q03_loop_hound_alpha", "q04_the_overflow"])
+reward_credits = 150
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "III"

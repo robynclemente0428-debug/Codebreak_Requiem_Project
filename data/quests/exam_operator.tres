@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Apply an efficient script (any tier)"
+kind = "program_efficient"
+
+
+[resource]
+script = ExtResource("2_quest")
+id = "exam_operator"
+title = "RANK EXAM: OPERATOR"
+description = "Examiner Sudo grades logic, not luck.
+Apply a script that earns an efficiency tier: 6 blocks or fewer, and valid."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
+ordered = false
+prerequisite_quest_ids = Array[String](["q01_glitchling_queen"])
+reward_credits = 0
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Sudo"
+metadata/act = "I"

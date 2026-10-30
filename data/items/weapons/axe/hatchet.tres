@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://5wcc10hr6kfn"]
+
+[ext_resource type="PackedScene" uid="uid://bw827osnp38cl" path="res://assets/models/weapons/weapon_scene/axe/hatchet.tscn" id="1_gg4oi"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://bafoeeehlxifw" path="res://data/item_types/weapon_types/axe.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "hatchet"
+display_name = "Hatchet"
+mesh = ExtResource("1_gg4oi")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 8.0,
+4: 14.0,
+5: 1.2
+}

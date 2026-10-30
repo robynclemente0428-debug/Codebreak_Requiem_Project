@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillGemDefinition" format=3 uid="uid://dg2sp662md7hi"]
+
+[ext_resource type="Script" uid="uid://dbtryuvavl6dm" path="res://systems/skills/behaviors/shoot_behavior.gd" id="1_3tcp7"]
+[ext_resource type="Script" uid="uid://cps3ri322o16r" path="res://systems/equipment/weapon_type_definition.gd" id="1_njpwi"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="2_clrip"]
+[ext_resource type="Resource" uid="uid://b34i3dusqh65j" path="res://data/item_types/weapon_types/sniper_rifle.tres" id="2_sdu6y"]
+[ext_resource type="Resource" uid="uid://dq8h6kk1aaxq6" path="res://data/item_types/weapon_types/assault_rifle.tres" id="3_3tcp7"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="3_sdu6y"]
+[ext_resource type="Resource" uid="uid://d1r26xxm0r1no" path="res://data/skill_programs/shoot_program_limits.tres" id="9_prog"]
+
+[sub_resource type="Resource" id="Resource_3tcp7"]
+script = ExtResource("3_sdu6y")
+stat = 10
+op = 2
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[resource]
+script = ExtResource("2_clrip")
+id = "shoot"
+display_name = "Shoot"
+behavior_script = ExtResource("1_3tcp7")
+stat_modifiers = Array[ExtResource("3_sdu6y")]([SubResource("Resource_3tcp7")])
+tags = Array[int]([3, 6])
+animation_keys = ["shoot"]
+program_limits = ExtResource("9_prog")
+base_mana_cost = 1.0
+required_weapon_types = Array[ExtResource("1_njpwi")]([ExtResource("2_sdu6y"), ExtResource("3_3tcp7")])
+description = "shoot your enemies with a gun"
+metadata/_custom_type_script = "uid://bqwv6qt1eh0ic"

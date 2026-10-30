@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3 uid="uid://cabws7a234o2f"]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_armoured_0"]
+script = ExtResource("2_mod")
+stat = 1
+value = 25.0
+source_id = "enemy_mod_armoured"
+
+[resource]
+script = ExtResource("1_def")
+id = "armoured"
+display_name_prefix = "Armoured"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_armoured_0")])
+tags = Array[int]([2])
+weight = 90

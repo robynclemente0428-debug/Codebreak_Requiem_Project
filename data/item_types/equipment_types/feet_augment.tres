@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EquipmentTypeDefinition" format=3 uid="uid://bcqqrbu7yftq3"]
+
+[ext_resource type="Script" uid="uid://cicrg4fxpcyrg" path="res://systems/equipment/equipment_type_definition.gd" id="1_2th8r"]
+
+[resource]
+script = ExtResource("1_2th8r")
+id = "feet_augment"
+display_name = "Feet Augment"
+slot = 5
+tags = Array[int]([4, 5, 8, 9, 10, 11])
+metadata/_custom_type_script = "uid://cicrg4fxpcyrg"

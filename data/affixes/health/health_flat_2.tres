@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://d4h7di3vw63vf"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "health_flat_2"
+display_name = "Hearty"
+tags = Array[int]([5])
+exclusivity_tags = Array[int]([2])
+weight = 80
+min_item_level = 10
+min_value = 45.0
+max_value = 80.0

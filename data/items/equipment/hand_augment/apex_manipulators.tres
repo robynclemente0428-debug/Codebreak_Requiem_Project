@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://dtciuw127pd6e" path="res://systems/equipment/equipment_types/hand_augment.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "apex_manipulators"
+display_name = "Apex Manipulators"
+equipment_type = ExtResource("2_type")
+base_stats = {
+1: 45.0
+}
+item_level = 55
+allowed_affix_tags = Array[int]([])

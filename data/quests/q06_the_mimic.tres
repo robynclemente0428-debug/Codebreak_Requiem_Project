@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Give one skill two WHEN rules"
+kind = "program_branches"
+
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Defeat The Mimic"
+kind = "kill"
+target = "the_mimic"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q06_the_mimic"
+title = "THE MIMIC"
+description = "A Null thing is copying everything we do.
+BOSS TRAIT: copies your equipped skill. Predictable scripts get used against you.
+SCRIPT TASK: give one skill two different WHEN rules, so its pattern changes."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q05_the_leak"])
+reward_credits = 175
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "III"

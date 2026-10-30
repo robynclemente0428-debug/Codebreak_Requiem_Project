@@ -1,0 +1,70 @@
+[gd_scene format=3 uid="uid://brcgbkbio4vce"]
+
+[ext_resource type="PackedScene" uid="uid://cvai1w4rt44ew" path="res://assets/models/npc/Rogue_final.glb" id="1_rhotu"]
+[ext_resource type="Shader" uid="uid://b3hu6466uhcgo" path="res://assets/shaders/materials/shader/glitch.gdshader" id="2_6lsn0"]
+[ext_resource type="Script" uid="uid://616jhum0djnx" path="res://scenes/loot/shop_npc/model_anchor.gd" id="2_s7kvg"]
+[ext_resource type="AnimationLibrary" uid="uid://cesyaiefc7pbu" path="res://scenes/player/animations/player_anims.res" id="4_s7kvg"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_s7kvg"]
+render_priority = 0
+shader = ExtResource("2_6lsn0")
+shader_parameter/albedo_color = Color(1, 1, 1, 1)
+shader_parameter/roughness = 0.6
+shader_parameter/metallic = 0.0
+shader_parameter/intensity = 1.0
+shader_parameter/glitch_speed = 14.0
+shader_parameter/burst_chance = 0.25
+shader_parameter/constant_glitch = 0.05
+shader_parameter/slice_count = 24.0
+shader_parameter/slice_displacement = 0.15
+shader_parameter/slice_active_chance = 0.35
+shader_parameter/vertex_jitter = 0.02
+shader_parameter/rgb_split = 0.02
+shader_parameter/glitch_color_a = Color(0, 1, 0.9, 1)
+shader_parameter/glitch_color_b = Color(1, 0, 0.6, 1)
+shader_parameter/glitch_emission = 2.0
+shader_parameter/scanline_density = 120.0
+shader_parameter/scanline_strength = 0.25
+shader_parameter/scanline_scroll = 1.5
+shader_parameter/dissolve_blocks = 16.0
+shader_parameter/dissolve_amount = 0.12
+
+[node name="Rogue_final" unique_id=1883957639 instance=ExtResource("1_rhotu")]
+script = ExtResource("2_s7kvg")
+
+[node name="Skeleton3D" parent="Armature" parent_id_path=PackedInt32Array(2079331461) index="0" unique_id=2063942219]
+bones/0/position = Vector3(0.0016506908, -0.000508429, -0.53510034)
+bones/0/rotation = Quaternion(-0.6851997, -0.27045605, 0.24788663, 0.6292116)
+bones/1/rotation = Quaternion(0.075697124, 0.21546836, 0.96917486, -0.09243063)
+bones/2/rotation = Quaternion(-0.3455197, 0.11856722, -0.012976262, 0.9308006)
+bones/3/rotation = Quaternion(0.5047712, -0.07796291, 0.032912724, 0.8590953)
+bones/4/rotation = Quaternion(0.3648121, -0.12916316, 0.02683296, 0.92168814)
+bones/6/rotation = Quaternion(-0.121251605, 0.0012675186, 0.98414105, 0.12947173)
+bones/7/rotation = Quaternion(-0.31583458, 0.08115424, -0.027808148, 0.94492817)
+bones/8/rotation = Quaternion(0.56702954, 0.13529414, 0.058156915, 0.8104263)
+bones/9/rotation = Quaternion(0.39240527, 0.15376738, -0.06161526, 0.90475255)
+bones/11/rotation = Quaternion(-0.015824161, 0.041020434, -0.00400367, 0.999025)
+bones/12/rotation = Quaternion(0.092266776, 0.08178696, -0.006285029, 0.99234986)
+bones/13/rotation = Quaternion(0.09284445, 0.081781, -0.0063894326, 0.9922958)
+bones/14/rotation = Quaternion(-0.5621947, -0.42586765, 0.60735947, -0.36563444)
+bones/15/rotation = Quaternion(0.4072431, -0.097131565, 0.01559121, 0.90800637)
+bones/16/rotation = Quaternion(0.054934125, 0.06925159, 0.41664633, 0.90476096)
+bones/17/rotation = Quaternion(-0.1363153, 0.4711047, 0.008987344, 0.87143433)
+bones/18/rotation = Quaternion(0.051402085, -0.011408022, 0.10029925, 0.9935632)
+bones/19/rotation = Quaternion(0.14024433, -0.002097739, 0.054330565, 0.988623)
+bones/20/rotation = Quaternion(6.7865435e-06, -0.0002571908, -0.007073424, 0.99997497)
+bones/22/rotation = Quaternion(0.046996143, -0.010668346, 0.00092764373, 0.99883765)
+bones/23/rotation = Quaternion(-0.064775206, 0.17767742, -0.0014001686, 0.98195374)
+bones/25/rotation = Quaternion(0.6271064, -0.37472683, 0.5632079, 0.3861529)
+bones/26/rotation = Quaternion(0.3566023, 0.09959179, 0.22166064, 0.90209913)
+bones/27/rotation = Quaternion(0.10401714, -0.007049901, -0.3560165, 0.9286459)
+bones/28/rotation = Quaternion(0.056908425, -0.34367418, -0.1266221, 0.9287715)
+bones/29/rotation = Quaternion(0.07705656, 0.019880699, -0.02965498, 0.99638736)
+bones/30/rotation = Quaternion(0.13309026, 0.00053919083, -0.02630539, 0.9907547)
+bones/31/rotation = Quaternion(-1.0780085e-05, -0.00046163844, -0.009318636, 0.9999565)
+
+[node name="tripo_node_f7cf0a46-2fa2-4d09-a65f-17c5bb5db7f7" parent="Armature/Skeleton3D" index="0" unique_id=704613920]
+material_overlay = SubResource("ShaderMaterial_s7kvg")
+
+[node name="AnimationPlayer" parent="." index="1" unique_id=1283316875]
+libraries/player_anims = ExtResource("4_s7kvg")

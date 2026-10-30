@@ -1,0 +1,51 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/breakpoint_support.gd" id="2_beh"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_bp_bonus"]
+script = ExtResource("3_knob")
+id = &"bp_bonus"
+display_name = "Marked damage"
+kind = 1
+flag_key = "breakpoint_bonus"
+step = 0.1
+min_steps = -2
+max_steps = 3
+cost_per_step = 1.5
+unit = "%"
+
+[sub_resource type="Resource" id="Knob_bp_hits"]
+script = ExtResource("3_knob")
+id = &"bp_hits"
+display_name = "Hits to break"
+kind = 1
+flag_key = "breakpoint_hits"
+step = -1.0
+min_steps = -2
+max_steps = 2
+cost_per_step = 2.5
+unit = ""
+
+[sub_resource type="Resource" id="Knob_bp_burst"]
+script = ExtResource("3_knob")
+id = &"bp_burst"
+display_name = "Break damage"
+kind = 1
+flag_key = "breakpoint_burst"
+step = 0.5
+min_steps = -2
+max_steps = 3
+cost_per_step = 1.0
+unit = "%"
+
+[resource]
+script = ExtResource("1_def")
+id = "breakpoint_support"
+display_name = "Breakpoint Support"
+allowed_tags = Array[int]([3])
+behavior_script = ExtResource("2_beh")
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_bp_bonus"), SubResource("Knob_bp_hits"), SubResource("Knob_bp_burst")])
+mana_cost_increase = 0.15
+description = "Shoot only. Your first hit on an enemy sets a breakpoint on it. Further hits on it deal 30% more damage, and the 5th hit consumes the breakpoint for 200% more damage. A mark nobody hits for 6 seconds wears off. Adds the WHEN target_marked block."

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Script a skill: when enemies_nearby()"
+kind = "program_condition"
+target = "enemies_nearby"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Trigger your rule in a fight"
+kind = "rule_triggered"
+target = "enemies_nearby"
+required = 3
+
+[resource]
+script = ExtResource("2_quest")
+id = "q00_proximity_trigger"
+title = "PROXIMITY TRIGGER"
+description = "Brack wants your skill to react before you face the Queen.
+SCRIPT TASK: open the skill editor (K > SCRIPTING) and make a skill fire when enemies are near, then use it in a fight."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["tut_basics"])
+reward_credits = 25
+metadata/giver = "Brack"
+metadata/act = "I"

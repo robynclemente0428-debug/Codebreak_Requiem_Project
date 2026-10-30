@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://systems/stims/stim_definition.gd" id="2_stim"]
+
+[sub_resource type="Resource" id="Stim_base"]
+script = ExtResource("2_stim")
+kind = 1
+base_amount = 50.0
+duration = 3.0
+max_charges = 30
+charges_per_use = 8
+
+[resource]
+script = ExtResource("1_item")
+id = "field_mana_stim"
+display_name = "Field Mana Stim"
+item_level = 1
+stim = SubResource("Stim_base")
+base_value = 15

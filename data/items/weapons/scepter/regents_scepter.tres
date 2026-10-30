@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://ck46faad4yccp"]
+
+[ext_resource type="PackedScene" uid="uid://cif2onfvudsji" path="res://assets/models/weapons/weapon_scene/scepter/scepter_void.tscn" id="1_br5ec"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://da8fbqcmjfpal" path="res://data/item_types/weapon_types/scepter.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "regents_scepter"
+display_name = "Regent's Scepter"
+mesh = ExtResource("1_br5ec")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 20.0,
+4: 39.0,
+5: 1.5
+}
+item_level = 35

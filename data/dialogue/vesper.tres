@@ -1,0 +1,68 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3]
+
+[ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
+
+[resource]
+script = ExtResource("1_dlg")
+source = "# Vesper: Null Speaker, guide to the Core (Acts IV and V). Calm, eerie.
+~ start
+@ quest_ready:q08_null_gatekeeper -> ready_q08_null_gatekeeper
+@ quest_ready:q07_null_weaver_prime -> ready_q07_null_weaver_prime
+@ quest_active:q08_null_gatekeeper -> remind_q08_null_gatekeeper
+@ quest_active:q07_null_weaver_prime -> remind_q07_null_weaver_prime
+@ can_start:q07_null_weaver_prime -> offer_q07_null_weaver_prime
+@ can_start:q08_null_gatekeeper -> offer_q08_null_gatekeeper
+-> idle
+
+~ offer_q07_null_weaver_prime
+Vesper: You can hear it, can’t you? The Null speaks. You just never listened.
+Vesper: The Weaver spins the Null’s grammar. Break it and you’ll hear the language.
+* ACCEPT -> accept_q07_null_weaver_prime
+* DECLINE -> end
+
+~ accept_q07_null_weaver_prime
+> start_quest q07_null_weaver_prime
+Vesper: Don’t fear it. Read it.
+-> end
+
+~ remind_q07_null_weaver_prime
+# NEW line below
+Vesper: Read the pattern. Step through the gaps.
+
+~ ready_q07_null_weaver_prime
+Vesper: Done?
+* TURN IN -> turnin_q07_null_weaver_prime
+* NOT YET -> end
+
+~ turnin_q07_null_weaver_prime
+> turn_in q07_null_weaver_prime
+Vesper: You see it now. The Null has logic. It isn’t just destruction.
+-> start
+
+~ offer_q08_null_gatekeeper
+Vesper: The Gatekeeper guards the Core. It will not let you pass.
+* ACCEPT -> accept_q08_null_gatekeeper
+* DECLINE -> end
+
+~ accept_q08_null_gatekeeper
+> start_quest q08_null_gatekeeper
+Vesper: Prove your code is worthy. Sudo will test you first.
+-> end
+
+~ remind_q08_null_gatekeeper
+# NEW line below
+Vesper: Sudo first. Then the Gate.
+
+~ ready_q08_null_gatekeeper
+Vesper: Done?
+* TURN IN -> turnin_q08_null_gatekeeper
+* NOT YET -> end
+
+~ turnin_q08_null_gatekeeper
+> turn_in q08_null_gatekeeper
+Vesper: The way is open. What you do next is yours alone.
+-> start
+
+~ idle
+Vesper: Listen. The silence has structure."
+metadata/_custom_type_script = "uid://dd85gxidfhqxl"

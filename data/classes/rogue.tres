@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://d3jyip4ox0phv"]
+
+[ext_resource type="Script" uid="uid://li80knwebkc2" path="res://systems/stats/class_data.gd" id="1_7ph07"]
+[ext_resource type="Texture2D" uid="uid://cc27h8y0jcsg6" path="res://assets/icons/classes/rogue.png" id="1_qgxf2"]
+[ext_resource type="PackedScene" uid="uid://dyrt84anfk21o" path="res://scenes/player/models/rogue_model.tscn" id="2_l0n1y"]
+[ext_resource type="PackedScene" uid="uid://bfoeuw023l60f" path="res://assets/models/classes/rogue/Rogue_final.glb" id="3_07stm"]
+[ext_resource type="Resource" uid="uid://cpf23qoxywjef" path="res://data/items/gem/shoot_gem.tres" id="5_cjm6j"]
+[ext_resource type="Resource" uid="uid://c6ba8tmmiqaah" path="res://data/items/weapons/assault_rifle/service_rifle.tres" id="6_ewcr0"]
+
+[resource]
+script = ExtResource("1_7ph07")
+id = &"rogue"
+display_name = "Rogue"
+description = "Fast and precise, always one step ahead of the fight."
+icon = ExtResource("1_qgxf2")
+sort_order = 1
+tagline = "Fast hands, faster exits"
+preview_scene = ExtResource("3_07stm")
+accent_color = Color(0.22352941, 1, 0.53333336, 1)
+dexterity = 24
+model_scene = ExtResource("2_l0n1y")
+starting_weapon = ExtResource("6_ewcr0")
+starting_skill_gem = ExtResource("5_cjm6j")

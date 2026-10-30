@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://bmdn5h7llbe83"]
+
+[ext_resource type="PackedScene" uid="uid://tq7cjyq252x8" path="res://assets/models/weapons/weapon_scene/sword/sword.tscn" id="1_4qnqe"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://cuhqvt0ypdxuk" path="res://data/item_types/weapon_types/sword.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "knights_blade"
+display_name = "Knight's Blade"
+mesh = ExtResource("1_4qnqe")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 23.0,
+4: 38.0,
+5: 1.6
+}
+item_level = 25

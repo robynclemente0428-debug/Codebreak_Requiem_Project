@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://d2ln3e1w2uyjg"]
+
+[ext_resource type="PackedScene" uid="uid://74yfvli07tk3" path="res://assets/models/weapons/scrap_shield.glb" id="1_5gm0a"]
+
+[node name="ScrapShield" type="Node3D" unique_id=2053530949]
+transform = Transform3D(3.4969112e-08, -5.280189e-15, 0.8, -1.2079664e-07, -0.8, 0, 0.8, -1.2079664e-07, -3.4969112e-08, 0, 0, 0)
+
+[node name="scrap_shield" parent="." unique_id=1031755790 instance=ExtResource("1_5gm0a")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, -1.6940659e-21, 1, 0, 0, 0.2)

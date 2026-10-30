@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://systems/props/loot_prop.gd" id="1_prop"]
+[ext_resource type="PackedScene" path="res://assets/models/Sci-Fi Essentials Kit[Standard]/glTF/Prop_Barrel1.gltf" id="2_closed"]
+
+[node name="LootBarrel" type="StaticBody3D"]
+script = ExtResource("1_prop")
+closed_model_scene = ExtResource("2_closed")
+collision_radius = 0.36
+collision_height = 1.1
+max_health = 10.0
+credits_min = 2
+credits_max = 8
+item_chance = 0.25
+item_rolls = 1
+rarity_weights = {"magic": 25, "normal": 70, "rare": 5}

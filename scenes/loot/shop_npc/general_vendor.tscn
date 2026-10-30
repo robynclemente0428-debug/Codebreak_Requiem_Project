@@ -1,0 +1,30 @@
+[gd_scene format=3 uid="uid://c8xae3fagfdfj"]
+
+[ext_resource type="Script" uid="uid://ccf8y7a8mnpal" path="res://systems/economy/shop_npc.gd" id="1_58xgl"]
+[ext_resource type="Resource" uid="uid://cstadbd417g5b" path="res://data/shops/general_vendor.tres" id="2_27m2b"]
+[ext_resource type="Resource" uid="uid://c2h1uynv8dy0d" path="res://data/dialogue/commander.tres" id="3_mr5k5"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_o8aln"]
+radius = 2.1207526
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_5uciv"]
+
+[node name="GeneralVendor" type="Area3D" unique_id=1385360680]
+collision_mask = 3
+script = ExtResource("1_58xgl")
+shop = ExtResource("2_27m2b")
+dialogue = ExtResource("3_mr5k5")
+info_title = "Outpost Commander"
+info_description = "Keeps the outpost supplied. Buys what you drag back from the dungeons and sells what you need to go back in."
+
+[node name="InteractionShape" type="CollisionShape3D" parent="." unique_id=1195533351]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("SphereShape3D_o8aln")
+
+[node name="Body" type="StaticBody3D" parent="." unique_id=1234681510]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Body" unique_id=1744637797]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CylinderShape3D_5uciv")
+
+[node name="ModelAnchor" type="Node3D" parent="." unique_id=373653127]

@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dxj2tgws6mu8b"]
+
+[ext_resource type="Script" uid="uid://bal11y0ttc2y6" path="res://scenes/check_mult.gd" id="1_m228k"]
+
+[node name="Check_Mult" type="Node" unique_id=2120344952]
+script = ExtResource("1_m228k")

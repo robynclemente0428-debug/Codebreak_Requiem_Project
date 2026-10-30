@@ -1,0 +1,308 @@
+class_name QuestTracker
+extends Control
+## Always-visible overlay: active quests and their objectives, plus a toast banner.
+## Sits in the top-right corner under the minimap (and moves up when the minimap is hidden).
+## Its header has a [-] / [+] button (or the minimize key) that folds it down to one line.
+## Only that button takes the mouse; the rest never blocks clicks meant for the game.
+
+@export var font: Font
+@export var accent := Color("#00E5FF")
+@export var tracker_width: float = 300.0     # matches the minimap
+@export var margin_right: float = 32.0       # matches the minimap's margin
+@export var margin_top: float = 32.0         # when there's no minimap above it
+@export var gap_below_minimap: float = 12.0
+@export var minimize_key: Key = KEY_L
+@export var max_quests: int = 3
+@export_range(0.0, 1.0, 0.01) var bg_opacity: float = 0.55
+@export var base_font_size: int = 16
+
+const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
+const COL_TEXT := Color(0.85, 0.96, 1.0)
+const COL_DIM := Color(0.55, 0.78, 0.85)
+const COL_DONE := Color(0.35, 1.0, 0.65)
+const COL_READY := Color(1.0, 0.82, 0.30)
+
+var _font: Font
+var _quests: QuestManager
+var _panel: PanelContainer
+var _box: VBoxContainer
+var _count_label: Label
+var _min_btn: Button
+var _minimized := false
+var _minimap: Control
+var _toast: Label
+var _toast_tween: Tween
+
+
+func _enter_tree() -> void:
+	add_to_group("quest_tracker")
+
+
+func _ready() -> void:
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_font = font
+	if _font == null and ResourceLoader.exists(DEFAULT_FONT):
+		_font = load(DEFAULT_FONT)
+	_build_ui()
+	_refresh()
+
+
+# ---------- PUBLIC ----------
+func bind(quests: QuestManager) -> void:
+	if _quests:
+		_quests.quest_started.disconnect(_on_started)
+		_quests.quest_updated.disconnect(_on_changed)
+		_quests.quest_ready.disconnect(_on_ready)
+		_quests.quest_completed.disconnect(_on_completed)
+	_quests = quests
+	if _quests:
+		_quests.quest_started.connect(_on_started)
+		_quests.quest_updated.connect(_on_changed)
+		_quests.quest_ready.connect(_on_ready)
+		_quests.quest_completed.connect(_on_completed)
+	_refresh()
+
+
+# ---------- SIGNALS ----------
+func _on_started(s: QuestState) -> void:
+	_refresh()
+	_show_toast("NEW QUEST: %s" % s.def.title.to_upper(), accent)
+
+
+func _on_changed(_s: QuestState) -> void:
+	_refresh()
+
+
+func _on_ready(s: QuestState) -> void:
+	_refresh()
+	_show_toast("QUEST READY: %s" % s.def.title.to_upper(), COL_READY)
+
+
+func _on_completed(s: QuestState) -> void:
+	_refresh()
+	_show_toast("QUEST COMPLETE: %s" % s.def.title.to_upper(), COL_DONE)
+
+
+# ---------- BUILDING ----------
+func _build_ui() -> void:
+	_panel = PanelContainer.new()
+	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_panel.anchor_left = 1.0
+	_panel.anchor_right = 1.0
+	_panel.anchor_top = 0.0
+	_panel.anchor_bottom = 0.0
+	_panel.offset_left = -(margin_right + tracker_width)
+	_panel.offset_right = -margin_right
+	_panel.offset_top = margin_top
+	_panel.offset_bottom = margin_top               # height follows the content
+	_panel.grow_vertical = Control.GROW_DIRECTION_END    # grows downward
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.02, 0.06, 0.09, bg_opacity)
+	style.border_color = Color(accent, 0.6)
+	style.border_width_left = 2
+	style.content_margin_left = 14
+	style.content_margin_right = 12
+	style.content_margin_top = 10
+	style.content_margin_bottom = 10
+	_panel.add_theme_stylebox_override("panel", style)
+	add_child(_panel)
+
+	var outer := VBoxContainer.new()
+	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	outer.add_theme_constant_override("separation", 6)
+	_panel.add_child(outer)
+
+	# Header: // QUESTS //  2  [-]
+	var head := HBoxContainer.new()
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_theme_constant_override("separation", 8)
+	outer.add_child(head)
+	var title := _label("// QUESTS //", base_font_size - 1, accent)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(title)
+	_count_label = _label("", base_font_size - 2, COL_DIM)
+	_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(_count_label)
+	_min_btn = _make_min_button()
+	head.add_child(_min_btn)
+
+	_box = VBoxContainer.new()
+	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_box.add_theme_constant_override("separation", 3)
+	outer.add_child(_box)
+
+	_toast = Label.new()
+	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_toast.anchor_left = 0.0
+	_toast.anchor_right = 1.0
+	_toast.offset_top = 110
+	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_toast.add_theme_font_size_override("font_size", base_font_size + 10)
+	_toast.add_theme_color_override("font_outline_color", Color.BLACK)
+	_toast.add_theme_constant_override("outline_size", 6)
+	if _font:
+		_toast.add_theme_font_override("font", _font)
+	_toast.modulate.a = 0.0
+	add_child(_toast)
+
+
+func _make_min_button() -> Button:
+	var b := Button.new()
+	b.focus_mode = Control.FOCUS_NONE
+	b.mouse_filter = Control.MOUSE_FILTER_STOP          # the one part that takes clicks
+	b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	b.custom_minimum_size = Vector2(26, 22)
+	if _font:
+		b.add_theme_font_override("font", _font)
+	b.add_theme_font_size_override("font_size", base_font_size - 1)
+	b.add_theme_color_override("font_color", accent)
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_color_override("font_pressed_color", Color.WHITE)
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(accent, 0.20 if state != "normal" else 0.06)
+		sb.border_color = Color(accent, 0.8 if state != "normal" else 0.45)
+		sb.set_border_width_all(1)
+		sb.content_margin_left = 4
+		sb.content_margin_right = 4
+		b.add_theme_stylebox_override(state, sb)
+	b.pressed.connect(toggle_minimized)
+	return b
+
+
+# ---------- MINIMIZE ----------
+func set_minimized(on: bool) -> void:
+	_minimized = on
+	_apply_minimized()
+
+
+func toggle_minimized() -> void:
+	set_minimized(not _minimized)
+
+
+func is_minimized() -> bool:
+	return _minimized
+
+
+func _apply_minimized() -> void:
+	if _box == null:
+		return
+	_box.visible = not _minimized
+	_min_btn.text = "+" if _minimized else "-"
+	_min_btn.tooltip_text = "%s the quest tracker  [ %s ]" % [
+		"Expand" if _minimized else "Minimize", OS.get_keycode_string(minimize_key)]
+	_panel.offset_left = -(margin_right + tracker_width)
+	_panel.offset_right = -margin_right
+	_panel.offset_bottom = _panel.offset_top             # height shrinks to the content
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == minimize_key \
+			and _panel != null and _panel.visible:
+		toggle_minimized()
+		get_viewport().set_input_as_handled()
+
+
+# ---------- FOLLOWING THE MINIMAP ----------
+## Stays right under the minimap, and glides up into its place when the minimap is hidden.
+func _process(_delta: float) -> void:
+	if _panel == null or not _panel.visible:
+		return
+	if _minimap == null or not is_instance_valid(_minimap):
+		_minimap = get_tree().get_first_node_in_group("minimap") as Control
+	var top := margin_top
+	if _minimap != null and _minimap.has_method("docked_amount"):
+		var below: float = _minimap.docked_bottom() + gap_below_minimap
+		top = lerpf(margin_top, below, _minimap.docked_amount())
+	if not is_equal_approx(_panel.offset_top, top):
+		_panel.offset_top = top
+		_panel.offset_bottom = top
+
+
+# ---------- REFRESH ----------
+func _refresh() -> void:
+	if _panel == null:
+		return
+	for child in _box.get_children():
+		_box.remove_child(child)
+		child.queue_free()
+
+	if _quests == null or _quests.active.is_empty():
+		_panel.visible = false
+		return
+	_panel.visible = true
+	_count_label.text = str(_quests.active.size())
+	_apply_minimized()
+
+	# ready quests first, then in the order they were started
+	var states: Array[QuestState] = []
+	for s: QuestState in _quests.active.values():
+		if s.status == QuestState.Status.READY_TO_TURN_IN:
+			states.push_front(s)
+		else:
+			states.append(s)
+
+	var shown := mini(states.size(), max_quests)
+	for n in shown:
+		if n > 0:
+			_box.add_child(_gap(6))
+		_add_quest(states[n])
+	if states.size() > shown:
+		_box.add_child(_label("+%d MORE  [ J ]" % (states.size() - shown), base_font_size - 3, COL_DIM))
+
+
+func _add_quest(s: QuestState) -> void:
+	var ready := s.status == QuestState.Status.READY_TO_TURN_IN
+	_box.add_child(_wrapped(s.def.title.to_upper(), base_font_size + 2, COL_READY if ready else accent))
+	if ready:
+		_box.add_child(_wrapped("RETURN TO THE QUEST GIVER", base_font_size - 2, COL_READY))
+		return
+	for i in s.def.objectives.size():
+		var o: Objective = s.def.objectives[i]
+		var have := s.progress[i]
+		var done := have >= o.required
+		var text := "???" if (o.hidden and not done) else o.description
+		if o.required > 1:
+			text += "  %d/%d" % [have, o.required]
+		var mark := "[X] " if done else "[ ] "
+		_box.add_child(_wrapped(mark + text, base_font_size - 2, COL_DONE if done else COL_TEXT))
+
+
+# ---------- TOAST ----------
+func _show_toast(text: String, colour: Color) -> void:
+	_toast.text = text
+	_toast.add_theme_color_override("font_color", colour)
+	_toast.modulate.a = 1.0
+	if _toast_tween:
+		_toast_tween.kill()
+	_toast_tween = create_tween()
+	_toast_tween.tween_interval(2.0)
+	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.6)
+
+
+# ---------- HELPERS ----------
+func _label(text: String, size_px: int, colour: Color) -> Label:
+	var l := Label.new()
+	l.text = text
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.add_theme_font_size_override("font_size", size_px)
+	l.add_theme_color_override("font_color", colour)
+	if _font:
+		l.add_theme_font_override("font", _font)
+	return l
+
+
+func _wrapped(text: String, size_px: int, colour: Color) -> Label:
+	var l := _label(text, size_px, colour)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return l
+
+
+func _gap(h: float) -> Control:
+	var c := Control.new()
+	c.custom_minimum_size.y = h
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c

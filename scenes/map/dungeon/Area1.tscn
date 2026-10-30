@@ -1,0 +1,112 @@
+[gd_scene format=3 uid="uid://balfrxet3v0xg"]
+
+[ext_resource type="Script" uid="uid://bhxjtuuwbqh34" path="res://scenes/map/dungeon/area_1.gd" id="1_pawjg"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="2_8fi85"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="3_8fi85"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_mrnmd"]
+albedo_color = Color(0.026374703, 0.031213487, 0.026139017, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_o8aln"]
+material = SubResource("StandardMaterial3D_mrnmd")
+size = Vector3(9, 0.1, 5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_8fi85"]
+size = Vector3(9, 0.1, 5)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tq27i"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_8fi85"]
+material = SubResource("StandardMaterial3D_tq27i")
+size = Vector3(9, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_xcfb7"]
+size = Vector3(5, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_o2pep"]
+size = Vector3(5, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_aixi5"]
+size = Vector3(5, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_65ax0"]
+size = Vector3(5, 1.5, 0.1)
+
+[node name="Area1" type="Node3D" unique_id=1476445714]
+script = ExtResource("1_pawjg")
+
+[node name="GridMap" type="GridMap" parent="." unique_id=2051186380]
+
+[node name="DungeonDirector" type="Node" parent="." unique_id=2003965190]
+script = ExtResource("2_8fi85")
+
+[node name="SpawnPoints" type="Node3D" parent="." unique_id=1442627928]
+
+[node name="default" type="Marker3D" parent="SpawnPoints" unique_id=1200444611]
+
+[node name="from_area_2" type="Marker3D" parent="SpawnPoints" unique_id=1430707941]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0, 0)
+
+[node name="from_hub" type="Marker3D" parent="SpawnPoints" unique_id=312134139]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0, 0)
+
+[node name="from_dungeon" type="Marker3D" parent="SpawnPoints" unique_id=1541887622]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 0)
+
+[node name="portal" parent="." unique_id=703885119 instance=ExtResource("3_8fi85")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+target_area = "uid://dj3vula8tucwg"
+target_spawn = &"from_area_1"
+
+[node name="portal2" parent="." unique_id=1485936154 instance=ExtResource("3_8fi85")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
+target_area = "uid://cgfehk70yol7f"
+target_spawn = &"from_area_1"
+
+[node name="ground" type="MeshInstance3D" parent="." unique_id=1650598254]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+mesh = SubResource("BoxMesh_o8aln")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="ground" unique_id=2123228489]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ground/StaticBody3D" unique_id=2073920209]
+shape = SubResource("BoxShape3D_8fi85")
+
+[node name="Walls" type="Node3D" parent="." unique_id=1316801457]
+visible = false
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Walls" unique_id=368397641]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.79538745, -2.4510963)
+mesh = SubResource("BoxMesh_8fi85")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D" unique_id=1356734472]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D/StaticBody3D" unique_id=1178229917]
+shape = SubResource("BoxShape3D_xcfb7")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Walls" unique_id=35630267]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0.79538745, 2.448904)
+mesh = SubResource("BoxMesh_8fi85")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D3" unique_id=720250447]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D3/StaticBody3D" unique_id=565698628]
+shape = SubResource("BoxShape3D_o2pep")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="Walls" unique_id=1391806494]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.4409323, 0.79538745, 0.017545603)
+mesh = SubResource("BoxMesh_8fi85")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D2" unique_id=213634088]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D2/StaticBody3D" unique_id=1679799876]
+shape = SubResource("BoxShape3D_aixi5")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="Walls" unique_id=1048459655]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 6.359068, 0.79538745, 0.01754522)
+mesh = SubResource("BoxMesh_8fi85")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D4" unique_id=1103098587]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D4/StaticBody3D" unique_id=915816693]
+shape = SubResource("BoxShape3D_65ax0")

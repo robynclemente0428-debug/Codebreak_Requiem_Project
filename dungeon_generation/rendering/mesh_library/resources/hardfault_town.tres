@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="DungeonTheme" format=3 uid="uid://bjsg34670e4e1"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_jxxha"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="2_t1fm8"]
+[ext_resource type="Script" uid="uid://ieg5mjinobvq" path="res://dungeon_generation/rendering/dungeon_theme.gd" id="3_glkom"]
+[ext_resource type="MeshLibrary" uid="uid://c8fj8v2pce55c" path="res://dungeon_generation/rendering/mesh_library/hardfault_town_meshes.tres" id="3_t1fm8"]
+
+[resource]
+script = ExtResource("3_glkom")
+mesh_library = ExtResource("3_t1fm8")
+enemies_per_room_min = 0
+enemies_per_room_max = 0
+loot_folders = PackedStringArray()
+metadata/_custom_type_script = "uid://ieg5mjinobvq"

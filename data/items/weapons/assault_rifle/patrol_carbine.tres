@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://dbqsx2arh35mm"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="PackedScene" uid="uid://8hy8utwehk1j" path="res://assets/models/weapons/weapon_scene/Rifle/service_rifle.tscn" id="1_rj0cv"]
+[ext_resource type="Resource" uid="uid://dq8h6kk1aaxq6" path="res://data/item_types/weapon_types/assault_rifle.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "patrol_carbine"
+display_name = "Patrol Carbine"
+mesh = ExtResource("1_rj0cv")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 5.0,
+4: 9.0,
+5: 6.0
+}
+item_level = 8

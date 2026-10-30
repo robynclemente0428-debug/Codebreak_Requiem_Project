@@ -1,0 +1,54 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3 uid="uid://div40rsqwqmu0"]
+
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="1_6ayv2"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_p0106"]
+[ext_resource type="Script" uid="uid://cgppr3ldqgmyw" path="res://systems/skills/program/skill_knob.gd" id="8_knob"]
+
+[sub_resource type="Resource" id="Knob_cleave_arc"]
+script = ExtResource("8_knob")
+id = &"cleave_arc"
+display_name = "Cleave arc"
+flag_key = "arc_angle"
+step = 15.0
+min_steps = -4
+max_steps = 4
+unit = "deg"
+
+[sub_resource type="Resource" id="Knob_cleave_targets"]
+script = ExtResource("8_knob")
+id = &"cleave_targets"
+display_name = "Cleave targets"
+flag_key = "max_targets"
+step = 1.0
+min_steps = -4
+max_steps = 4
+cost_per_step = 1.5
+unit = ""
+
+[sub_resource type="Resource" id="Knob_cleave_reach"]
+script = ExtResource("8_knob")
+id = &"cleave_reach"
+display_name = "Cleave reach"
+flag_key = "range_bonus"
+step = 0.25
+min_steps = -4
+max_steps = 4
+cost_per_step = 2.0
+unit = "m"
+
+[sub_resource type="Resource" id="Resource_12cyo"]
+script = ExtResource("2_p0106")
+stat = 10
+op = 1
+value = -0.15
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[resource]
+script = ExtResource("1_6ayv2")
+id = "cleave_support"
+display_name = "Cleave Support"
+stat_modifiers = Array[ExtResource("2_p0106")]([SubResource("Resource_12cyo")])
+allowed_tags = Array[int]([0])
+program_knobs = Array[ExtResource("8_knob")]([SubResource("Knob_cleave_arc"), SubResource("Knob_cleave_targets"), SubResource("Knob_cleave_reach")])
+mana_cost_increase = 0.2
+metadata/_custom_type_script = "uid://nmpkxw061f5h"

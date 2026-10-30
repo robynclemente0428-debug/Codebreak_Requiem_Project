@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/explode_on_kill_support.gd" id="2_beh"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="8_knob"]
+
+[sub_resource type="Resource" id="Knob_explode_radius"]
+script = ExtResource("8_knob")
+id = &"explode_radius"
+first_cast_only = true
+display_name = "Explosion radius"
+kind = 1
+flag_key = "explode_radius"
+step = 0.5
+min_steps = -3
+max_steps = 4
+cost_per_step = 1.5
+unit = "m"
+
+[sub_resource type="Resource" id="Knob_explode_power"]
+script = ExtResource("8_knob")
+id = &"explode_power"
+first_cast_only = true
+display_name = "Explosion damage"
+kind = 1
+flag_key = "explode_damage"
+step = 0.1
+min_steps = -4
+max_steps = 5
+cost_per_step = 2.0
+unit = "%"
+
+[resource]
+script = ExtResource("1_def")
+id = "explode_on_kill_support"
+display_name = "Explode on Kill Support"
+allowed_tags = Array[int]([0, 1, 2, 3])
+program_knobs = Array[ExtResource("8_knob")]([SubResource("Knob_explode_radius"), SubResource("Knob_explode_power")])
+behavior_script = ExtResource("2_beh")
+mana_cost_increase = 0.3
+description = "Enemies killed by the supported skill explode, dealing half of its damage to enemies around them."
+metadata/_custom_type_script = "uid://nmpkxw061f5h"

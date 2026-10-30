@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = "for_loop_support"
+display_name = "For Loop Support"
+allowed_tags = Array[int]([0, 1, 2, 3])
+mana_cost_increase = 0.2
+description = "Any skill. Improves the loop blocks in this skill's script: up to 7 repeats per cast instead of 5, loops cost 25% fewer points, and each repeat costs half the mana."

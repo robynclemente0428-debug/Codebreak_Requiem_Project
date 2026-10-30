@@ -1,0 +1,9 @@
+[gd_scene format=3 uid="uid://61ryqyaftnix"]
+
+[node name="WeaponSocket_R" type="BoneAttachment3D" unique_id=391335197]
+transform = Transform3D(0.2939163, 0.17700167, 0.9392997, -0.35312438, 0.9332901, -0.065373, -0.88821, -0.31247538, 0.33681247, 0, 0, 0)
+bone_name = "mixamorig_RightHand"
+bone_idx = 32
+
+[node name="Grip" type="Node3D" parent="." unique_id=798341394]
+transform = Transform3D(0.6, 2.9975998e-15, 8.940701e-09, 0, 0.6, -2.0116545e-07, -8.940701e-09, 2.0116545e-07, 0.6, 0, 0, 0)

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://djmfyvif2du4l"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "health_flat_4"
+display_name = "Titanic"
+tags = Array[int]([5])
+exclusivity_tags = Array[int]([2])
+weight = 20
+min_item_level = 45
+min_value = 135.0
+max_value = 200.0

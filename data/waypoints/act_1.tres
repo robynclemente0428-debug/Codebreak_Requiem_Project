@@ -1,0 +1,131 @@
+[gd_resource type="Resource" script_class="WaypointAct" format=3 uid="uid://babrxvnyiyfds"]
+
+[ext_resource type="Script" uid="uid://e2ln6b6b1sre" path="res://systems/waypoints/waypoint_act.gd" id="1_act"]
+[ext_resource type="Script" uid="uid://cpivoq1jwxma1" path="res://systems/waypoints/waypoint.gd" id="2_wp"]
+
+[sub_resource type="Resource" id="Waypoint_act1_town"]
+script = ExtResource("2_wp")
+id = "act1_town"
+display_name = "Hardfault Outpost"
+scene = "uid://de57t2qg8my1n"
+kind = 0
+map_position = Vector2(0.13, 0.5)
+links = PackedStringArray("act1_map1")
+note = "Brack, Sudo, vendor"
+
+[sub_resource type="Resource" id="Waypoint_act1_map1"]
+script = ExtResource("2_wp")
+id = "act1_map1"
+display_name = "The Breach"
+scene = "uid://vgnxg54ci24w"
+spawn_id = &"act_1_map_1"
+dungeon_level = 1
+map_position = Vector2(0.24, 0.25)
+links = PackedStringArray("act1_town", "act1_spillway")
+note = "Level 1"
+
+[sub_resource type="Resource" id="Waypoint_act1_spillway"]
+script = ExtResource("2_wp")
+id = "act1_spillway"
+display_name = "The Spillway"
+scene = "res://scenes/map/dungeon/act_1_spillway.tscn"
+spawn_id = &"spillway_in"
+dungeon_level = 2
+map_position = Vector2(0.4, 0.1)
+links = PackedStringArray("act1_map1", "act1_warrens")
+note = "Level 2  -  Corrupted Raider"
+
+[sub_resource type="Resource" id="Waypoint_act1_warrens"]
+script = ExtResource("2_wp")
+id = "act1_warrens"
+display_name = "Cache Warrens"
+scene = "res://scenes/map/dungeon/act_1_cache_warrens.tscn"
+spawn_id = &"warrens_in"
+dungeon_level = 3
+map_position = Vector2(0.56, 0.25)
+links = PackedStringArray("act1_spillway", "act1_map2")
+note = "Level 3  -  Corrupted Enchanter"
+
+[sub_resource type="Resource" id="Waypoint_act1_map2"]
+script = ExtResource("2_wp")
+id = "act1_map2"
+display_name = "Glitchling Nest"
+scene = "uid://des7ljssbcdxi"
+spawn_id = &"map_2"
+dungeon_level = 4
+kind = 2
+map_position = Vector2(0.62, 0.48)
+links = PackedStringArray("act1_warrens", "act1_deadsector")
+note = "Level 4  -  Glitchling Queen"
+
+[sub_resource type="Resource" id="Waypoint_act1_deadsector"]
+script = ExtResource("2_wp")
+id = "act1_deadsector"
+display_name = "Dead Sector"
+scene = "res://scenes/map/dungeon/act_1_dead_sector.tscn"
+spawn_id = &"deadsector_in"
+dungeon_level = 5
+map_position = Vector2(0.45, 0.62)
+links = PackedStringArray("act1_map2", "act1_relaytrench")
+note = "Level 5  -  Alien warband"
+
+[sub_resource type="Resource" id="Waypoint_act1_relaytrench"]
+script = ExtResource("2_wp")
+id = "act1_relaytrench"
+display_name = "Relay Trench"
+scene = "res://scenes/map/dungeon/act_1_relay_trench.tscn"
+spawn_id = &"relaytrench_in"
+dungeon_level = 6
+map_position = Vector2(0.29, 0.8)
+links = PackedStringArray("act1_deadsector", "act1_coolant")
+note = "Level 6  -  Relay Enchanter"
+
+[sub_resource type="Resource" id="Waypoint_act1_coolant"]
+script = ExtResource("2_wp")
+id = "act1_coolant"
+display_name = "Coolant Vaults"
+scene = "res://scenes/map/dungeon/act_1_coolant_vaults.tscn"
+spawn_id = &"coolant_in"
+dungeon_level = 7
+map_position = Vector2(0.49, 0.92)
+links = PackedStringArray("act1_relaytrench", "act1_foundry")
+note = "Level 7  -  Vault Raider"
+
+[sub_resource type="Resource" id="Waypoint_act1_foundry"]
+script = ExtResource("2_wp")
+id = "act1_foundry"
+display_name = "Overclock Foundry"
+scene = "res://scenes/map/dungeon/act_1_overclock_foundry.tscn"
+spawn_id = &"foundry_in"
+dungeon_level = 8
+map_position = Vector2(0.7, 0.8)
+links = PackedStringArray("act1_coolant", "act1_approach")
+note = "Level 8  -  Overclocked Raider"
+
+[sub_resource type="Resource" id="Waypoint_act1_approach"]
+script = ExtResource("2_wp")
+id = "act1_approach"
+display_name = "Firewall Approach"
+scene = "res://scenes/map/dungeon/act_1_firewall_approach.tscn"
+spawn_id = &"approach_in"
+dungeon_level = 9
+map_position = Vector2(0.82, 0.55)
+links = PackedStringArray("act1_foundry", "act1_map3")
+note = "Level 9  -  Firewall Wardens"
+
+[sub_resource type="Resource" id="Waypoint_act1_map3"]
+script = ExtResource("2_wp")
+id = "act1_map3"
+display_name = "The Gate"
+scene = "res://scenes/map/dungeon/act_1_map_3.tscn"
+spawn_id = &"from_map_2"
+dungeon_level = 10
+kind = 2
+map_position = Vector2(0.94, 0.28)
+links = PackedStringArray("act1_approach")
+note = "Level 10  -  Corrupted Gate Guard"
+
+[resource]
+script = ExtResource("1_act")
+subtitle = "HARDFAULT  -  From the Breach to the Gate, levels 1 to 10"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act1_town"), SubResource("Waypoint_act1_map1"), SubResource("Waypoint_act1_spillway"), SubResource("Waypoint_act1_warrens"), SubResource("Waypoint_act1_map2"), SubResource("Waypoint_act1_deadsector"), SubResource("Waypoint_act1_relaytrench"), SubResource("Waypoint_act1_coolant"), SubResource("Waypoint_act1_foundry"), SubResource("Waypoint_act1_approach"), SubResource("Waypoint_act1_map3")])

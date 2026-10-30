@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://0snu8whe2s7u"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_ld5xy"]
+[ext_resource type="PackedScene" uid="uid://b4brqlopkjh0x" path="res://scenes/enemy/boss/enchanter_boss_model.tscn" id="1_odby2"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="2_aerot"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_h7pnl"]
+[ext_resource type="Resource" uid="uid://bhvnamfs5xebq" path="res://data/skill_gems/blast.tres" id="3_aerot"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_h7pnl"]
+
+[resource]
+script = ExtResource("1_ld5xy")
+id = "corrupted_enchanter"
+display_name = "Corrupted Enchanter"
+allowed_modifier_tags = Array[int]([1, 3, 4])
+scene = ExtResource("2_h7pnl")
+model_scene = ExtResource("1_odby2")
+max_health = 150.0
+move_speed = 2.0
+preferred_distance = 5.0
+flee_distance = 2.0
+kite_delay_min = 0.0
+min_attack_damage = 5.0
+max_attack_damage = 15.0
+attack_speed = 1.0
+skills = Array[ExtResource("2_aerot")]([ExtResource("3_aerot")])
+basic_attack_enabled = false
+skill_cooldown = 0.5
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

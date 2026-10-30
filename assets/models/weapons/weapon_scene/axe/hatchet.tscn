@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bw827osnp38cl"]
+
+[ext_resource type="PackedScene" uid="uid://clxp3xan3vg2n" path="res://assets/models/weapons/hatchet.glb" id="1_0lh65"]
+
+[node name="Hatchet" type="Node3D" unique_id=834762800]
+transform = Transform3D(-2.1855694e-08, 0.5, 0, -0.5, -2.1855694e-08, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="hatchet" parent="." unique_id=1792781839 instance=ExtResource("1_0lh65")]

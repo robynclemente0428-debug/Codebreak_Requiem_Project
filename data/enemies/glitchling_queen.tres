@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://bg558d1aoah65"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/boss/glitchling_queen_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_fxmrk"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_u73bf"]
+[ext_resource type="Resource" uid="uid://bvfgosohngk7i" path="res://data/support_gems/multicast.tres" id="5_2tt0l"]
+[ext_resource type="Resource" uid="uid://dklpmq4u6k78e" path="res://data/skill_gems/strike.tres" id="7_2nyu2"]
+
+[resource]
+script = ExtResource("1_def")
+id = "glitchling_queen"
+display_name = "Glitchling Queen"
+allowed_modifier_tags = Array[int]([0, 2, 3, 4, 5, 6])
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+capsule_radius = 0.25
+max_health = 150.0
+armour = 8.0
+aggro_range = 14.0
+attack_range = 1.2
+min_attack_damage = 10.0
+max_attack_damage = 20.0
+attack_speed = 0.8
+skills = Array[ExtResource("4_fxmrk")]([ExtResource("7_2nyu2")])
+skill_supports = Array[ExtResource("4_u73bf")]([ExtResource("5_2tt0l")])
+basic_attack_enabled = false
+skill_cooldown = 0.1
+cooldown_jitter = 1.0
+cast_lock_fraction = 0.5

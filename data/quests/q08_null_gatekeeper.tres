@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("1_obj")
+description = "Pass Examiner Sudo's advanced exam"
+kind = "quest_done"
+target = "exam_engineer"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Defeat the Null Gatekeeper"
+kind = "kill"
+target = "null_gatekeeper"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q08_null_gatekeeper"
+title = "THE NULL GATEKEEPER"
+description = "The Gatekeeper guards the Core.
+BOSS TRAIT: shifts between a fast form and a slow, heavy form.
+SCRIPT TASK: pass Examiner Sudo's advanced rank exam."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q07_null_weaver_prime"])
+reward_credits = 250
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Vesper"
+metadata/act = "IV"

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://cpf23qoxywjef"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_1bdw5"]
+[ext_resource type="Resource" uid="uid://dg2sp662md7hi" path="res://data/skill_gems/shoot.tres" id="2_cpdyn"]
+
+[resource]
+script = ExtResource("1_1bdw5")
+id = "shoot_gem"
+display_name = "Shoot Gem"
+skill_gem = ExtResource("2_cpdyn")
+metadata/_custom_type_script = "uid://s1hliskd6ob6"

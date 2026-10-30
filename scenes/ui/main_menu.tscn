@@ -1,0 +1,115 @@
+[gd_scene format=3 uid="uid://dil7lkwsfirj1"]
+
+[ext_resource type="Theme" uid="uid://bd7e4olw1das" path="res://scenes/ui/theme/cyber_theme.tres" id="1_xpiny"]
+[ext_resource type="Script" uid="uid://2t1vpgru4joh" path="res://scenes/ui/design/corner_brackets.gd" id="2_6jbdy"]
+[ext_resource type="Script" uid="uid://c02djk2nc0c2x" path="res://scenes/ui/main_menu.gd" id="2_e2per"]
+[ext_resource type="FontFile" uid="uid://cwuudm0bjtvk4" path="res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf" id="2_iwbf0"]
+[ext_resource type="Script" uid="uid://bsn33o1eb5751" path="res://scenes/ui/design/glow_label.gd" id="3_2ysvc"]
+[ext_resource type="PackedScene" uid="uid://d4ja45anrps8a" path="res://scenes/ui/reusables/background.tscn" id="3_7mi0g"]
+[ext_resource type="PackedScene" uid="uid://cl3pqmxe1b8jk" path="res://scenes/ui/reusables/circuit_background.tscn" id="4_nqjyj"]
+[ext_resource type="PackedScene" uid="uid://c1anpifsroohb" path="res://scenes/ui/reusables/circuit_border.tscn" id="5_7vr37"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_6jbdy"]
+bg_color = Color(0.039215688, 0.101960786, 0.16470589, 0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0, 0.8980392, 1, 0.42352942)
+
+[node name="MainMenu" type="Control" unique_id=269724993]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_xpiny")
+script = ExtResource("2_e2per")
+
+[node name="Background" parent="." unique_id=2039363021 instance=ExtResource("3_7mi0g")]
+layout_mode = 1
+
+[node name="Circuit Background" parent="." unique_id=499650488 instance=ExtResource("4_nqjyj")]
+layout_mode = 1
+
+[node name="CircuitBorder" parent="." unique_id=304354947 instance=ExtResource("5_7vr37")]
+layout_mode = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=253320926]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -626.25
+offset_top = -312.0
+offset_right = 626.25
+offset_bottom = 312.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 4
+
+[node name="TitleContainer" type="CenterContainer" parent="VBoxContainer" unique_id=1909883884]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+
+[node name="TitlePanel" type="PanelContainer" parent="VBoxContainer/TitleContainer" unique_id=456224311]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_6jbdy")
+
+[node name="Label" type="Label" parent="VBoxContainer/TitleContainer/TitlePanel" unique_id=177795627]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.8980392, 1, 1)
+theme_override_fonts/font = ExtResource("2_iwbf0")
+theme_override_font_sizes/font_size = 86
+text = " Codebreak: Requiem "
+horizontal_alignment = 1
+script = ExtResource("3_2ysvc")
+layers = 3
+max_radius = 20
+intensity = 0.3
+
+[node name="Brackets" type="Control" parent="VBoxContainer/TitleContainer/TitlePanel" unique_id=1955852929]
+layout_mode = 2
+mouse_filter = 2
+script = ExtResource("2_6jbdy")
+color = Color(0.1, 0.9, 1, 1)
+arm_length = 60.0
+
+[node name="ButtonCenter" type="CenterContainer" parent="VBoxContainer" unique_id=582384812]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ButtonBox" type="VBoxContainer" parent="VBoxContainer/ButtonCenter" unique_id=432557432]
+custom_minimum_size = Vector2(550, 85)
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="PlayButton" type="Button" parent="VBoxContainer/ButtonCenter/ButtonBox" unique_id=448265523]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 5
+size_flags_vertical = 3
+text = "Play"
+
+[node name="SettingsButton" type="Button" parent="VBoxContainer/ButtonCenter/ButtonBox" unique_id=295533432]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 5
+text = "Settings"
+
+[node name="CreditsButton" type="Button" parent="VBoxContainer/ButtonCenter/ButtonBox" unique_id=838696234]
+visible = false
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 5
+text = "Credits"
+
+[node name="ExitButton" type="Button" parent="VBoxContainer/ButtonCenter/ButtonBox" unique_id=1339222447]
+custom_minimum_size = Vector2(0, 80)
+layout_mode = 2
+size_flags_horizontal = 5
+text = "Exit"

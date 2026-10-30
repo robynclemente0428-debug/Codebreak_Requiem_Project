@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://0romkytgua4l"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_wep6t"]
+[ext_resource type="PackedScene" uid="uid://dxepl755w57v3" path="res://scenes/enemy/boss/raider_boss_model.tscn" id="1_x3xuc"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="2_cmiq8"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_d2drd"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_d2drd"]
+[ext_resource type="Resource" uid="uid://fknn5tyerrs2" path="res://data/skill_gems/slam.tres" id="5_l181a"]
+
+[resource]
+script = ExtResource("1_wep6t")
+id = "corrupted_raider"
+display_name = "Corrupted Raider"
+allowed_modifier_tags = Array[int]([0, 2, 3, 4])
+scene = ExtResource("2_d2drd")
+model_scene = ExtResource("1_x3xuc")
+max_health = 200.0
+armour = 10.0
+move_speed = 2.0
+attack_range = 1.0
+min_attack_damage = 10.0
+max_attack_damage = 15.0
+skills = Array[ExtResource("2_cmiq8")]([ExtResource("5_l181a")])
+skill_cooldown = 2.0
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

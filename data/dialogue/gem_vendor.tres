@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3 uid="uid://cj7ruy6fmca7e"]
+
+[ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_inydl"]
+
+[resource]
+script = ExtResource("1_inydl")
+source = "# Cache: gem trader. Sells skill and support gems, explains how they fit together.
+~ start
+Cache: Ah. A fresh process. Looking to compile something new?
+* Show me your gems. -> shop
+* What's the difference between skill and support gems? -> about_gems
+* How do I use them? -> how_to
+* Goodbye. -> bye
+
+~ shop
+> open_shop
+
+~ about_gems
+Cache: Skill gems are functions. Strike, Slam, Blast. Each one does a thing when you call it.
+Cache: Support gems are modifiers. Alone they do nothing. Linked to a skill, they change how it runs.
+Cache: Explode on kill, more damage, wider area... One skill, many builds.
+* And scripting? -> about_scripts
+* Got it. -> start
+
+~ about_scripts
+Cache: Socket a gem, then open the SCRIPTING tab. Every gem gives you knobs to turn.
+Cache: Buffs cost points. Drawbacks give points back. Use few blocks and the code runs cleaner. Bonus damage, too.
+Cache: Supports add their own knobs to the skill they're linked to. More gems, more options.
+* Back. -> start
+
+~ how_to
+Cache: Press K. Drop a skill gem in a socket, then link supports beside it.
+Cache: Bind the skill to a key, and it's yours.
+Cache: Gems don't level from use here. Find better ones, or buy them from me.
+* Back. -> start
+
+~ bye
+Cache: Come back when your code needs more functions.
+-> end"
+metadata/_custom_type_script = "uid://dd85gxidfhqxl"

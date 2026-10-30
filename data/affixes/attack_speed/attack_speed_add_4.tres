@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://b0yng5xgheuic"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "attack_speed_add_4"
+display_name = "of the Storm"
+affix_type = "suffix"
+tags = Array[int]([6])
+exclusivity_tags = Array[int]([6])
+weight = 15
+min_item_level = 55
+stat = 5
+op = 1
+min_value = 0.35
+max_value = 0.4

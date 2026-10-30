@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Script" path="res://systems/stims/stim_definition.gd" id="2_stim"]
+
+[sub_resource type="Resource" id="Stim_base"]
+script = ExtResource("2_stim")
+kind = 0
+base_amount = 120.0
+duration = 2.5
+max_charges = 40
+charges_per_use = 12
+
+[resource]
+script = ExtResource("1_item")
+id = "combat_health_stim"
+display_name = "Combat Health Stim"
+item_level = 12
+stim = SubResource("Stim_base")
+base_value = 40

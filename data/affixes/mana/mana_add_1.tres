@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AffixDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "mana_add_1"
+display_name = "Charged"
+affix_type = "prefix"
+shape = 0
+op = 1
+tags = Array[int]([11])
+exclusivity_tags = Array[int]([11])
+min_item_level = 1
+weight = 100
+stat = 9
+min_value = 0.04
+max_value = 0.07

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://0io0stpk0ekx"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="PackedScene" uid="uid://tq7cjyq252x8" path="res://assets/models/weapons/weapon_scene/sword/sword.tscn" id="1_ok44y"]
+[ext_resource type="Resource" uid="uid://cuhqvt0ypdxuk" path="res://data/item_types/weapon_types/sword.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "daybreak_blade"
+display_name = "Daybreak Blade"
+mesh = ExtResource("1_ok44y")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 43.0,
+4: 72.0,
+5: 1.6
+}
+item_level = 55

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("1_obj")
+description = "Pass Examiner Sudo's exam"
+kind = "quest_done"
+target = "exam_operator"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Defeat the Corrupted Gate Guard"
+kind = "kill"
+target = "corrupted_gate_guard"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q02_corrupted_gate_guard"
+title = "THE CORRUPTED GATE GUARD"
+description = "The Gate Guard went rogue. Nobody gets in or out until it falls.
+BOSS TRAIT: slow, heavy swings. Dodge, then strike.
+SCRIPT TASK: pass Examiner Sudo's first rank exam."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q01_glitchling_queen"])
+reward_credits = 75
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "I"

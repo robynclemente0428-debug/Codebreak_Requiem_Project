@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="SkillProgramLimits" format=3 uid="uid://lt55vhra6acp"]
+
+[ext_resource type="Script" uid="uid://cgppr3ldqgmyw" path="res://systems/skills/program/skill_knob.gd" id="1_knob"]
+[ext_resource type="Script" uid="uid://rjdn1jn4gchv" path="res://systems/skills/program/skill_program_limits.gd" id="1_lim"]
+[ext_resource type="Script" uid="uid://cx3egq6jiui7m" path="res://systems/skills/program/efficiency_tier.gd" id="2_tierscript"]
+[ext_resource type="Resource" uid="uid://cowy0l5vsg3mb" path="res://data/skill_programs/tiers/elegant.tres" id="3_elegant"]
+[ext_resource type="Resource" uid="uid://ct25lin1evumb" path="res://data/skill_programs/tiers/lean.tres" id="4_lean"]
+
+[sub_resource type="Resource" id="Knob_damage"]
+script = ExtResource("1_knob")
+id = &"damage"
+display_name = "Damage"
+kind = 0
+min_steps = -6
+max_steps = 10
+cost_per_step = 2.0
+
+[sub_resource type="Resource" id="Knob_range_bonus"]
+script = ExtResource("1_knob")
+id = &"range_bonus"
+display_name = "Range"
+flag_key = "range_bonus"
+step = 0.25
+min_steps = -2
+max_steps = 6
+cost_per_step = 2.0
+unit = "m"
+
+[sub_resource type="Resource" id="Knob_max_targets"]
+script = ExtResource("1_knob")
+id = &"max_targets"
+display_name = "Max targets"
+flag_key = "max_targets"
+step = 1.0
+min_steps = -2
+max_steps = 3
+cost_per_step = 3.0
+unit = ""
+
+[sub_resource type="Resource" id="Knob_arc_angle"]
+script = ExtResource("1_knob")
+id = &"arc_angle"
+display_name = "Arc"
+flag_key = "arc_angle"
+step = 15.0
+min_steps = -4
+max_steps = 4
+unit = "deg"
+
+[sub_resource type="Resource" id="Knob_attack_speed"]
+script = ExtResource("1_knob")
+id = &"attack_speed"
+display_name = "Attack speed"
+kind = 2
+stat = 5
+min_steps = -8
+max_steps = 3
+cost_per_step = 2.5
+
+[resource]
+script = ExtResource("1_lim")
+knobs = Array[ExtResource("1_knob")]([SubResource("Knob_damage"), SubResource("Knob_range_bonus"), SubResource("Knob_max_targets"), SubResource("Knob_arc_angle"), SubResource("Knob_attack_speed")])
+point_budget = 6.0
+tiers = Array[ExtResource("2_tierscript")]([ExtResource("3_elegant"), ExtResource("4_lean")])

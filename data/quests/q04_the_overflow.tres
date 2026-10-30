@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Script a skill: when my_life_below()"
+kind = "program_condition"
+target = "caster_life_below"
+
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Defeat The Overflow"
+kind = "kill"
+target = "the_overflow"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q04_the_overflow"
+title = "THE OVERFLOW"
+description = "A giant Stack Crawler is sitting on Hex's power cells.
+BOSS TRAIT: gets stronger as more enemies stack on it. Kill the small ones first.
+SCRIPT TASK: make a skill hit harder when your life is low."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q02_corrupted_gate_guard"])
+reward_credits = 200
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Hex"
+metadata/act = "II"

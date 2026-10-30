@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AffixDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "mana_on_hit_add_3"
+display_name = "of Absorption"
+affix_type = "suffix"
+shape = 0
+op = 1
+tags = Array[int]([11])
+exclusivity_tags = Array[int]([18])
+min_item_level = 28
+weight = 40
+stat = 18
+min_value = 0.25
+max_value = 0.36

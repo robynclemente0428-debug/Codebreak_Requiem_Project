@@ -1,0 +1,126 @@
+[gd_scene format=3 uid="uid://2c4k0x3obuvs"]
+
+[ext_resource type="Theme" uid="uid://bd7e4olw1das" path="res://scenes/ui/theme/cyber_theme.tres" id="1_kr4ir"]
+[ext_resource type="PackedScene" uid="uid://d4ja45anrps8a" path="res://scenes/ui/reusables/background.tscn" id="2_pkwy5"]
+[ext_resource type="Script" uid="uid://df82xa0ky1bbh" path="res://scenes/ui/character_slots/character_select.gd" id="2_rpccq"]
+[ext_resource type="PackedScene" uid="uid://cl3pqmxe1b8jk" path="res://scenes/ui/reusables/circuit_background.tscn" id="3_plxai"]
+[ext_resource type="PackedScene" uid="uid://c1anpifsroohb" path="res://scenes/ui/reusables/circuit_border.tscn" id="4_rpccq"]
+[ext_resource type="Script" uid="uid://dj0ktnv8eva86" path="res://scenes/ui/design/cyber_back_button.gd" id="5_pkwy5"]
+[ext_resource type="FontFile" uid="uid://cwuudm0bjtvk4" path="res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf" id="6_plxai"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_rpccq"]
+blend_mode = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_plxai"]
+content_margin_left = 0.0
+content_margin_top = 0.0
+content_margin_right = 0.0
+content_margin_bottom = 0.0
+bg_color = Color(0, 0.8980392, 1, 0.078431375)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.8980392, 1, 0.7019608)
+
+[node name="CharacterSelect" type="Control" unique_id=401618916]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_kr4ir")
+script = ExtResource("2_rpccq")
+
+[node name="Background" parent="." unique_id=2039363021 instance=ExtResource("2_pkwy5")]
+layout_mode = 1
+mouse_filter = 2
+
+[node name="Circuit Background" parent="." unique_id=499650488 instance=ExtResource("3_plxai")]
+layout_mode = 1
+
+[node name="CircuitBorder" parent="." unique_id=304354947 instance=ExtResource("4_rpccq")]
+layout_mode = 1
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=626345794]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="Header" type="MarginContainer" parent="." unique_id=62466306]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 210.0
+grow_horizontal = 2
+theme_override_constants/margin_left = 150
+theme_override_constants/margin_top = 150
+theme_override_constants/margin_right = 150
+
+[node name="HBox" type="HBoxContainer" parent="Header" unique_id=204333975]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BackButton" type="TextureButton" parent="Header/HBox" unique_id=1669220454]
+unique_name_in_owner = true
+material = SubResource("CanvasItemMaterial_rpccq")
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+stretch_mode = 5
+script = ExtResource("5_pkwy5")
+font = ExtResource("6_plxai")
+
+[node name="TitleLabel" type="Label" parent="Header/HBox" unique_id=67934015]
+layout_mode = 2
+theme_override_font_sizes/font_size = 52
+text = "Character Select"
+
+[node name="Content" type="MarginContainer" parent="." unique_id=2026287527]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 150
+theme_override_constants/margin_top = 250
+theme_override_constants/margin_right = 150
+theme_override_constants/margin_bottom = 100
+
+[node name="VBox" type="VBoxContainer" parent="Content" unique_id=1741221971]
+layout_mode = 2
+theme_override_constants/separation = 0
+
+[node name="SlotsLabel" type="Label" parent="Content/VBox" unique_id=782712138]
+layout_mode = 2
+text = "Slots"
+
+[node name="SlotsPanel" type="PanelContainer" parent="Content/VBox" unique_id=2095179689]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_plxai")
+
+[node name="Scroll" type="ScrollContainer" parent="Content/VBox/SlotsPanel" unique_id=1748649954]
+unique_name_in_owner = true
+layout_mode = 2
+follow_focus = true
+vertical_scroll_mode = 0
+
+[node name="Padding" type="MarginContainer" parent="Content/VBox/SlotsPanel/Scroll" unique_id=1304192687]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/margin_left = 60
+theme_override_constants/margin_top = 40
+theme_override_constants/margin_right = 60
+theme_override_constants/margin_bottom = 40
+
+[node name="SlotsBox" type="HBoxContainer" parent="Content/VBox/SlotsPanel/Scroll/Padding" unique_id=170794350]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 35
+
+[node name="DeleteDialog" type="ConfirmationDialog" parent="." unique_id=1572635357]
+unique_name_in_owner = true

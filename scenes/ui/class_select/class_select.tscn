@@ -1,0 +1,253 @@
+[gd_scene format=3 uid="uid://dinmoppbmjpf6"]
+
+[ext_resource type="Theme" uid="uid://bd7e4olw1das" path="res://scenes/ui/theme/cyber_theme.tres" id="1_3x747"]
+[ext_resource type="Script" uid="uid://dxuat4ng8x02j" path="res://scenes/ui/class_select/class_select.gd" id="2_a4beg"]
+[ext_resource type="PackedScene" uid="uid://d4ja45anrps8a" path="res://scenes/ui/reusables/background.tscn" id="2_g885k"]
+[ext_resource type="PackedScene" uid="uid://cl3pqmxe1b8jk" path="res://scenes/ui/reusables/circuit_background.tscn" id="3_a4beg"]
+[ext_resource type="PackedScene" uid="uid://c1anpifsroohb" path="res://scenes/ui/reusables/circuit_border.tscn" id="4_hc0rs"]
+[ext_resource type="Script" uid="uid://dj0ktnv8eva86" path="res://scenes/ui/design/cyber_back_button.gd" id="5_g885k"]
+[ext_resource type="FontFile" uid="uid://cwuudm0bjtvk4" path="res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf" id="6_a4beg"]
+[ext_resource type="Shader" uid="uid://bj1r3k37ybtvy" path="res://assets/shaders/materials/shader/edge_detection.gdshader" id="8_hc0rs"]
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_hc0rs"]
+blend_mode = 1
+
+[sub_resource type="Environment" id="Environment_rwnve"]
+ambient_light_source = 2
+ambient_light_color = Color(4.5242905e-06, 0.7415382, 0.741538, 1)
+ambient_light_energy = 0.6
+
+[sub_resource type="QuadMesh" id="QuadMesh_o8aln"]
+flip_faces = true
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_5uciv"]
+render_priority = 0
+shader = ExtResource("8_hc0rs")
+shader_parameter/lightIntensity = 1.25
+shader_parameter/lineAlpha = 0.7
+shader_parameter/useLighting = true
+shader_parameter/lineHighlight = 0.2
+shader_parameter/lineShadow = 0.55
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tqvqj"]
+albedo_color = Color(0.039215688, 0.101960786, 0.16470589, 1)
+emission_enabled = true
+emission = Color(0, 1, 1, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_bl57u"]
+material = SubResource("StandardMaterial3D_tqvqj")
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+
+[node name="ClassSelect" type="Control" unique_id=708514682]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("1_3x747")
+script = ExtResource("2_a4beg")
+
+[node name="Background" parent="." unique_id=2039363021 instance=ExtResource("2_g885k")]
+layout_mode = 1
+
+[node name="Circuit Background" parent="." unique_id=499650488 instance=ExtResource("3_a4beg")]
+layout_mode = 1
+
+[node name="CircuitBorder" parent="." unique_id=304354947 instance=ExtResource("4_hc0rs")]
+layout_mode = 1
+
+[node name="Header" type="MarginContainer" parent="." unique_id=62466306]
+layout_mode = 0
+theme_override_constants/margin_left = 150
+theme_override_constants/margin_top = 150
+theme_override_constants/margin_right = 150
+
+[node name="HBox" type="HBoxContainer" parent="Header" unique_id=204333975]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="BackButton" type="TextureButton" parent="Header/HBox" unique_id=1669220454]
+unique_name_in_owner = true
+material = SubResource("CanvasItemMaterial_hc0rs")
+custom_minimum_size = Vector2(200, 60)
+layout_mode = 2
+stretch_mode = 5
+script = ExtResource("5_g885k")
+font = ExtResource("6_a4beg")
+
+[node name="TitleLabel" type="Label" parent="Header/HBox" unique_id=67934015]
+layout_mode = 2
+theme_override_font_sizes/font_size = 52
+text = "Class Select"
+
+[node name="Content" type="MarginContainer" parent="." unique_id=903955969]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 150
+theme_override_constants/margin_top = 250
+theme_override_constants/margin_right = 150
+theme_override_constants/margin_bottom = 100
+
+[node name="RootVBox" type="VBoxContainer" parent="Content" unique_id=1151528681]
+layout_mode = 2
+theme_override_constants/separation = 30
+
+[node name="Columns" type="HBoxContainer" parent="Content/RootVBox" unique_id=122760984]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 40
+
+[node name="ClassListPanel" type="PanelContainer" parent="Content/RootVBox/Columns" unique_id=32772743]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(440, 0)
+layout_mode = 2
+
+[node name="ListScroll" type="ScrollContainer" parent="Content/RootVBox/Columns/ClassListPanel" unique_id=966066605]
+layout_mode = 2
+follow_focus = true
+horizontal_scroll_mode = 0
+
+[node name="ListMargin" type="MarginContainer" parent="Content/RootVBox/Columns/ClassListPanel/ListScroll" unique_id=802457878]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 20
+
+[node name="ClassList" type="VBoxContainer" parent="Content/RootVBox/Columns/ClassListPanel/ListScroll/ListMargin" unique_id=42986602]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="PreviewPanel" type="PanelContainer" parent="Content/RootVBox/Columns" unique_id=1487994647]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PreviewContainer" type="SubViewportContainer" parent="Content/RootVBox/Columns/PreviewPanel" unique_id=1802752970]
+unique_name_in_owner = true
+texture_filter = 1
+layout_mode = 2
+mouse_filter = 0
+stretch = true
+stretch_shrink = 2
+
+[node name="PreviewViewport" type="SubViewport" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer" unique_id=189638231]
+own_world_3d = true
+transparent_bg = true
+handle_input_locally = false
+msaa_3d = 2
+size = Vector2i(297, 315)
+render_target_update_mode = 4
+
+[node name="Camera3D" type="Camera3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=657333656]
+transform = Transform3D(1, 0, 0, 0, 0.9975641, 0.06975647, 0, -0.06975647, 0.9975641, 0, 1.1, 4)
+environment = SubResource("Environment_rwnve")
+fov = 35.0
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport/Camera3D" unique_id=119840528]
+extra_cull_margin = 16384.0
+mesh = SubResource("QuadMesh_o8aln")
+surface_material_override/0 = SubResource("ShaderMaterial_5uciv")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=403816019]
+transform = Transform3D(0.85843116, -0.37161252, 0.35355338, 0.014808527, 0.7069517, 0.70710677, -0.51271486, -0.6017668, 0.6123724, 0, 5.8928003, 0)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="Platform" type="MeshInstance3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=308679143]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.54, 0)
+mesh = SubResource("CylinderMesh_bl57u")
+
+[node name="ModelPivot" type="Node3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=663597909]
+unique_name_in_owner = true
+
+[node name="InfoPanel" type="PanelContainer" parent="Content/RootVBox/Columns" unique_id=844698876]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(500, 0)
+layout_mode = 2
+
+[node name="InfoMargin" type="MarginContainer" parent="Content/RootVBox/Columns/InfoPanel" unique_id=1743448827]
+layout_mode = 2
+
+[node name="InfoVBox" type="VBoxContainer" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin" unique_id=1376250862]
+layout_mode = 2
+
+[node name="ClassName" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1001161328]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 56
+
+[node name="TagLine" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1590567177]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.8980392, 1, 0.7019608)
+theme_override_font_sizes/font_size = 26
+
+[node name="HSeparator" type="HSeparator" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1285052574]
+layout_mode = 2
+
+[node name="Description" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1742840384]
+unique_name_in_owner = true
+custom_maximum_size = Vector2(500, 381)
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 26
+autowrap_mode = 3
+
+[node name="AttrTitle" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=110654651]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.8980392, 1, 0.7019608)
+theme_override_font_sizes/font_size = 22
+text = "Attributes"
+
+[node name="AttributeList" type="VBoxContainer" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=23884473]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="SkillTitle" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=74447513]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.8980392, 1, 0.7019608)
+theme_override_font_sizes/font_size = 22
+text = "Starting Skill"
+
+[node name="SkillLabel" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=467870485]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="Content/RootVBox" unique_id=1561616543]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="NameTitle" type="Label" parent="Content/RootVBox/Footer" unique_id=1845871479]
+layout_mode = 2
+text = "Name"
+
+[node name="NameInput" type="LineEdit" parent="Content/RootVBox/Footer" unique_id=2049531585]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(460, 64)
+layout_mode = 2
+placeholder_text = "Enter Character Name"
+
+[node name="ErrorLabel" type="Label" parent="Content/RootVBox/Footer" unique_id=1572655065]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 20
+autowrap_mode = 3
+vertical_alignment = 1
+
+[node name="CreateButton" type="Button" parent="Content/RootVBox/Footer" unique_id=899084756]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Create Character"

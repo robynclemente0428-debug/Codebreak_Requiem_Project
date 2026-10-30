@@ -1,0 +1,39 @@
+[gd_scene format=3 uid="uid://mmnrm4wv6kkk"]
+
+[ext_resource type="Script" uid="uid://cxmn747jvth41" path="res://scenes/player/camera_rig.gd" id="1_81dl4"]
+[ext_resource type="PackedScene" uid="uid://bk1qcerygqao5" path="res://scenes/player/animations/mesh_instance_3d.tscn" id="2_6c0ns"]
+[ext_resource type="Script" uid="uid://df0riv46omd3p" path="res://scenes/player/camera_debug.gd" id="2_wfmun"]
+[ext_resource type="Script" uid="uid://c0mb314aq0xxo" path="res://scenes/player/camera_utils.gd" id="3_6c0ns"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jjvhh"]
+albedo_color = Color(0.8493206, 0, 0.10647873, 1)
+
+[node name="CameraRig" type="Node3D" unique_id=1553840949]
+top_level = true
+script = ExtResource("1_81dl4")
+
+[node name="OffsetRig" type="Node3D" parent="." unique_id=247244191]
+
+[node name="Camera3D" type="Camera3D" parent="OffsetRig" unique_id=592097885]
+transform = Transform3D(1, 0, 0, 0, 0.49999997, 0.86602545, 0, -0.86602545, 0.49999997, 0, 20.006475, 11.432955)
+doppler_tracking = 2
+projection = 1
+fov = 15.0
+size = 6.0
+near = 0.001
+far = 50.0
+
+[node name="MeshInstance3D" parent="OffsetRig/Camera3D" unique_id=130288869 instance=ExtResource("2_6c0ns")]
+
+[node name="OffsetRigDebug" type="CSGCylinder3D" parent="OffsetRig" unique_id=1527088076]
+transform = Transform3D(1, 0, 0, 0, 0.090245426, 0, 0, 0, 1, 0, 0.022, 0)
+visible = false
+sides = 16
+material = SubResource("StandardMaterial3D_jjvhh")
+
+[node name="CameraDebug" type="Node2D" parent="." unique_id=375758127]
+visible = false
+script = ExtResource("2_wfmun")
+
+[node name="CameraUtils" type="Node" parent="." unique_id=1499002331]
+script = ExtResource("3_6c0ns")

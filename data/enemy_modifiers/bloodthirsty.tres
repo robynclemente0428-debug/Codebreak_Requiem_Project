@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3 uid="uid://rsnupoki1qm4"]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_bloodthirsty_0"]
+script = ExtResource("2_mod")
+stat = 8
+value = 2.0
+source_id = "enemy_mod_bloodthirsty"
+
+[sub_resource type="Resource" id="Resource_bloodthirsty_1"]
+script = ExtResource("2_mod")
+stat = 5
+op = 1
+value = 0.2
+source_id = "enemy_mod_bloodthirsty"
+
+[sub_resource type="Resource" id="Resource_bloodthirsty_2"]
+script = ExtResource("2_mod")
+op = 1
+value = 0.2
+source_id = "enemy_mod_bloodthirsty"
+
+[resource]
+script = ExtResource("1_def")
+id = "bloodthirsty"
+display_name_prefix = "Bloodthirsty"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_bloodthirsty_0"), SubResource("Resource_bloodthirsty_1"), SubResource("Resource_bloodthirsty_2")])
+tags = Array[int]([5, 0])
+weight = 30
+min_rarity = "rare"

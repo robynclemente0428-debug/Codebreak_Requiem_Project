@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://b5qiog3l1tu7f"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "damage_flat_1"
+display_name = "Serrated"
+shape = 1
+tags = Array[int]([3])
+exclusivity_tags = Array[int]([3])
+min_stat = 3
+max_stat = 4
+added_min_low = 6.0
+added_min_high = 10.0
+added_max_low = 15.0
+added_max_high = 20.0

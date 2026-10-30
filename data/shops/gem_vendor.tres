@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ShopDefinition" format=3 uid="uid://c58lpqc0ep3fj"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_d1lht"]
+[ext_resource type="Script" uid="uid://byv47dv3as5px" path="res://systems/economy/shop_definition.gd" id="2_xxkoj"]
+
+[resource]
+script = ExtResource("2_xxkoj")
+id = "vendor"
+greeting = "Want some gems? Credit first."
+random_slots = 10
+catalog_folders = ["res://data/items/gem"]
+include_gems = true
+metadata/_custom_type_script = "uid://byv47dv3as5px"

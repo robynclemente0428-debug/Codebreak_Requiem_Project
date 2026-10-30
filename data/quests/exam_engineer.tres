@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Apply an ELEGANT script (3 blocks or fewer)"
+kind = "program_efficient"
+target = "elegant"
+
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("3_prog")
+description = "Use a rule with two conditions"
+kind = "program_nested"
+
+
+[resource]
+script = ExtResource("2_quest")
+id = "exam_engineer"
+title = "RANK EXAM: ENGINEER"
+description = "Examiner Sudo's advanced exam.
+Apply a script that earns the ELEGANT tier (3 blocks or fewer) and a rule with two conditions."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = false
+prerequisite_quest_ids = Array[String](["q07_null_weaver_prime"])
+reward_credits = 0
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Sudo"
+metadata/act = "IV"

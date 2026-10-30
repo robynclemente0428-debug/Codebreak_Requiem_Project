@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AffixDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "strength_flat_1"
+display_name = "of the Ox"
+affix_type = "suffix"
+shape = 0
+op = 0
+tags = Array[int]([10])
+exclusivity_tags = Array[int]([13])
+min_item_level = 1
+weight = 100
+stat = 11
+min_value = 2
+max_value = 4

@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ClassTrait" format=3]
+
+[ext_resource type="Script" path="res://systems/stats/class_trait.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+display_name = "Mobility"
+description = "15% more damage while moving. +0.3 movement speed for every rule in your skill programs. Phases through enemies: they can't block your path."
+moving_damage_more = 0.15
+move_speed_per_rule = 0.3
+phase_through_enemies = true

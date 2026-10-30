@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://vflkkayeqdok"]
+
+[ext_resource type="Script" uid="uid://b0e82d3pmihap" path="res://systems/skills/scenes/shoot/shoot_projectile.gd" id="1_shoot"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_tracer"]
+albedo_color = Color(1, 0.85, 0.4, 1)
+emission_enabled = true
+emission = Color(1, 0.85, 0.4, 1)
+emission_energy_multiplier = 4.0
+
+[sub_resource type="BoxMesh" id="Mesh_tracer"]
+material = SubResource("Mat_tracer")
+size = Vector3(0.05, 0.05, 0.7)
+
+[node name="ShootProjectile" type="Node3D" unique_id=667770095]
+script = ExtResource("1_shoot")
+hit_radius = 0.25
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=567573791]
+mesh = SubResource("Mesh_tracer")

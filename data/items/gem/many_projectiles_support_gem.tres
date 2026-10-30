@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://dfo6cfulo1vsu"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_sgb2r"]
+[ext_resource type="Resource" uid="uid://di0awj3a2v2si" path="res://data/support_gems/many_projectiles_support.tres" id="2_jd2oo"]
+
+[resource]
+script = ExtResource("1_sgb2r")
+id = "many_projectiles_support_gem"
+display_name = "Many Projectiles Support Gem"
+support_gem = ExtResource("2_jd2oo")
+metadata/_custom_type_script = "uid://s1hliskd6ob6"

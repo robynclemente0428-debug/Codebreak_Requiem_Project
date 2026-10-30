@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_frenzied_0"]
+script = ExtResource("2_mod")
+stat = 5
+op = 1
+value = 0.4
+source_id = "enemy_mod_frenzied"
+
+[sub_resource type="Resource" id="Resource_frenzied_1"]
+script = ExtResource("2_mod")
+stat = 2
+op = 1
+value = 0.15
+source_id = "enemy_mod_frenzied"
+
+[resource]
+script = ExtResource("1_def")
+id = "frenzied"
+display_name_prefix = "Frenzied"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_frenzied_0"), SubResource("Resource_frenzied_1")])
+tags = Array[int]([3])
+weight = 70
+min_rarity = "magic"

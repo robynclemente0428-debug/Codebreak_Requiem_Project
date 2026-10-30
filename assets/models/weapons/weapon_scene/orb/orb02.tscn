@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://g56gh8kn3wo0"]
+
+[ext_resource type="Shader" uid="uid://cl1jyn1liod36" path="res://assets/shaders/materials/game_shaders/orb_void.gdshader" id="1_ggxrv"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bsmwt"]
+render_priority = 0
+shader = ExtResource("1_ggxrv")
+shader_parameter/rim_color = Color(0.55, 0.1, 1, 1)
+shader_parameter/vein_color = Color(0.9, 0.5, 1, 1)
+shader_parameter/rim_power = 3.0
+shader_parameter/vein_width = 0.06
+shader_parameter/speed = 0.4
+
+[sub_resource type="SphereMesh" id="SphereMesh_o8aln"]
+
+[node name="Orb02" type="Node3D" unique_id=1600597995]
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0, 0)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1113861497]
+material_override = SubResource("ShaderMaterial_bsmwt")
+mesh = SubResource("SphereMesh_o8aln")

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="ShopDefinition" format=3 uid="uid://bw1olxgfgunn5"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_cq133"]
+[ext_resource type="Script" uid="uid://byv47dv3as5px" path="res://systems/economy/shop_definition.gd" id="2_1u1xk"]
+
+[resource]
+script = ExtResource("2_1u1xk")
+id = "weapon_vendor"
+display_name = "Weapon Vendor"
+greeting = "Gimme money, and I'll give ye weapon"
+random_slots = 10
+magic_chance = 0.2
+rare_chance = 0.5
+catalog_folders = ["res://data/items/weapons"]
+metadata/_custom_type_script = "uid://byv47dv3as5px"

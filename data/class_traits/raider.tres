@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ClassTrait" format=3]
+
+[ext_resource type="Script" path="res://systems/stats/class_trait.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+display_name = "Brute Force"
+description = "Every knob step in your skill programs costs 1.5x the points, but changes 2.5x as much."
+knob_cost_mult = 1.5
+knob_effect_mult = 2.5

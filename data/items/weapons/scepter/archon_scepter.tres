@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://bq724s1sc0mem"]
+
+[ext_resource type="PackedScene" uid="uid://cif2onfvudsji" path="res://assets/models/weapons/weapon_scene/scepter/scepter_void.tscn" id="1_0nb3r"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://da8fbqcmjfpal" path="res://data/item_types/weapon_types/scepter.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "archon_scepter"
+display_name = "Archon Scepter"
+mesh = ExtResource("1_0nb3r")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 24.0,
+4: 48.0,
+5: 1.5
+}
+item_level = 45

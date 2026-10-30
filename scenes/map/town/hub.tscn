@@ -1,0 +1,97 @@
+[gd_scene format=3 uid="uid://dj3vula8tucwg"]
+
+[ext_resource type="Script" uid="uid://doltcmd3ol8e7" path="res://scenes/map/town/hub.gd" id="1_sa1sc"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_aqgep"]
+[ext_resource type="PackedScene" uid="uid://c8xae3fagfdfj" path="res://scenes/loot/shop_npc/general_vendor.tscn" id="3_ex5m5"]
+[ext_resource type="Resource" uid="uid://c58lpqc0ep3fj" path="res://data/shops/gem_vendor.tres" id="3_xb0wt"]
+[ext_resource type="PackedScene" uid="uid://brcgbkbio4vce" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="4_hcck1"]
+[ext_resource type="Resource" uid="uid://cj7ruy6fmca7e" path="res://data/dialogue/gem_vendor.tres" id="5_yfwml"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tq27i"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_o8aln"]
+material = SubResource("StandardMaterial3D_tq27i")
+size = Vector3(5, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_eq5tp"]
+size = Vector3(5, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_mrnmd"]
+size = Vector3(5, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_8yn3i"]
+size = Vector3(5, 1.5, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_df28a"]
+size = Vector3(5, 1.5, 0.1)
+
+[node name="Hub" type="Node3D" unique_id=1046682812]
+script = ExtResource("1_sa1sc")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=1687890508]
+use_collision = true
+size = Vector3(5, 0.1, 5)
+
+[node name="SpawnPoints" type="Node3D" parent="." unique_id=6231160]
+
+[node name="default" type="Marker3D" parent="SpawnPoints" unique_id=1491082706]
+
+[node name="from_area_1" type="Marker3D" parent="SpawnPoints" unique_id=379242527]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.7, 0, 0)
+
+[node name="from_act_1_town" type="Marker3D" parent="SpawnPoints" unique_id=1734187179]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.5)
+
+[node name="Walls" type="Node3D" parent="." unique_id=2060661296]
+visible = false
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Walls" unique_id=1965733252]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.79538745, -2.4510963)
+mesh = SubResource("BoxMesh_o8aln")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D" unique_id=958739468]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D/StaticBody3D" unique_id=10017512]
+shape = SubResource("BoxShape3D_eq5tp")
+
+[node name="MeshInstance3D3" type="MeshInstance3D" parent="Walls" unique_id=257580254]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.79538745, 2.448904)
+mesh = SubResource("BoxMesh_o8aln")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D3" unique_id=53261208]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D3/StaticBody3D" unique_id=77261821]
+shape = SubResource("BoxShape3D_mrnmd")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="Walls" unique_id=329002984]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, -2.4409323, 0.79538745, 0.017545603)
+mesh = SubResource("BoxMesh_o8aln")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D2" unique_id=1434679825]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D2/StaticBody3D" unique_id=1996148960]
+shape = SubResource("BoxShape3D_8yn3i")
+
+[node name="MeshInstance3D4" type="MeshInstance3D" parent="Walls" unique_id=973554814]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 2.359068, 0.79538745, 0.017545395)
+mesh = SubResource("BoxMesh_o8aln")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Walls/MeshInstance3D4" unique_id=1352176185]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Walls/MeshInstance3D4/StaticBody3D" unique_id=170998612]
+shape = SubResource("BoxShape3D_df28a")
+
+[node name="GemVendor" parent="." unique_id=1385360680 instance=ExtResource("3_ex5m5")]
+transform = Transform3D(-0.7442046, 0, 0.66795176, 0, 1, 0, -0.66795176, 0, -0.7442046, -1.8082103, 0, 0)
+shop = ExtResource("3_xb0wt")
+stock_level = 20
+model_scene = ExtResource("4_hcck1")
+npc_id = "gem_vendor"
+npc_name = "Gem Vendor"
+dialogue = ExtResource("5_yfwml")
+info_title = "Gem Vendor"
+
+[node name="PortalToAct1Town" parent="." unique_id=1973424723 instance=ExtResource("2_aqgep")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 0, 0, -1.6)
+target_area = "uid://de57t2qg8my1n"
+target_spawn = &"from_hub"

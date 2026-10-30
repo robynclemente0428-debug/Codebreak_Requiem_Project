@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3 uid="uid://di0awj3a2v2si"]
+
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="1_dx76n"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="3_0cb8n"]
+[ext_resource type="Script" uid="uid://cgppr3ldqgmyw" path="res://systems/skills/program/skill_knob.gd" id="8_knob"]
+
+[sub_resource type="Resource" id="Knob_mp_count"]
+script = ExtResource("8_knob")
+id = &"mp_count"
+display_name = "Extra projectiles"
+flag_key = "max_projectiles"
+step = 1.0
+min_steps = -2
+max_steps = 2
+cost_per_step = 4.0
+unit = ""
+
+[sub_resource type="Resource" id="Knob_mp_spread"]
+script = ExtResource("8_knob")
+id = &"mp_spread"
+display_name = "Spread"
+flag_key = "spread_angle"
+step = 2.0
+min_steps = -4
+max_steps = 4
+cost_per_step = 0.25
+unit = "deg"
+
+[sub_resource type="Resource" id="Resource_rdwlw"]
+script = ExtResource("3_0cb8n")
+stat = 10
+op = 1
+value = -0.8
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[resource]
+script = ExtResource("1_dx76n")
+id = "many_projectiles_support"
+display_name = "Many Projectiles Support"
+stat_modifiers = Array[ExtResource("3_0cb8n")]([SubResource("Resource_rdwlw")])
+allowed_tags = Array[int]([2, 3])
+program_knobs = Array[ExtResource("8_knob")]([SubResource("Knob_mp_count"), SubResource("Knob_mp_spread")])
+metadata/_custom_type_script = "uid://nmpkxw061f5h"

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://crpwkah2cy7mb"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "armour_flat_3"
+display_name = "Hardened"
+tags = Array[int]([4])
+exclusivity_tags = Array[int]([4])
+weight = 50
+min_item_level = 25
+stat = 1
+min_value = 50.0
+max_value = 80.0

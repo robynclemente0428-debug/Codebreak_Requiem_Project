@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AffixDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "regeneration_add_2"
+display_name = "Reviving"
+affix_type = "prefix"
+shape = 0
+op = 1
+tags = Array[int]([8])
+exclusivity_tags = Array[int]([16])
+min_item_level = 12
+weight = 70
+stat = 14
+min_value = 0.09
+max_value = 0.14

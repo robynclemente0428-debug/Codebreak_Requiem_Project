@@ -1,0 +1,61 @@
+[gd_scene format=3 uid="uid://du4fjwgxtu0i4"]
+
+[ext_resource type="Script" uid="uid://un6p342ospqj" path="res://scenes/player/player.gd" id="1_lvxji"]
+[ext_resource type="PackedScene" uid="uid://gdffhd1v8vbo" path="res://scenes/components/health_component.tscn" id="2_75vfm"]
+[ext_resource type="Script" uid="uid://30ym8s02wn36" path="res://scenes/player/model.gd" id="2_p47bc"]
+[ext_resource type="PackedScene" uid="uid://dfll2e04xr3dx" path="res://scenes/components/stat_component.tscn" id="3_0owmy"]
+[ext_resource type="Script" uid="uid://d05c5yqnuffps" path="res://systems/stats/mana_component.gd" id="3_5gtgg"]
+[ext_resource type="PackedScene" uid="uid://mmnrm4wv6kkk" path="res://scenes/player/camera.tscn" id="3_qhqgy"]
+[ext_resource type="PackedScene" uid="uid://cwe7q8exs5rjd" path="res://scenes/components/equipment_component.tscn" id="4_0owmy"]
+[ext_resource type="PackedScene" uid="uid://b6kq06nb3tvi6" path="res://scenes/components/skill_component.tscn" id="4_qek5x"]
+[ext_resource type="PackedScene" uid="uid://bgklj8dvj2rxk" path="res://scenes/components/inventory_component.tscn" id="5_qek5x"]
+[ext_resource type="Script" uid="uid://dq1by7nuiqnej" path="res://scenes/loot/pickup_controller.gd" id="8_h17s1"]
+[ext_resource type="Script" uid="uid://bcxv00tx87paa" path="res://systems/economy/currency_component.gd" id="9_je7p5"]
+[ext_resource type="Script" uid="uid://cw1efwt65t1yk" path="res://scenes/player/enemy_hover.gd" id="10_fm80t"]
+[ext_resource type="Script" uid="uid://pdup1r0ec6ph" path="res://systems/quest/quest_manager.gd" id="11_gx1jg"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_o8aln"]
+height = 1.7
+
+[node name="Player" type="CharacterBody3D" unique_id=1695220546 groups=["players"]]
+collision_layer = 2
+collision_mask = 13
+script = ExtResource("1_lvxji")
+
+[node name="HealthComponent" parent="." unique_id=378635613 instance=ExtResource("2_75vfm")]
+
+[node name="ManaComponent" type="Node" parent="." unique_id=2106610683]
+script = ExtResource("3_5gtgg")
+
+[node name="StatComponent" parent="." unique_id=1059519250 instance=ExtResource("3_0owmy")]
+
+[node name="SkillComponent" parent="." unique_id=896865260 instance=ExtResource("4_qek5x")]
+
+[node name="EquipmentComponent" parent="." unique_id=443005562 instance=ExtResource("4_0owmy")]
+
+[node name="InventoryComponent" parent="." unique_id=1438759893 instance=ExtResource("5_qek5x")]
+
+[node name="PickupController" type="Node" parent="." unique_id=934872485 node_paths=PackedStringArray("inventory")]
+script = ExtResource("8_h17s1")
+inventory = NodePath("../InventoryComponent")
+
+[node name="CurrencyComponent" type="Node" parent="." unique_id=1918926493]
+script = ExtResource("9_je7p5")
+
+[node name="EnemyHover" type="Node" parent="." unique_id=1719285322]
+script = ExtResource("10_fm80t")
+
+[node name="QuestManager" type="Node" parent="." unique_id=1605515219]
+script = ExtResource("11_gx1jg")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1405519848]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8613281, 0)
+shape = SubResource("CylinderShape3D_o8aln")
+debug_color = Color(0, 0.6, 0.70980394, 0.80784315)
+
+[node name="model" type="Node3D" parent="." unique_id=1548661102]
+script = ExtResource("2_p47bc")
+
+[node name="CameraRig" parent="." unique_id=1553840949 node_paths=PackedStringArray("player") instance=ExtResource("3_qhqgy")]
+player = NodePath("..")
+enabled = true

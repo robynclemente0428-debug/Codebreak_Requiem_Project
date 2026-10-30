@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ClassTrait" format=3]
+
+[ext_resource type="Script" path="res://systems/stats/class_trait.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+display_name = "Execution Protocol"
+description = "Per-hit rules (TARGET LIFE BELOW) cost 50% fewer points and their damage steps count double. Opening shot: 50% more damage against enemies still at full life."
+hit_rule_cost_mult = 0.5
+hit_rule_effect_mult = 2.0
+full_life_damage_more = 0.5

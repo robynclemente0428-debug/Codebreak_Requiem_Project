@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Write a rule with two conditions"
+kind = "program_nested"
+
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Defeat Null Weaver Prime"
+kind = "kill"
+target = "null_weaver_prime"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q07_null_weaver_prime"
+title = "NULL WEAVER PRIME"
+description = "The Weaver spins the Null's grammar.
+BOSS TRAIT: weaves traps in patterns. Read the pattern, step through the gaps.
+SCRIPT TASK: write a rule with two conditions (when ... and ...)."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q06_the_mimic"])
+reward_credits = 200
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Vesper"
+metadata/act = "IV"

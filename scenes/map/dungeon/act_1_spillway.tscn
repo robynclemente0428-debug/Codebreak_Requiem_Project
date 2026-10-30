@@ -1,0 +1,108 @@
+[gd_scene format=3 uid="uid://dbnv64kqsvu1a"]
+
+[ext_resource type="Script" uid="uid://blbsgtjt3mdxp" path="res://scenes/map/dungeon/dungeon.gd" id="1_dun"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_portal"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
+[ext_resource type="Resource" uid="uid://csp2aspl8pru6" path="res://dungeon_generation/rendering/mesh_library/resources/pbr.tres" id="4_theme"]
+[ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
+[ext_resource type="MeshLibrary" uid="uid://bktm4q5140ysj" path="res://dungeon_generation/rendering/mesh_library/hardfault_meshes.tres" id="6_mesh"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
+[ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="10_enemym"]
+[ext_resource type="Resource" uid="uid://0romkytgua4l" path="res://data/enemies/raider_boss.tres" id="e_raider"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_1"]
+agent_height = 1.8
+agent_radius = 0.3
+
+[node name="Spillway" type="Node3D" unique_id=883893316]
+script = ExtResource("1_dun")
+dungeon_level = 2
+respawn_spawn_id = &"spillway_in"
+portal_scene = ExtResource("2_portal")
+metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
+
+[node name="DungeonDirector" type="Node" parent="." unique_id=1480970731 node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("3_dir")
+grid_width = 100
+grid_height = 100
+corridor_width = 2
+min_room_size = 6
+max_room_size = 9
+room_interval = 8
+num_branch_rooms = 2
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_theme")
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+filler_rooms = true
+random_rooms = 4
+random_room_spread = 12
+metadata/_custom_type_script = "uid://b5gwgfu4bdnrx"
+
+[node name="DungeonPopulator" type="Node" parent="." unique_id=1899003129 node_paths=PackedStringArray("director", "enemies_root", "loot_root")]
+script = ExtResource("5_pop")
+director = NodePath("../DungeonDirector")
+enemies_root = NodePath("../Enemies")
+loot_root = NodePath("../Loot")
+metadata/_custom_type_script = "uid://gvonfu37eay0"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=356024120]
+navigation_mesh = SubResource("NavigationMesh_1")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D" unique_id=609820841]
+mesh_library = ExtResource("6_mesh")
+
+[node name="Enemies" type="Node3D" parent="." unique_id=1244537812]
+
+[node name="Loot" type="Node3D" parent="." unique_id=1300682516]
+
+[node name="Layout" type="Node3D" parent="." unique_id=178445669]
+
+[node name="PortalBack" type="Marker3D" parent="Layout" unique_id=1592981762]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 100)
+script = ExtResource("7_portalm")
+target_area = "uid://vgnxg54ci24w"
+target_spawn = &"map_1"
+dungeon_level = 1
+arrival_spawn_id = &"spillway_in"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnIn" type="Marker3D" parent="Layout" unique_id=1564255411]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 100)
+script = ExtResource("8_spawnm")
+spawn_id = &"spillway_in"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="PortalNext" type="Marker3D" parent="Layout" unique_id=809868404]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 190, 1, 60)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/dungeon/act_1_cache_warrens.tscn"
+target_spawn = &"warrens_in"
+dungeon_level = 3
+arrival_spawn_id = &"spillway_out"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnOut" type="Marker3D" parent="Layout" unique_id=1313771983]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 189, 0, 60)
+script = ExtResource("8_spawnm")
+spawn_id = &"spillway_out"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="MiniBossArena" type="Marker3D" parent="Layout" unique_id=819938592]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 0, 120)
+script = ExtResource("9_roomm")
+room_size = Vector2i(10, 9)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="MiniBoss" type="Marker3D" parent="Layout/MiniBossArena" unique_id=2007172697]
+script = ExtResource("10_enemym")
+enemy = ExtResource("e_raider")
+rarity = "rare"
+metadata/_custom_type_script = "uid://bri1ph1ms875r"

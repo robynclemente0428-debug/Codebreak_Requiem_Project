@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="ClassTrait" format=3]
+
+[ext_resource type="Script" path="res://systems/stats/class_trait.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+display_name = "Combo Logic"
+description = "Rules using EVERY NTH CAST cost 50% fewer points, and their knob steps are more effective the rarer the rule fires: x1.5 every 2nd cast, +0.25 for each step rarer (x2.5 every 6th)."
+nth_rule_cost_mult = 0.5
+nth_rule_effect_mult = 1.5
+nth_rule_effect_per_n = 0.25

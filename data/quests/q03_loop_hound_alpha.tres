@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_prog")
+description = "Script a skill: when every_nth_cast()"
+kind = "program_condition"
+target = "every_nth_cast"
+
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Defeat Loop Hound Alpha"
+kind = "kill"
+target = "loop_hound_alpha"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q03_loop_hound_alpha"
+title = "LOOP HOUND ALPHA"
+description = "Alpha leads the pack that blocks our road.
+BOSS TRAIT: charges along the same path again and again. Learn the loop, break it.
+SCRIPT TASK: give a skill a repeating cycle with every_nth_cast()."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q02_corrupted_gate_guard"])
+reward_credits = 100
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "II"

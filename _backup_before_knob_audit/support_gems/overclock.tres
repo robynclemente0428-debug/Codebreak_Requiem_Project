@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/overclock_support.gd" id="2_beh"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_oc_speed"]
+script = ExtResource("3_knob")
+id = &"oc_speed"
+display_name = "Speed per stack"
+kind = 1
+flag_key = "overclock_speed"
+step = 0.02
+min_steps = -2
+max_steps = 3
+cost_per_step = 1.5
+unit = "%"
+
+[sub_resource type="Resource" id="Knob_oc_max"]
+script = ExtResource("3_knob")
+id = &"oc_max"
+display_name = "Max stacks"
+kind = 1
+flag_key = "overclock_max"
+step = 1.0
+min_steps = -2
+max_steps = 3
+cost_per_step = 1.5
+unit = ""
+
+[resource]
+script = ExtResource("1_def")
+id = "overclock_support"
+display_name = "Overclock Support"
+allowed_tags = Array[int]([3])
+behavior_script = ExtResource("2_beh")
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_oc_speed"), SubResource("Knob_oc_max")])
+mana_cost_increase = 0.1
+description = "Shoot only. Every shot fired right after the last one (within about a second of it) adds a stack, up to 5. Each stack makes the rifle fire 8% faster. Stop shooting and the stacks drop. Shots count toward every_nth_cast the same way. Adds the WHEN overclocked >= N block."

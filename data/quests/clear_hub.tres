@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3 uid="uid://sxwew8e6uvd6"]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_0vovl"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="2_qnvcd"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="3_7is5x"]
+
+[sub_resource type="Resource" id="Resource_aj5je"]
+script = ExtResource("1_0vovl")
+description = "Kill the Corrupted Raider"
+target = "corrupted_raider"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Resource_kmul8"]
+script = ExtResource("1_0vovl")
+description = "Kill the Corrupted Enchanter"
+target = "corrupted_enchanter"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("3_7is5x")
+id = "clear_hub"
+title = "Clear the Hub"
+description = "Kill the Corrupted Raider and the Corrupted Enchanter"
+objectives = Array[ExtResource("1_0vovl")]([SubResource("Resource_aj5je"), SubResource("Resource_kmul8")])
+metadata/_custom_type_script = "uid://ddwasls37yxoi"

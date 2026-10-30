@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://db5x0hik713ow"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "health_add_4"
+display_name = "Indomitable"
+tags = Array[int]([5])
+exclusivity_tags = Array[int]([2])
+weight = 15
+min_item_level = 50
+op = 1
+min_value = 0.15
+max_value = 0.2

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://c5iuy5pe82p2v"]
+
+[ext_resource type="PackedScene" uid="uid://g56gh8kn3wo0" path="res://assets/models/weapons/weapon_scene/orb/orb02.tscn" id="1_il66e"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://b6boa5sqabeq3" path="res://data/item_types/weapon_types/orb.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "void_orb"
+display_name = "Void Orb"
+mesh = ExtResource("1_il66e")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 30.0,
+4: 55.0,
+5: 1.4
+}
+item_level = 45

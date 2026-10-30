@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://bxr4rth6cj8q0"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "intelligence_flat_2"
+display_name = "of the Scholar"
+affix_type = "suffix"
+tags = Array[int]([10])
+exclusivity_tags = Array[int]([15])
+weight = 80
+min_item_level = 12
+stat = 13
+min_value = 10.0
+max_value = 18.0

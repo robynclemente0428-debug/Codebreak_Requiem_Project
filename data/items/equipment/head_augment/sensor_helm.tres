@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="ItemDefinition" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://cxtomxjxhptoj" path="res://systems/equipment/equipment_types/head_augment.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "sensor_helm"
+display_name = "Sensor Helm"
+equipment_type = ExtResource("2_type")
+base_stats = {
+1: 21.0,
+0: 54.0
+}
+item_level = 15
+allowed_affix_tags = Array[int]([])

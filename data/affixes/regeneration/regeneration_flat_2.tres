@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://dct7nmoj1aa67"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "regeneration_flat_2"
+display_name = "Restorative"
+tags = Array[int]([8])
+exclusivity_tags = Array[int]([16])
+weight = 80
+min_item_level = 12
+stat = 14
+min_value = 10.0
+max_value = 15.0

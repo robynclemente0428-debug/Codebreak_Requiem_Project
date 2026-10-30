@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3]
+
+[ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
+
+[resource]
+script = ExtResource("1_dlg")
+source = "# Tinker Hex: trader. Sarcastic, fair. Gives The Overflow (Act II). Use on a ShopNPC so 'open_shop' works.
+~ start
+@ quest_ready:q04_the_overflow -> ready_q04_the_overflow
+@ quest_active:q04_the_overflow -> remind_q04_the_overflow
+@ can_start:q04_the_overflow -> offer_q04_the_overflow
+-> idle
+
+~ offer_q04_the_overflow
+Hex: A big crawler is sitting on all my power cells. Kill it and I’ll pay well.
+* ACCEPT -> accept_q04_the_overflow
+* DECLINE -> end
+
+~ accept_q04_the_overflow
+> start_quest q04_the_overflow
+Hex: Don’t let it stack up. Clear the small ones first.
+-> end
+
+~ remind_q04_the_overflow
+# NEW line below
+Hex: My cells are still under that thing.
+
+~ ready_q04_the_overflow
+Hex: Done?
+* TURN IN -> turnin_q04_the_overflow
+* NOT YET -> end
+
+~ turnin_q04_the_overflow
+> turn_in q04_the_overflow
+Hex: My cells! Here’s your reward. A better weapon, as promised.
+-> start
+
+~ idle
+Hex: Buying, selling, complaining. Pick two.
+* TRADE -> shop
+* GOODBYE -> end
+
+~ shop
+Hex: Trading is simple. You offer, I offer, we both complain.
+> open_shop"
+metadata/_custom_type_script = "uid://dd85gxidfhqxl"

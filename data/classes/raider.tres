@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://xmxrpfwqx0r6"]
+
+[ext_resource type="Texture2D" uid="uid://dlnmk6ubhf65" path="res://assets/icons/classes/raider.png" id="1_3cfw2"]
+[ext_resource type="Script" uid="uid://li80knwebkc2" path="res://systems/stats/class_data.gd" id="1_ttijo"]
+[ext_resource type="PackedScene" uid="uid://bfjr2jfnarhc6" path="res://scenes/player/models/raider_model.tscn" id="2_1qfoh"]
+[ext_resource type="PackedScene" uid="uid://b0dhf7eo08g6g" path="res://assets/models/classes/raider/Raider_final1.glb" id="3_ub0m8"]
+[ext_resource type="Resource" uid="uid://dpix1e4t264lm" path="res://data/items/gem/slam_gem.tres" id="5_q2tue"]
+[ext_resource type="Resource" uid="uid://5wcc10hr6kfn" path="res://data/items/weapons/axe/hatchet.tres" id="6_n8gtf"]
+
+[resource]
+script = ExtResource("1_ttijo")
+id = &"raider"
+display_name = "Raider"
+description = "A brute who wins by standing still and hitting harder."
+icon = ExtResource("1_3cfw2")
+tagline = "Crushes defenses head-on"
+preview_scene = ExtResource("3_ub0m8")
+accent_color = Color(1, 0.3529412, 0.23529412, 1)
+strength = 24
+model_scene = ExtResource("2_1qfoh")
+starting_weapon = ExtResource("6_n8gtf")
+starting_skill_gem = ExtResource("5_q2tue")

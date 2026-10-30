@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="ShopDefinition" format=3 uid="uid://cstadbd417g5b"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_1h40p"]
+[ext_resource type="Script" uid="uid://byv47dv3as5px" path="res://systems/economy/shop_definition.gd" id="2_ftj4g"]
+
+[resource]
+script = ExtResource("2_ftj4g")
+id = "vendor"
+random_slots = 20
+rare_chance = 0.2
+include_gems = true
+level_window = 100
+metadata/_custom_type_script = "uid://byv47dv3as5px"

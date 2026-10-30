@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://do6kda1ubgtso"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "intelligence_flat_4"
+display_name = "of the Prodigy"
+affix_type = "suffix"
+tags = Array[int]([10])
+exclusivity_tags = Array[int]([15])
+weight = 20
+min_item_level = 48
+stat = 13
+min_value = 50.0
+max_value = 80.0

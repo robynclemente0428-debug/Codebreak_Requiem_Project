@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3 uid="uid://b1aqjhrgh548a"]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_ironclad_0"]
+script = ExtResource("2_mod")
+stat = 1
+value = 60.0
+source_id = "enemy_mod_ironclad"
+
+[sub_resource type="Resource" id="Resource_ironclad_1"]
+script = ExtResource("2_mod")
+op = 1
+value = 0.25
+source_id = "enemy_mod_ironclad"
+
+[sub_resource type="Resource" id="Resource_ironclad_2"]
+script = ExtResource("2_mod")
+stat = 2
+op = 1
+value = -0.1
+source_id = "enemy_mod_ironclad"
+
+[resource]
+script = ExtResource("1_def")
+id = "ironclad"
+display_name_prefix = "Ironclad"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_ironclad_0"), SubResource("Resource_ironclad_1"), SubResource("Resource_ironclad_2")])
+tags = Array[int]([2])
+weight = 40
+min_rarity = "rare"

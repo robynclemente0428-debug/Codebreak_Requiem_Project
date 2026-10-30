@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="WeaponTypeDefinition" format=3 uid="uid://da8fbqcmjfpal"]
+
+[ext_resource type="Script" uid="uid://cps3ri322o16r" path="res://systems/equipment/weapon_type_definition.gd" id="1_tlg0a"]
+
+[resource]
+script = ExtResource("1_tlg0a")
+id = "scepter"
+display_name = "Scepter"
+tags = Array[int]([0, 1, 2, 3, 6, 7, 11])
+metadata/_custom_type_script = "uid://cps3ri322o16r"

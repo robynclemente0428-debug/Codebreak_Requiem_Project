@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://dnvf2d28wnswh"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "damage_add_3"
+display_name = "Savage"
+shape = 2
+tags = Array[int]([3])
+exclusivity_tags = Array[int]([3])
+weight = 40
+min_item_level = 28
+op = 1
+min_value = 1.0
+max_value = 1.3
+min_stat = 3
+max_stat = 4

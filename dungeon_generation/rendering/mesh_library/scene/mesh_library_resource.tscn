@@ -1,0 +1,77 @@
+[gd_scene format=3 uid="uid://dep8i2cklreq4"]
+
+[ext_resource type="Texture2D" uid="uid://c0ksxqqgykwre" path="res://assets/textures/Materials_Scifi_01bu/4k JPEG/Scifi_Panels_04/Scifi_Panels_04_height.jpg" id="1_hmufd"]
+[ext_resource type="Texture2D" uid="uid://ch1iwb4qryv2p" path="res://assets/textures/Materials_Scifi_01bu/4k JPEG/Scifi_Panels_04/Scifi_Panels_04_basecolor.jpg" id="2_hmufd"]
+[ext_resource type="Texture2D" uid="uid://w7f7gcdfh7ie" path="res://assets/textures/Materials_Scifi_01bu/4k JPEG/Scifi_Panels_02/Scifi_Panels_02_glossiness.jpg" id="3_hmufd"]
+[ext_resource type="Texture2D" uid="uid://f03p82pg33ha" path="res://assets/textures/Materials_Scifi_01bu/4k JPEG/Scifi_FabricPanels_01/Scifi_FabricPanels_01_roughness.jpg" id="3_uv6gc"]
+[ext_resource type="Texture2D" uid="uid://bv1pmu5h7a78x" path="res://assets/textures/Materials_Scifi_01bu/4k JPEG/Scifi_Panels_05/Scifi_Panels_05_ambientocclusion.jpg" id="4_uv6gc"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_8jw6u"]
+albedo_texture = ExtResource("1_hmufd")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_uv6gc"]
+albedo_texture = ExtResource("2_hmufd")
+
+[sub_resource type="BoxMesh" id="BoxMesh_o8aln"]
+material = SubResource("StandardMaterial3D_uv6gc")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_5ufu6"]
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_djtrb"]
+albedo_texture = ExtResource("3_uv6gc")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pt57q"]
+albedo_texture = ExtResource("3_uv6gc")
+
+[sub_resource type="BoxMesh" id="BoxMesh_5uciv"]
+material = SubResource("StandardMaterial3D_pt57q")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_uxt1b"]
+size = Vector3(2, 2, 2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_d58ng"]
+albedo_texture = ExtResource("4_uv6gc")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_swloq"]
+albedo_texture = ExtResource("3_hmufd")
+texture_filter = 4
+
+[sub_resource type="BoxMesh" id="BoxMesh_b08ri"]
+material = SubResource("StandardMaterial3D_swloq")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_pwuf1"]
+size = Vector3(2, 0.2, 2)
+
+[node name="MeshLibraryResource" type="Node3D" unique_id=1450746719]
+
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=1059431126]
+material_override = SubResource("StandardMaterial3D_8jw6u")
+mesh = SubResource("BoxMesh_o8aln")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor" unique_id=934266991]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D" unique_id=1395109166]
+shape = SubResource("BoxShape3D_5ufu6")
+
+[node name="Wall" type="MeshInstance3D" parent="." unique_id=908658875]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+material_override = SubResource("StandardMaterial3D_djtrb")
+mesh = SubResource("BoxMesh_5uciv")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Wall" unique_id=2059057140]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Wall/StaticBody3D" unique_id=638775355]
+shape = SubResource("BoxShape3D_uxt1b")
+
+[node name="Room_Floor" type="MeshInstance3D" parent="." unique_id=2074313071]
+material_override = SubResource("StandardMaterial3D_d58ng")
+mesh = SubResource("BoxMesh_b08ri")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="Room_Floor" unique_id=154805867]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Room_Floor/StaticBody3D" unique_id=765189467]
+shape = SubResource("BoxShape3D_pwuf1")

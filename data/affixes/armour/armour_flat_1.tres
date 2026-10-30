@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://cp2fambr2spi0"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "armour_flat_1"
+display_name = "Plated"
+tags = Array[int]([4])
+exclusivity_tags = Array[int]([4])
+stat = 1
+min_value = 10.0
+max_value = 20.0

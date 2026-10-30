@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3 uid="uid://dp0dpoxeakybw"]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_stalwart_0"]
+script = ExtResource("2_mod")
+op = 2
+value = 0.3
+source_id = "enemy_mod_stalwart"
+
+[sub_resource type="Resource" id="Resource_stalwart_1"]
+script = ExtResource("2_mod")
+stat = 1
+value = 15.0
+source_id = "enemy_mod_stalwart"
+
+[resource]
+script = ExtResource("1_def")
+id = "stalwart"
+display_name_prefix = "Stalwart"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_stalwart_0"), SubResource("Resource_stalwart_1")])
+tags = Array[int]([2])
+weight = 80

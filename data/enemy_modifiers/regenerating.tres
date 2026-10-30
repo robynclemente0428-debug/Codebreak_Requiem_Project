@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3 uid="uid://cwjdxh65m6fkq"]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="2_mod"]
+
+[sub_resource type="Resource" id="Resource_regenerating_0"]
+script = ExtResource("2_mod")
+stat = 14
+value = 2.0
+source_id = "enemy_mod_regenerating"
+
+[sub_resource type="Resource" id="Resource_fqugp"]
+script = ExtResource("2_mod")
+stat = 14
+op = 1
+value = 1.0
+metadata/_custom_type_script = "uid://c4ewwdjeurelq"
+
+[resource]
+script = ExtResource("1_def")
+id = "regenerating"
+display_name_prefix = "Regenerating"
+stat_modifiers = Array[ExtResource("2_mod")]([SubResource("Resource_regenerating_0"), SubResource("Resource_fqugp")])
+tags = Array[int]([6])
+weight = 80
+min_rarity = "champion"

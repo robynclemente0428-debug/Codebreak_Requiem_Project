@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cwe7q8exs5rjd"]
+
+[ext_resource type="Script" uid="uid://bpmaggo5n5u3e" path="res://systems/equipment/equipment_component.gd" id="1_ti5pw"]
+
+[node name="EquipmentComponent" type="Node" unique_id=443005562]
+script = ExtResource("1_ti5pw")

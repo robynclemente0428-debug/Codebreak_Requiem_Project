@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="AffixDefinition" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "move_speed_flat_3"
+display_name = "of the Courier"
+affix_type = "suffix"
+shape = 0
+op = 0
+tags = Array[int]([9])
+exclusivity_tags = Array[int]([7])
+min_item_level = 30
+weight = 40
+stat = 2
+min_value = 0.45
+max_value = 0.6

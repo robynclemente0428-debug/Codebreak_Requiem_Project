@@ -1,0 +1,76 @@
+[gd_resource type="Resource" script_class="SkillProgramLimits" format=3 uid="uid://djgtvi82l1a8s"]
+
+[ext_resource type="Script" uid="uid://cgppr3ldqgmyw" path="res://systems/skills/program/skill_knob.gd" id="1_knob"]
+[ext_resource type="Script" uid="uid://rjdn1jn4gchv" path="res://systems/skills/program/skill_program_limits.gd" id="1_lim"]
+[ext_resource type="Script" uid="uid://cx3egq6jiui7m" path="res://systems/skills/program/efficiency_tier.gd" id="2_tierscript"]
+[ext_resource type="Resource" uid="uid://cowy0l5vsg3mb" path="res://data/skill_programs/tiers/elegant.tres" id="3_elegant"]
+[ext_resource type="Resource" uid="uid://ct25lin1evumb" path="res://data/skill_programs/tiers/lean.tres" id="4_lean"]
+
+[sub_resource type="Resource" id="Knob_damage"]
+script = ExtResource("1_knob")
+id = &"damage"
+display_name = "Damage"
+kind = 0
+min_steps = -6
+max_steps = 10
+cost_per_step = 2.0
+
+[sub_resource type="Resource" id="Knob_radius"]
+script = ExtResource("1_knob")
+id = &"radius"
+display_name = "Radius"
+flag_key = "radius"
+step = 0.25
+min_steps = -2
+max_steps = 4
+cost_per_step = 2.0
+unit = "m"
+
+[sub_resource type="Resource" id="Knob_max_projectiles"]
+script = ExtResource("1_knob")
+id = &"max_projectiles"
+display_name = "Projectiles"
+flag_key = "max_projectiles"
+step = 1.0
+min_steps = 0
+max_steps = 2
+cost_per_step = 5.0
+unit = ""
+
+[sub_resource type="Resource" id="Knob_speed"]
+script = ExtResource("1_knob")
+id = &"speed"
+display_name = "Projectile speed"
+flag_key = "speed"
+step = 2.0
+min_steps = -3
+max_steps = 4
+cost_per_step = 0.5
+unit = ""
+
+[sub_resource type="Resource" id="Knob_mana_cost"]
+script = ExtResource("1_knob")
+id = &"mana_cost"
+display_name = "Mana cost"
+kind = 2
+stat = 17
+step = 0.1
+min_steps = -2
+max_steps = 10
+cost_per_step = -1.0
+
+[sub_resource type="Resource" id="Knob_attack_speed"]
+script = ExtResource("1_knob")
+id = &"attack_speed"
+display_name = "Attack speed"
+kind = 2
+stat = 5
+min_steps = -8
+max_steps = 3
+cost_per_step = 2.5
+
+[resource]
+script = ExtResource("1_lim")
+knobs = Array[ExtResource("1_knob")]([SubResource("Knob_damage"), SubResource("Knob_radius"), SubResource("Knob_max_projectiles"), SubResource("Knob_speed"), SubResource("Knob_mana_cost"), SubResource("Knob_attack_speed")])
+point_budget = 6.0
+tiers = Array[ExtResource("2_tierscript")]([ExtResource("3_elegant"), ExtResource("4_lean")])

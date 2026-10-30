@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/rending_wave_support.gd" id="2_beh"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_wave_reach"]
+script = ExtResource("3_knob")
+id = &"wave_reach"
+first_cast_only = true
+display_name = "Wave reach"
+kind = 1
+flag_key = "wave_range"
+step = 0.5
+min_steps = -3
+max_steps = 4
+cost_per_step = 1.5
+unit = "m"
+
+[sub_resource type="Resource" id="Knob_wave_power"]
+script = ExtResource("3_knob")
+id = &"wave_power"
+first_cast_only = true
+display_name = "Wave damage"
+kind = 1
+flag_key = "wave_damage"
+step = 0.1
+min_steps = -3
+max_steps = 3
+cost_per_step = 1.5
+unit = "%"
+
+[resource]
+script = ExtResource("1_def")
+id = "rending_wave_support"
+display_name = "Rending Wave Support"
+allowed_tags = Array[int]([0])
+behavior_script = ExtResource("2_beh")
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_wave_reach"), SubResource("Knob_wave_power")])
+mana_cost_increase = 0.3
+description = "Strike only. Each swing throws a crescent blade that flies 8 m forward, cutting every enemy it passes through for 60% of the damage."

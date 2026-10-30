@@ -1,0 +1,23 @@
+[gd_scene format=3 uid="uid://c1anpifsroohb"]
+
+[ext_resource type="Script" uid="uid://ddne83kdbtwjc" path="res://scenes/ui/design/circuit_border.gd" id="1_m4snp"]
+[ext_resource type="Script" uid="uid://ba2mvsagsoq7c" path="res://scenes/ui/design/circuit_pulses.gd" id="2_6pkm8"]
+
+[node name="CircuitBorder" type="Control" unique_id=304354947]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_m4snp")
+
+[node name="Pulses" type="Control" parent="." unique_id=2141685423]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_6pkm8")

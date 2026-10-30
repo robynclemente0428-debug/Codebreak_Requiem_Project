@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://la0ep7uf5q7w"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "regeneration_add_1"
+display_name = "Recuperating"
+tags = Array[int]([8])
+exclusivity_tags = Array[int]([16])
+stat = 14
+op = 1
+min_value = 0.05
+max_value = 0.08

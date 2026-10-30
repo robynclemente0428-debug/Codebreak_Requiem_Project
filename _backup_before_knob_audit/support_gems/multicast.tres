@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3 uid="uid://bvfgosohngk7i"]
+
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" uid="uid://b2goctlhyakya" path="res://systems/skills/supports/multicast_support.gd" id="2_beh"]
+[ext_resource type="Script" uid="uid://cgppr3ldqgmyw" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+[ext_resource type="Script" uid="uid://c4ewwdjeurelq" path="res://systems/stats/modifier.gd" id="4_kj8ng"]
+
+[sub_resource type="Resource" id="Knob_holo_power"]
+script = ExtResource("3_knob")
+id = &"holo_power"
+display_name = "Hologram damage"
+flag_key = "multicast_effectiveness"
+min_steps = -4
+max_steps = 4
+cost_per_step = 2.0
+
+[sub_resource type="Resource" id="Knob_holo_offset"]
+script = ExtResource("3_knob")
+id = &"holo_offset"
+display_name = "Hologram distance"
+flag_key = "multicast_offset"
+step = 0.25
+min_steps = -4
+max_steps = 4
+cost_per_step = 0.0
+unit = "m"
+
+[resource]
+script = ExtResource("1_def")
+id = "multicast_support"
+display_name = "Multicast Support"
+allowed_tags = Array[int]([0, 1, 2, 3])
+behavior_script = ExtResource("2_beh")
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_holo_power"), SubResource("Knob_holo_offset")])
+mana_cost_increase = 0.5
+description = "Every cast summons a hologram of you, right where you stand, that uses the same skill a moment later, with all its supports and bonuses, at 40% less damage."

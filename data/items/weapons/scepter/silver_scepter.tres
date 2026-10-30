@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://bh27eab3radnv"]
+
+[ext_resource type="PackedScene" uid="uid://bjgwhwyb4011i" path="res://assets/models/weapons/weapon_scene/scepter/scepter_arcane.tscn" id="1_f3q63"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://da8fbqcmjfpal" path="res://data/item_types/weapon_types/scepter.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "silver_scepter"
+display_name = "Silver Scepter"
+mesh = ExtResource("1_f3q63")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 10.0,
+4: 21.0,
+5: 1.5
+}
+item_level = 15

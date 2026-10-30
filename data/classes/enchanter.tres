@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ClassData" format=3 uid="uid://dn7385s87be2f"]
+
+[ext_resource type="Texture2D" uid="uid://b3swlqi0a0goa" path="res://assets/icons/classes/enchanter.png" id="1_qgbc5"]
+[ext_resource type="Script" uid="uid://li80knwebkc2" path="res://systems/stats/class_data.gd" id="1_yfapa"]
+[ext_resource type="PackedScene" uid="uid://dqe5auxyyhmi7" path="res://scenes/player/models/enchanter_model.tscn" id="2_g0md1"]
+[ext_resource type="PackedScene" uid="uid://c3tf8oa0i0yht" path="res://assets/models/classes/enchanter/Enchanter_final1.glb" id="3_dwt8o"]
+[ext_resource type="Resource" uid="uid://4o32xmg3pnhj" path="res://data/items/gem/blast_gem.tres" id="5_qx3r1"]
+[ext_resource type="Resource" uid="uid://c6egj12ghos5o" path="res://data/items/weapons/orb/cracked_orb.tres" id="6_ppslt"]
+
+[resource]
+script = ExtResource("1_yfapa")
+id = &"enchanter"
+display_name = "Enchanter"
+description = "Bends raw power into skills that hit far above their weight."
+icon = ExtResource("1_qgbc5")
+sort_order = 2
+tagline = "Rewrites reality with code"
+preview_scene = ExtResource("3_dwt8o")
+accent_color = Color(0.3019608, 0.6156863, 1, 1)
+intelligence = 24
+model_scene = ExtResource("2_g0md1")
+starting_weapon = ExtResource("6_ppslt")
+starting_skill_gem = ExtResource("5_qx3r1")

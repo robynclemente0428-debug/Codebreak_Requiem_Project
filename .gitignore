@@ -1,0 +1,19 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# This project stores its editor data in godot/ instead of .godot/
+# (application/config/use_hidden_project_data_directory=false)
+/godot/
+
+# godot_ai plugin updater cache and backups
+/addons/.godot_ai_update/
+
+# Export output
+/build/
+/export/
+
+# OS files
+desktop.ini
+Thumbs.db
+.DS_Store

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://bbjh6b2awenpe"]
+
+[ext_resource type="PackedScene" uid="uid://cxo5hn4wyhjn5" path="res://assets/models/weapons/weapon_scene/axe/axe.tscn" id="1_ekhrn"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="Resource" uid="uid://bafoeeehlxifw" path="res://data/item_types/weapon_types/axe.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "reaver_axe"
+display_name = "Reaver Axe"
+mesh = ExtResource("1_ekhrn")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 39.0,
+4: 69.0,
+5: 1.2
+}
+item_level = 35

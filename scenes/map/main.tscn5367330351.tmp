@@ -1,0 +1,175 @@
+[gd_scene format=3 uid="uid://biwsepohnq33d"]
+
+[ext_resource type="PackedScene" uid="uid://du4fjwgxtu0i4" path="res://scenes/player/player.tscn" id="1_4tf7g"]
+[ext_resource type="Script" uid="uid://cxn46nrg2dl4u" path="res://scenes/map/map_management/area_manager.gd" id="2_csenv"]
+[ext_resource type="Script" uid="uid://btqo35aeb57at" path="res://scenes/ui/player_ui/life_and_mana/life/hp_hud.gd" id="4_cn66n"]
+[ext_resource type="FontFile" uid="uid://cwuudm0bjtvk4" path="res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf" id="4_g13t0"]
+[ext_resource type="Script" uid="uid://bh3sgl1cjqjtx" path="res://scenes/ui/player_ui/inventory/inventory_panel.gd" id="4_i5a3g"]
+[ext_resource type="Script" uid="uid://4h4jsbmfvdyh" path="res://scenes/ui/player_ui/life_and_mana/mana/mana_hud.gd" id="5_a6n85"]
+[ext_resource type="Script" uid="uid://dsbnd8hbwbf1x" path="res://scenes/ui/player_ui/character_panel/character_panel.gd" id="5_g13t0"]
+[ext_resource type="Script" uid="uid://dxusyorjf2um1" path="res://scenes/loot/loot_labels.gd" id="6_wveil"]
+[ext_resource type="Script" uid="uid://cliljgr7v0qny" path="res://scenes/ui/player_ui/mini_map/mini_map.gd" id="7_sqayf"]
+[ext_resource type="Script" uid="uid://d05vk6toq0qh2" path="res://scenes/ui/player_ui/skill_panel/skill_panel.gd" id="8_6ndsl"]
+[ext_resource type="Script" uid="uid://dwnk1slcdsdro" path="res://scenes/ui/player_ui/skill_panel/skill_bar.gd" id="9_qdvca"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_5n0wg"]
+sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+ground_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
+
+[sub_resource type="Sky" id="Sky_cn66n"]
+sky_material = SubResource("ProceduralSkyMaterial_5n0wg")
+
+[sub_resource type="Environment" id="Environment_g13t0"]
+background_mode = 2
+sky = SubResource("Sky_cn66n")
+glow_enabled = true
+
+[node name="world" type="Node3D" unique_id=32497592]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=600180058]
+environment = SubResource("Environment_g13t0")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=2145440144]
+transform = Transform3D(-0.8660254, -0.43301278, 0.25, 0, 0.49999997, 0.86602545, -0.50000006, 0.75, -0.43301266, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Hud" type="CanvasLayer" parent="." unique_id=192785509]
+layer = 20
+
+[node name="Hp_Hud" type="Control" parent="Hud" unique_id=741028229]
+custom_minimum_size = Vector2(520, 92)
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -260.0
+offset_top = -230.0
+offset_right = 260.0
+offset_bottom = -138.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("4_cn66n")
+font = ExtResource("4_g13t0")
+debug_keys = true
+ui_scale = 1.0
+bg_opacity = 0.3
+
+[node name="CharacterPanel" type="Control" parent="Hud" unique_id=1670020900]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("5_g13t0")
+font = ExtResource("4_g13t0")
+
+[node name="InventoryPanel" type="Control" parent="Hud" unique_id=179218386]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("4_i5a3g")
+
+[node name="Mana_Hud" type="Control" parent="Hud" unique_id=1236982105]
+custom_minimum_size = Vector2(240, 46.4)
+layout_mode = 3
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -208.0
+offset_top = -100.0
+offset_right = 208.0
+offset_bottom = -26.400024
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+script = ExtResource("5_a6n85")
+segments = 20
+font = ExtResource("4_g13t0")
+font_size = 22
+ui_scale = 0.8
+
+[node name="LootLabels" type="Control" parent="Hud" unique_id=234671133 node_paths=PackedStringArray("container")]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("6_wveil")
+container = NodePath("../../SubViewportContainer")
+font = ExtResource("4_g13t0")
+
+[node name="MiniMap" type="Control" parent="Hud" unique_id=363012376]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("7_sqayf")
+
+[node name="SkillPanel" type="Control" parent="Hud" unique_id=2134233793]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("8_6ndsl")
+font = ExtResource("4_g13t0")
+
+[node name="SkillBar" type="Control" parent="Hud" unique_id=1738502442]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("9_qdvca")
+font = ExtResource("4_g13t0")
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=1925379568]
+texture_filter = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stretch = true
+stretch_shrink = 3
+
+[node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=544999069]
+handle_input_locally = false
+size = Vector2i(640, 360)
+render_target_update_mode = 4
+
+[node name="map" type="Node3D" parent="SubViewportContainer/SubViewport" unique_id=899275609]
+transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0, 0, 0)
+
+[node name="Player" parent="SubViewportContainer/SubViewport" unique_id=1695220546 instance=ExtResource("1_4tf7g")]
+
+[node name="AreaManager" type="Node" parent="SubViewportContainer/SubViewport" unique_id=886248463 node_paths=PackedStringArray("area_container", "player", "fade_rect")]
+script = ExtResource("2_csenv")
+area_container = NodePath("../map")
+player = NodePath("../Player")
+start_area = "uid://cgfehk70yol7f"
+fade_rect = NodePath("../../../FadeLayer/FadeRect")
+arrival_cooldown_ms = 400
+
+[node name="FadeLayer" type="CanvasLayer" parent="." unique_id=1315055284]
+layer = 10
+
+[node name="FadeRect" type="ColorRect" parent="FadeLayer" unique_id=280029519]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)

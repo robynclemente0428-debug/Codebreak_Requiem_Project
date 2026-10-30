@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/tremor_chain_support.gd" id="2_beh"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_chain"]
+script = ExtResource("3_knob")
+id = &"tremor_chain"
+display_name = "Chain length"
+kind = 1
+flag_key = "tremor_max_chain"
+step = 1.0
+min_steps = -2
+max_steps = 2
+cost_per_step = 2.5
+unit = ""
+
+[sub_resource type="Resource" id="Knob_tremor_radius"]
+script = ExtResource("3_knob")
+id = &"tremor_radius"
+display_name = "Tremor radius"
+kind = 1
+flag_key = "tremor_radius"
+step = 0.1
+min_steps = -3
+max_steps = 3
+cost_per_step = 1.0
+unit = "%"
+
+[resource]
+script = ExtResource("1_def")
+id = "tremor_chain_support"
+display_name = "Tremor Chain Support"
+allowed_tags = Array[int]([1])
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_chain"), SubResource("Knob_tremor_radius")])
+behavior_script = ExtResource("2_beh")
+mana_cost_increase = 0.3
+description = "Slam only. Enemies killed by the slam set off a smaller slam where they fall (50% damage). Its kills set off more, up to 3 links."

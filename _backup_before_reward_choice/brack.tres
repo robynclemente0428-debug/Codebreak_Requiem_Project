@@ -1,0 +1,204 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3]
+
+[ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
+
+[resource]
+script = ExtResource("1_dlg")
+source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss quests (Acts I to III).
+# Lines marked NEW are not in the campaign doc yet.
+~ start
+@ quest_ready:tut_basics -> ready_tut_basics
+@ quest_active:tut_basics -> remind_tut_basics
+@ can_start:tut_basics -> offer_tut_basics
+@ quest_ready:q00_proximity_trigger -> ready_q00_proximity_trigger
+@ quest_active:q00_proximity_trigger -> remind_q00_proximity_trigger
+@ can_start:q00_proximity_trigger -> offer_q00_proximity_trigger
+@ quest_ready:q06_the_mimic -> ready_q06_the_mimic
+@ quest_ready:q05_the_leak -> ready_q05_the_leak
+@ quest_ready:q03_loop_hound_alpha -> ready_q03_loop_hound_alpha
+@ quest_ready:q02_corrupted_gate_guard -> ready_q02_corrupted_gate_guard
+@ quest_ready:q01_glitchling_queen -> ready_q01_glitchling_queen
+@ quest_active:q06_the_mimic -> remind_q06_the_mimic
+@ quest_active:q05_the_leak -> remind_q05_the_leak
+@ quest_active:q03_loop_hound_alpha -> remind_q03_loop_hound_alpha
+@ quest_active:q02_corrupted_gate_guard -> remind_q02_corrupted_gate_guard
+@ quest_active:q01_glitchling_queen -> remind_q01_glitchling_queen
+@ can_start:q01_glitchling_queen -> offer_q01_glitchling_queen
+@ can_start:q02_corrupted_gate_guard -> offer_q02_corrupted_gate_guard
+@ can_start:q03_loop_hound_alpha -> offer_q03_loop_hound_alpha
+@ can_start:q05_the_leak -> offer_q05_the_leak
+@ can_start:q06_the_mimic -> offer_q06_the_mimic
+-> idle
+
+~ offer_q00_proximity_trigger
+Brack: Before you face anything real, teach your skill to think.
+Brack: Make it fire when enemies close in. Then prove it works in a fight.
+* ACCEPT -> accept_q00_proximity_trigger
+* DECLINE -> end
+
+~ accept_q00_proximity_trigger
+> start_quest q00_proximity_trigger
+Brack: Open your skill editor first. Tell your skill when to fire.
+-> end
+
+~ remind_q00_proximity_trigger
+Brack: Script your skill, then use it with enemies close.
+
+~ ready_q00_proximity_trigger
+Brack: It works?
+* TURN IN -> turnin_q00_proximity_trigger
+* NOT YET -> end
+
+~ turnin_q00_proximity_trigger
+> turn_in q00_proximity_trigger
+Brack: Good. Now you're ready for the Queen.
+-> start
+
+~ offer_q01_glitchling_queen
+Brack: You’re alive. Good. Something woke up in you, and we need it.
+Brack: A Queen is breeding Glitchlings near the wall. Kill her.
+* ACCEPT -> accept_q01_glitchling_queen
+* DECLINE -> end
+
+~ accept_q01_glitchling_queen
+> start_quest q01_glitchling_queen
+Brack: Your script works. Now use it on her.
+-> end
+
+~ remind_q01_glitchling_queen
+# NEW line below
+Brack: The Queen's still breeding. Go.
+
+~ ready_q01_glitchling_queen
+Brack: Done?
+* TURN IN -> turnin_q01_glitchling_queen
+* NOT YET -> end
+
+~ turnin_q01_glitchling_queen
+> turn_in q01_glitchling_queen
+Brack: Wall’s holding. You’re useful. I’ll admit it.
+-> start
+
+~ offer_q02_corrupted_gate_guard
+Brack: The Gate Guard went rogue. Nobody gets in or out until it falls.
+* ACCEPT -> accept_q02_corrupted_gate_guard
+* DECLINE -> end
+
+~ accept_q02_corrupted_gate_guard
+> start_quest q02_corrupted_gate_guard
+Brack: Sudo will test your scripts first. No test, no rank.
+-> end
+
+~ remind_q02_corrupted_gate_guard
+# NEW line below
+Brack: Talk to Sudo. Then the Guard.
+
+~ ready_q02_corrupted_gate_guard
+Brack: Done?
+* TURN IN -> turnin_q02_corrupted_gate_guard
+* NOT YET -> end
+
+~ turnin_q02_corrupted_gate_guard
+> turn_in q02_corrupted_gate_guard
+Brack: The gate is open. Time to move.
+-> start
+
+~ offer_q03_loop_hound_alpha
+Brack: Alpha leads the pack that blocks our road. Cut off the head.
+* ACCEPT -> accept_q03_loop_hound_alpha
+* DECLINE -> end
+
+~ accept_q03_loop_hound_alpha
+> start_quest q03_loop_hound_alpha
+Brack: Give your skill a stop condition, or you’ll chase it forever.
+-> end
+
+~ remind_q03_loop_hound_alpha
+# NEW line below
+Brack: The road's still blocked.
+
+~ ready_q03_loop_hound_alpha
+Brack: Done?
+* TURN IN -> turnin_q03_loop_hound_alpha
+* NOT YET -> end
+
+~ turnin_q03_loop_hound_alpha
+> turn_in q03_loop_hound_alpha
+Brack: The hounds scatter without him. Road’s clear.
+-> start
+
+~ offer_q05_the_leak
+Brack: Something is eating Checkpoint’s memory. It splits every time we hit it.
+* ACCEPT -> accept_q05_the_leak
+* DECLINE -> end
+
+~ accept_q05_the_leak
+> start_quest q05_the_leak
+Brack: Hit it hard and hit it wide. A reusable function helps.
+-> end
+
+~ remind_q05_the_leak
+# NEW line below
+Brack: It's still splitting. Hit it wider.
+
+~ ready_q05_the_leak
+Brack: Done?
+* TURN IN -> turnin_q05_the_leak
+* NOT YET -> end
+
+~ turnin_q05_the_leak
+> turn_in q05_the_leak
+Brack: The leak is sealed. We can finally rest.
+-> start
+
+~ offer_q06_the_mimic
+Brack: A Null thing is copying everything we do. It copied my voice yesterday.
+* ACCEPT -> accept_q06_the_mimic
+* DECLINE -> end
+
+~ accept_q06_the_mimic
+> start_quest q06_the_mimic
+Brack: Vary your pattern. A copied skill is a defeated skill.
+-> end
+
+~ remind_q06_the_mimic
+# NEW line below
+Brack: Change your pattern. It's learning.
+
+~ ready_q06_the_mimic
+Brack: Done?
+* TURN IN -> turnin_q06_the_mimic
+* NOT YET -> end
+
+~ turnin_q06_the_mimic
+> turn_in q06_the_mimic
+Brack: It’s gone. I never want to hear that voice again.
+-> start
+
+~ offer_tut_basics
+Brack: Recruit. Before anything else, you learn the basics.
+Brack: Move, gear up, and bind a skill to attack. Scripting comes after.
+* ACCEPT -> accept_tut_basics
+* DECLINE -> end
+
+~ accept_tut_basics
+> start_quest tut_basics
+Brack: Start by walking around. Your backpack is already on you. Check the quest log for the next step.
+-> end
+
+~ remind_tut_basics
+Brack: Finish the basics. The quest log has the next step.
+
+~ ready_tut_basics
+Brack: Done with the basics?
+* TURN IN -> turnin_tut_basics
+* NOT YET -> end
+
+~ turnin_tut_basics
+> turn_in tut_basics
+Brack: Not bad. Now go find something that bites back.
+-> start
+
+~ idle
+Brack: Rest while you can."
+metadata/_custom_type_script = "uid://dd85gxidfhqxl"

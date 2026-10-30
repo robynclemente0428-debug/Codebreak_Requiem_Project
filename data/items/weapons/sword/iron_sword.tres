@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="ItemDefinition" format=3 uid="uid://bta4qf5i2fpxd"]
+
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="1_item"]
+[ext_resource type="PackedScene" uid="uid://bxv4tbbidpy75" path="res://assets/models/weapons/weapon_scene/sword/ironsword.tscn" id="1_y122a"]
+[ext_resource type="Resource" uid="uid://cuhqvt0ypdxuk" path="res://data/item_types/weapon_types/sword.tres" id="2_type"]
+
+[resource]
+script = ExtResource("1_item")
+id = "iron_sword"
+display_name = "Iron Sword"
+mesh = ExtResource("1_y122a")
+weapon_type = ExtResource("2_type")
+base_stats = {
+3: 11.0,
+4: 18.0,
+5: 1.6
+}
+item_level = 8

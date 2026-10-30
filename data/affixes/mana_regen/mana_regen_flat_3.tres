@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="AffixDefinition" format=3 uid="uid://cba6meh68gaxh"]
+
+[ext_resource type="Script" uid="uid://bi3f18hmcoxbp" path="res://systems/equipment/affix_definition.gd" id="1_affix"]
+
+[resource]
+script = ExtResource("1_affix")
+id = "mana_regen_flat_3"
+display_name = "Cascading"
+tags = Array[int]([11])
+exclusivity_tags = Array[int]([17])
+weight = 50
+min_item_level = 25
+stat = 15
+min_value = 5.0
+max_value = 8.0

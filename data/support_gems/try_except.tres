@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_retries"]
+script = ExtResource("3_knob")
+id = &"retries"
+first_cast_only = true
+display_name = "Retries"
+kind = 1
+flag_key = "except_retries"
+step = 1.0
+min_steps = 0
+max_steps = 2
+cost_per_step = 2.0
+unit = ""
+
+[sub_resource type="Resource" id="Knob_refund"]
+script = ExtResource("3_knob")
+id = &"refund"
+first_cast_only = true
+display_name = "Mana refund"
+kind = 1
+flag_key = "except_refund"
+step = 0.25
+min_steps = -4
+max_steps = 0
+cost_per_step = 0.75
+unit = "%"
+
+[resource]
+script = ExtResource("1_def")
+id = "try_except_support"
+display_name = "Try Except Support"
+allowed_tags = Array[int]([2])
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_retries"), SubResource("Knob_refund")])
+mana_cost_increase = 0.2
+description = "Blast only. When a loop repeat hits nothing, its mana is refunded, it doesn't count toward the loop cap, and it is tried again from you (once per cast). Adds the except missed: block, whose effects only change that retry."

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ClassTrait" format=3]
+
+[ext_resource type="Script" path="res://systems/stats/class_trait.gd" id="1_trait"]
+
+[resource]
+script = ExtResource("1_trait")
+display_name = "Overclocked Compiler"
+description = "+3 program points on every skill, and buffs cost 25% fewer points."
+buff_cost_mult = 0.75
+extra_points = 3.0

@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://doxxilvofveta"]
+
+[ext_resource type="PackedScene" uid="uid://cpjfpnyick2b0" path="res://assets/models/weapons/rusted_sword.glb" id="1_4nxds"]
+
+[node name="RustedSword" type="Node3D" unique_id=964437518]
+transform = Transform3D(-2.1855694e-08, 0.5, 0, -0.5, -2.1855694e-08, 0, 0, 0, 0.5, 0, 0, 0)
+
+[node name="rusted_sword" parent="." unique_id=1174797647 instance=ExtResource("1_4nxds")]

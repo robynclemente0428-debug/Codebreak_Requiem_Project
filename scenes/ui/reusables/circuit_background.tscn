@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://cl3pqmxe1b8jk"]
+
+[ext_resource type="Script" uid="uid://clykycowj28c8" path="res://scenes/ui/design/circuit_background.gd" id="1_jatli"]
+[ext_resource type="Script" uid="uid://ba2mvsagsoq7c" path="res://scenes/ui/design/circuit_pulses.gd" id="2_1wlot"]
+
+[node name="Circuit Background" type="Control" unique_id=499650488]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_jatli")
+opacity = 0.2
+
+[node name="Pulses" type="Control" parent="." unique_id=273116587]
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+script = ExtResource("2_1wlot")
