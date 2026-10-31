@@ -27,8 +27,8 @@ var _support_flag_modifiers: Dictionary = {
 	"rending_wave_support": {"wave_range": 8.0, "wave_width": 3.2, "wave_speed": 16.0, "wave_damage": 0.6, "wave_delay": 0.05},
 	# Blast-only (scripting) supports
 	"variable_store_support": {"var_store_gain": 1.0, "var_store_max": 10.0},
-	"pointer_support": {"pointer_range": 6.0, "pointer_turn": 90.0},
-	"try_except_support": {"except_retries": 1.0, "except_refund": 1.0},
+	"pointer_support": {"pointer_range": 6.0, "pointer_turn": 90.0, "pointer_hops": 1.0, "pointer_hop_damage": 0.5},
+	"try_except_support": {"except_retries": 1.0, "except_refund": 1.0, "except_max_stacks": 3.0, "except_stack_damage": 0.25},
 	# Shoot-only supports
 	"fork_support": {"fork_count": 2.0, "fork_angle": 30.0, "fork_damage": 0.6},
 	"breakpoint_support": {"breakpoint_bonus": 0.3, "breakpoint_hits": 5.0, "breakpoint_burst": 2.0, "breakpoint_duration": 6.0},

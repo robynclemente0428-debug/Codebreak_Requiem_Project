@@ -39,6 +39,12 @@ func _ready() -> void:
 	add_child(_opener)
 
 
+## Close enough to open it by clicking (the same reach as the interact key).
+func in_reach(player: Node3D) -> bool:
+	var d := player.global_position - global_position
+	return Vector2(d.x, d.z).length() <= interact_radius + 0.3
+
+
 func open_chest() -> void:
 	if is_open:
 		return

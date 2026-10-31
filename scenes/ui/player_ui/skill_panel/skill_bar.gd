@@ -164,6 +164,10 @@ func _process(delta: float) -> void:
 			var charge := ""
 			if VariableStoreSupport.on_skill(slot.skill) and _skills != null:
 				charge = str(VariableStoreSupport.read(_skills.get_parent(), slot.skill))
+			if TryExceptSupport.on_skill(slot.skill) and _skills != null:
+				var errors := TryExceptSupport.stacks_of(_skills.get_parent(), slot.skill)
+				if errors > 0:
+					charge = "!%d" % errors                    # Try / Except stored errors
 			var oc := OverclockSupport.on_skill(slot.skill)
 			if oc != null and oc.current_stacks() > 0:
 				charge = "x%d" % oc.current_stacks()          # Overclock stacks

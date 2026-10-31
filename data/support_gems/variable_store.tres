@@ -36,4 +36,4 @@ allowed_tags = Array[int]([2])
 behavior_script = ExtResource("2_beh")
 program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_store_capacity"), SubResource("Knob_store_gain")])
 mana_cost_increase = 0.2
-description = "Blast only. Every enemy hit stores 1 charge (up to 10), kept between casts. Spend it with the WHEN charge >= N block: when that rule fires, N charge is used up."
+description = "Blast only. Every enemy hit stores 1 charge (up to 10), kept between casts. Spend it with the WHEN charge >= N block: when that rule fires, N charge is used up and the rule's effects are 25% stronger per charge spent (charge >= 4: x2)."

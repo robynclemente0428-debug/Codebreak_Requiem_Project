@@ -567,6 +567,10 @@ func _effect_line(rule: ProgramRule, e: ProgramEffect, limits: SkillProgramLimit
 		note = "pays %.1f" % -cost
 	if rule.loop != null or rule.only_on_repeats():
 		note = ("%s, repeats only" % note) if note != "" else "repeats only"
+	var charge_mult := VariableStoreSupport.rule_effect_mult(rule)
+	if charge_mult > 1.0:
+		var x := "x%.2f charge" % charge_mult                 # Variable Store: spent charge amplifies it
+		note = ("%s, %s" % [note, x]) if note != "" else x
 	code.add_child(_comment_tok(note))
 	if knob:
 		parts[0].tooltip_text = "%s: %s\n%+.1f points per step. Limits: %d to %+d steps.%s%s\nDrag out or right-click to delete." % [

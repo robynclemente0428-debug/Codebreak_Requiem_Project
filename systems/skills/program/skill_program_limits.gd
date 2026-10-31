@@ -76,8 +76,10 @@ func rule_cost_mult(rule: ProgramRule) -> float:
 	return class_trait.rule_cost_mult(rule) if class_trait else 1.0
 
 
+## How much stronger a rule's effects are than their knob steps: the class trait (Gladiator:
+## every-Nth rules x1.5) times Variable Store's charge bonus (WHEN charge >= N rules).
 func rule_effect_mult(rule: ProgramRule) -> float:
-	return class_trait.rule_effect_mult(rule) if class_trait else 1.0
+	return (class_trait.rule_effect_mult(rule) if class_trait else 1.0) * VariableStoreSupport.rule_effect_mult(rule)
 
 
 ## Loops (ProgramLoop): the most repeats one cast may run, the points discount and the mana

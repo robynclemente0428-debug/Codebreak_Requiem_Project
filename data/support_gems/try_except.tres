@@ -1,7 +1,20 @@
 [gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
 
 [ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/supports/try_except_support.gd" id="2_beh"]
 [ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_stack_damage"]
+script = ExtResource("3_knob")
+id = &"stack_damage"
+display_name = "Error damage"
+kind = 1
+flag_key = "except_stack_damage"
+step = 0.1
+min_steps = -2
+max_steps = 3
+cost_per_step = 1.0
+unit = "%"
 
 [sub_resource type="Resource" id="Knob_retries"]
 script = ExtResource("3_knob")
@@ -34,6 +47,7 @@ script = ExtResource("1_def")
 id = "try_except_support"
 display_name = "Try Except Support"
 allowed_tags = Array[int]([2])
-program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_retries"), SubResource("Knob_refund")])
+behavior_script = ExtResource("2_beh")
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_stack_damage"), SubResource("Knob_retries"), SubResource("Knob_refund")])
 mana_cost_increase = 0.2
-description = "Blast only. When a loop repeat hits nothing, its mana is refunded, it doesn't count toward the loop cap, and it is tried again from you (once per cast). Adds the except missed: block, whose effects only change that retry."
+description = "Blast only. Misses are caught: a Blast that hits nothing refunds its mana and stores an ERROR (up to 3). Your next Blast that hits handles them all for 25% more damage per error. The cast after a miss also runs the except missed: block. In a loop, a repeat that misses is refunded and tried again."

@@ -32,6 +32,7 @@ var _card: _Card
 var _tag: Label                     # name under the cursor while hovering
 var _npc: Interactable
 var _hovered: Interactable
+var _hovered_chest: LootChest        # chests can be clicked open too (when close enough)
 var _pointing := false
 var _open_pos := Vector3.ZERO       # where the player stood when the card opened
 
@@ -121,13 +122,21 @@ func _talk(npc: Interactable, p: Node3D, label: String, reach: float) -> void:
 
 # ---------- HOVER AND CLICK ----------
 func _process(_delta: float) -> void:
-	var npc := _npc_under_mouse() if not _ui_under_mouse() else null
-	if npc != _hovered:
+	var ui := _ui_under_mouse()
+	var npc := _npc_under_mouse() if not ui else null
+	var chest := _chest_under_mouse() if not ui and npc == null else null
+	if chest != null and chest.is_open:
+		chest = null                                 # already looted: nothing to click
+	if npc != _hovered or chest != _hovered_chest:
 		_hovered = npc
-		_set_pointing(npc != null)
+		_hovered_chest = chest
+		_set_pointing(npc != null or chest != null)
 		if npc != null:
 			_tag.text = "%s  [CLICK]" % _npc_name(npc)
-	_tag.visible = npc != null and npc != _npc
+	if chest != null:
+		var p := _player()
+		_tag.text = "CHEST  [CLICK]" if p != null and chest.in_reach(p) else "CHEST  [GET CLOSER]"
+	_tag.visible = (npc != null and npc != _npc) or chest != null
 	if _tag.visible:
 		var m := get_viewport().get_mouse_position()
 		_tag.position = (m + Vector2(22, 18)).round()
@@ -147,6 +156,16 @@ func _input(event: InputEvent) -> void:
 		return
 	if _ui_under_mouse():
 		return                                       # a panel (or this card) was clicked
+	var chest := _chest_under_mouse()
+	if chest != null and not chest.is_open:
+		get_viewport().set_input_as_handled()        # no skill cast for this click either
+		var p := _player()
+		if p != null and chest.in_reach(p):
+			chest.open_chest()
+		else:
+			get_tree().call_group("damage_numbers", "pop_text",
+					chest.global_position + Vector3.UP * 1.4, "GET CLOSER", COL_DIM)
+		return
 	var npc := _npc_under_mouse()
 	if npc == null:
 		return
@@ -176,8 +195,28 @@ func _player() -> Node3D:
 	return get_tree().get_first_node_in_group("players") as Node3D
 
 
-## The 3D world lives in a SubViewport; rays use its camera and its mouse position.
 func _npc_under_mouse() -> Interactable:
+	var n := _collider_under_mouse()
+	while n != null:
+		if n is Interactable:
+			return n as Interactable
+		n = n.get_parent()
+	return null
+
+
+## A loot chest under the mouse (its body; its interact area is a child, so the NPC search
+## above never finds it).
+func _chest_under_mouse() -> LootChest:
+	var n := _collider_under_mouse()
+	while n != null:
+		if n is LootChest:
+			return n as LootChest
+		n = n.get_parent()
+	return null
+
+
+## The 3D world lives in a SubViewport; rays use its camera and its mouse position.
+func _collider_under_mouse() -> Node:
 	var p := _player()
 	if p == null:
 		return null
@@ -193,12 +232,7 @@ func _npc_under_mouse() -> Interactable:
 	if p is CollisionObject3D:
 		query.exclude = [(p as CollisionObject3D).get_rid()]
 	var hit := p.get_world_3d().direct_space_state.intersect_ray(query)
-	var n := hit.get("collider") as Node
-	while n != null:
-		if n is Interactable:
-			return n as Interactable
-		n = n.get_parent()
-	return null
+	return hit.get("collider") as Node
 
 
 func _npc_screen_pos(npc: Node3D) -> Vector2:

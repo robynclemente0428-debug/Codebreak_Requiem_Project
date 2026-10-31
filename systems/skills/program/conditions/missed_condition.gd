@@ -1,7 +1,8 @@
 class_name MissedCondition
 extends ProgramCondition
-## except missed:  only with the Try / Except support. True for a repeat that is being tried
-## again because the one before it hit nothing. The rule's effects only change that retry.
+## except missed:  only with the Try / Except support. True for the cast right after one that
+## hit nothing, and in a loop for a repeat being tried again because the one before it hit
+## nothing. The rule's effects only change that cast or that retry.
 
 func type_id() -> String:
 	return "missed"
@@ -24,7 +25,9 @@ func changes_during_cast() -> bool:
 
 
 func is_true(cast: SkillCast, _target: Node) -> bool:
-	return bool(cast.extra.get("loop_retry", false))
+	if cast.extra.get("loop_repeat", false):
+		return bool(cast.extra.get("loop_retry", false))
+	return TryExceptSupport.last_missed(cast.caster, cast.skill)
 
 
 func cost_multiplier() -> float:
@@ -39,6 +42,6 @@ func palette_name() -> String:
 	return "MISSED"
 
 
-## Only true on a loop repeat (see ProgramCondition.needs_loop).
+## Also true on the cast after a miss, so it works without a loop (see ProgramCondition.needs_loop).
 func needs_loop() -> bool:
-	return true
+	return false
