@@ -26,6 +26,7 @@ const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_DIM := Color(0.55, 0.78, 0.85)
 const COL_LIFE := Color(1.0, 0.30, 0.37)
 const COL_MANA := Color(0.30, 0.64, 1.0)
+const COL_RANK := Color(1.0, 0.82, 0.30)        # gold, like a ready quest
 const COL_STR := Color(1.0, 0.30, 0.37)
 const COL_DEX := Color(0.30, 1.0, 0.60)
 const COL_INT := Color(0.30, 0.64, 1.0)
@@ -72,6 +73,7 @@ var _changed_mouse_mode := false
 var _portrait: TextureRect
 var _name_label: Label
 var _sub_label: Label
+var _rank_label: Label                # Executor rank (Ranks), and the next one to earn
 var _life_label: Label
 var _mana_label: Label
 var _badges: Array[AttrBadge] = []
@@ -265,9 +267,10 @@ func _build_ui() -> void:
 	_name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_name_label.custom_minimum_size.x = 0.0
 	_sub_label = _label("", 16, accent)
+	_rank_label = _label("", 15, COL_RANK)
 	_life_label = _label("", 19, COL_LIFE)
 	_mana_label = _label("", 19, COL_MANA)
-	for l in [_name_label, _sub_label, _life_label, _mana_label]:
+	for l in [_name_label, _sub_label, _rank_label, _life_label, _mana_label]:
 		info.add_child(l)
 
 	# Attribute dials
@@ -412,6 +415,16 @@ func _refresh_header() -> void:
 			_name_label.add_theme_color_override("font_color", c.accent_color)
 
 	_sub_label.text = class_text.to_upper()
+
+	var player := get_tree().get_first_node_in_group("players")
+	var qm: QuestManager = player.get("quests") if player != null else null
+	var next_rank := Ranks.next(qm)
+	_rank_label.text = "RANK  %s" % Ranks.current(qm)
+	if next_rank != "":
+		_rank_label.text += "  ·  NEXT: %s" % next_rank
+	_rank_label.tooltip_text = ("Next rank: %s. Pass Examiner Sudo's exam." % next_rank) if next_rank != "" \
+			else "Highest rank."
+	_rank_label.mouse_filter = Control.MOUSE_FILTER_PASS        # so the tooltip shows
 
 	var t := ClassTrait.for_class(class_id)
 	_passive_box.visible = t != null
