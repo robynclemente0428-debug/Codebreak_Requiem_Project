@@ -8,8 +8,10 @@
 [ext_resource type="Script" uid="uid://dj0ktnv8eva86" path="res://scenes/ui/design/cyber_back_button.gd" id="5_g885k"]
 [ext_resource type="FontFile" uid="uid://cwuudm0bjtvk4" path="res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf" id="6_a4beg"]
 [ext_resource type="Shader" uid="uid://bj1r3k37ybtvy" path="res://assets/shaders/materials/shader/edge_detection.gdshader" id="8_hc0rs"]
+[ext_resource type="Shader" uid="uid://kfcd702mcvha" path="res://assets/shaders/materials/game_shaders/hologram_glitch.gdshader" id="9_8yee1"]
+[ext_resource type="Shader" uid="uid://c6j74g7ux17v4" path="res://assets/shaders/materials/game_shaders/orb_arcane.gdshader" id="10_ufxba"]
 
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_hc0rs"]
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_4flwa"]
 blend_mode = 1
 
 [sub_resource type="Environment" id="Environment_rwnve"]
@@ -28,6 +30,44 @@ shader_parameter/lineAlpha = 0.7
 shader_parameter/useLighting = true
 shader_parameter/lineHighlight = 0.2
 shader_parameter/lineShadow = 0.55
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_4fgvj"]
+render_priority = 0
+shader = ExtResource("9_8yee1")
+shader_parameter/holo_color = Color(0.1, 0.55, 1, 1)
+shader_parameter/glitch_tint = Color(0.6, 1, 1, 1)
+shader_parameter/intensity = 1.6
+shader_parameter/base_alpha = 0.25
+shader_parameter/tex_mix = 0.0
+shader_parameter/fresnel_power = 2.5
+shader_parameter/fresnel_strength = 1.2
+shader_parameter/scan_density = 60.0
+shader_parameter/scan_speed = 1.5
+shader_parameter/scan_strength = 0.5
+shader_parameter/sweep_speed = 0.6
+shader_parameter/sweep_width = 0.15
+shader_parameter/sweep_strength = 1.0
+shader_parameter/height_min = -1.0
+shader_parameter/height_max = 1.0
+shader_parameter/glitch_strength = 0.12
+shader_parameter/glitch_chance = 0.15
+shader_parameter/glitch_speed = 8.0
+shader_parameter/band_density = 12.0
+shader_parameter/burst_chance = 0.25
+shader_parameter/flicker_speed = 18.0
+shader_parameter/flicker_amount = 0.25
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_br3p5"]
+render_priority = 0
+shader = ExtResource("10_ufxba")
+shader_parameter/color_a = Color(0.1, 0.4, 1, 1)
+shader_parameter/color_b = Color(0.6, 1, 1, 1)
+shader_parameter/rim_power = 2.5
+shader_parameter/band_scale = 9.0
+shader_parameter/band_strength = 0.6
+shader_parameter/speed = 1.0
+shader_parameter/intensity = 2.0
+shader_parameter/base_alpha = 0.15
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_tqvqj"]
 albedo_color = Color(0.039215688, 0.101960786, 0.16470589, 1)
@@ -56,9 +96,11 @@ layout_mode = 1
 
 [node name="Circuit Background" parent="." unique_id=499650488 instance=ExtResource("3_a4beg")]
 layout_mode = 1
+seed_value = 100
 
 [node name="CircuitBorder" parent="." unique_id=304354947 instance=ExtResource("4_hc0rs")]
 layout_mode = 1
+seed_value = 100
 
 [node name="Header" type="MarginContainer" parent="." unique_id=62466306]
 layout_mode = 0
@@ -72,7 +114,7 @@ theme_override_constants/separation = 10
 
 [node name="BackButton" type="TextureButton" parent="Header/HBox" unique_id=1669220454]
 unique_name_in_owner = true
-material = SubResource("CanvasItemMaterial_hc0rs")
+material = SubResource("CanvasItemMaterial_4flwa")
 custom_minimum_size = Vector2(200, 60)
 layout_mode = 2
 stretch_mode = 5
@@ -167,6 +209,8 @@ shadow_enabled = true
 
 [node name="Platform" type="MeshInstance3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=308679143]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.54, 0)
+material_override = SubResource("ShaderMaterial_4fgvj")
+material_overlay = SubResource("ShaderMaterial_br3p5")
 mesh = SubResource("CylinderMesh_bl57u")
 
 [node name="ModelPivot" type="Node3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=663597909]
@@ -244,8 +288,8 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
-autowrap_mode = 3
 vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="CreateButton" type="Button" parent="Content/RootVBox/Footer" unique_id=899084756]
 unique_name_in_owner = true

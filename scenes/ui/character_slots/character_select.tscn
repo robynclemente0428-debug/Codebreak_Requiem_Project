@@ -39,9 +39,11 @@ mouse_filter = 2
 
 [node name="Circuit Background" parent="." unique_id=499650488 instance=ExtResource("3_plxai")]
 layout_mode = 1
+seed_value = 100
 
 [node name="CircuitBorder" parent="." unique_id=304354947 instance=ExtResource("4_rpccq")]
 layout_mode = 1
+seed_value = 100
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=626345794]
 layout_mode = 0

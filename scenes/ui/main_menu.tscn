@@ -32,9 +32,11 @@ layout_mode = 1
 
 [node name="Circuit Background" parent="." unique_id=499650488 instance=ExtResource("4_nqjyj")]
 layout_mode = 1
+seed_value = 100
 
 [node name="CircuitBorder" parent="." unique_id=304354947 instance=ExtResource("5_7vr37")]
 layout_mode = 1
+seed_value = 100
 
 [node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=253320926]
 layout_mode = 1
