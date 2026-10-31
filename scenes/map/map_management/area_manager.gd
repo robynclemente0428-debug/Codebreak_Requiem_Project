@@ -149,7 +149,59 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 		area.on_player_arrived(player)
 	Waypoints.arrived(scene_path)         # first visit unlocks the area on the waypoint map (U)
 
+	await _wait_for_navigation(area, use_fade)
 	await _finish(use_fade)
+
+
+## Dungeons bake their navmesh on a worker thread after _ready(). Keep the screen dark until
+## it's done, so the player never sees enemies standing still before they can path.
+## Polls a flag rather than awaiting the signal (can't miss it), and gives up after
+## NAV_WAIT_MAX so a failed bake never leaves the screen black.
+const NAV_WAIT_MAX := 10.0
+const LOADING_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
+var _loading_label: Label
+
+
+func _wait_for_navigation(area: GameArea, use_fade: bool) -> void:
+	if area.get("navigation_is_ready") != false:
+		return                            # not a dungeon (null), or already baked (true)
+	if use_fade:
+		_show_loading(true)
+	var waited := 0.0
+	while is_instance_valid(area) and area.get("navigation_is_ready") == false and waited < NAV_WAIT_MAX:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	if waited >= NAV_WAIT_MAX:
+		push_warning("AreaManager: navmesh not ready after %.0f s, showing the area anyway" % NAV_WAIT_MAX)
+	_show_loading(false)
+
+
+## A pulsing "LOADING" in the middle of the fade overlay. Made the first time it's needed.
+func _show_loading(on: bool) -> void:
+	if fade_rect == null:
+		return
+	if _loading_label == null:
+		_loading_label = Label.new()
+		_loading_label.text = "LOADING"
+		_loading_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_loading_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_loading_label.add_theme_font_size_override("font_size", 28)
+		_loading_label.add_theme_color_override("font_color", Color("#00E5FF"))
+		if ResourceLoader.exists(LOADING_FONT):
+			_loading_label.add_theme_font_override("font", load(LOADING_FONT))
+		fade_rect.add_child(_loading_label)
+	_loading_label.visible = on
+	if on:
+		_loading_label.modulate.a = 1.0
+		var tween := _loading_label.create_tween().set_loops()
+		tween.tween_property(_loading_label, "modulate:a", 0.35, 0.6)
+		tween.tween_property(_loading_label, "modulate:a", 1.0, 0.6)
+		_loading_label.set_meta("tween", tween)
+	elif _loading_label.has_meta("tween"):
+		(_loading_label.get_meta("tween") as Tween).kill()
+		_loading_label.remove_meta("tween")
 
 
 func _finish(use_fade: bool) -> void:

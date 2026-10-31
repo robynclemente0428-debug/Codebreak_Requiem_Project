@@ -1,6 +1,8 @@
 extends GameArea
 
 signal navigation_ready
+## True once the first navmesh bake is done. AreaManager keeps the screen faded out until then.
+var navigation_is_ready := false
 
 @onready var director: DungeonDirector = $DungeonDirector
 @onready var grid_map: GridMap = $NavigationRegion3D/GridMap
@@ -66,8 +68,9 @@ const REBAKE_DELAY := 0.6       # seconds after a prop breaks before the navmesh
 const NAV_FOOTPRINT := 0.6      # fraction of a prop's collider radius cut out of the navmesh
 
 var _rebake_pending := false
-## The level's tiles, read once after the first bake. Re-bakes reuse it instead of reading the
-## whole GridMap again on the main thread (that read is what made breaking a barrel hitch).
+## The level's tiles, read once before the first bake. Every bake reuses it instead of reading
+## the whole GridMap again on the main thread (that read is what made entering a dungeon and
+## breaking a barrel hitch).
 var _tile_geometry: NavigationMeshSourceGeometryData3D
 
 
@@ -75,6 +78,9 @@ func _bake_navigation() -> void:
 	var nm := nav_region.navigation_mesh
 	nm.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_WITH_CHILDREN
 	nm.geometry_source_group_name = NAV_SOURCE_GROUP
+	# The tiles' collision shapes, not their visual meshes: reading meshes copies them back from
+	# the GPU and stalls rendering. Every MeshLibrary tile needs a collision shape for this.
+	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
 	grid_map.add_to_group(NAV_SOURCE_GROUP)
 	var props := get_node_or_null("Props")
 	if props != null:
@@ -83,21 +89,24 @@ func _bake_navigation() -> void:
 				_add_nav_obstacle(p as LootProp)
 				if not (p as LootProp).opened.is_connected(_on_prop_opened):
 					(p as LootProp).opened.connect(_on_prop_opened)
-	nav_region.bake_navigation_mesh(true)
-	while nav_region.is_baking():             # polling can't miss a signal
+	# The GridMap builds its collision shapes deferred, so there are none to read during
+	# _ready(). Wait for them (the screen stays faded out until navigation_is_ready).
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	# The one read of the level (tiles plus prop footprints), on the main thread.
+	var data := NavigationMeshSourceGeometryData3D.new()
+	NavigationServer3D.parse_source_geometry_data(nav_region.navigation_mesh, data, nav_region)
+	_tile_geometry = NavigationMeshSourceGeometryData3D.new()   # kept for re-bakes, minus the props
+	_tile_geometry.set_vertices(data.get_vertices())
+	_tile_geometry.set_indices(data.get_indices())
+	_bake_async(data)
+	while _baking_async:                      # polling can't miss a signal
 		await get_tree().process_frame
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 	print("[Dungeon] navmesh ready, polygons: %d" % nav_region.navigation_mesh.get_polygon_count())
-	_cache_tile_geometry()
+	navigation_is_ready = true
 	navigation_ready.emit()
-
-
-func _cache_tile_geometry() -> void:
-	# Same parse the bake did (so everything is in the region's space), minus the props
-	_tile_geometry = NavigationMeshSourceGeometryData3D.new()
-	NavigationServer3D.parse_source_geometry_data(nav_region.navigation_mesh, _tile_geometry, nav_region)
-	_tile_geometry.set_projected_obstructions([])
 
 
 ## Cuts a prop's footprint (its collider, not its whole model) out of the navmesh when baking.
@@ -162,6 +171,11 @@ func _rebake() -> void:
 				var w := to_region * (ob.global_transform * v)
 				pts.append(Vector3(w.x, 0.0, w.z))
 			data.add_projected_obstruction(pts, base.y, ob.height, false)
+	_bake_async(data)
+
+
+## Bakes `data` on a worker thread into a copy of the navmesh, swapped in when it's done.
+func _bake_async(data: NavigationMeshSourceGeometryData3D) -> void:
 	var nm := nav_region.navigation_mesh.duplicate() as NavigationMesh
 	nm.clear_polygons()
 	nm.set_vertices(PackedVector3Array())

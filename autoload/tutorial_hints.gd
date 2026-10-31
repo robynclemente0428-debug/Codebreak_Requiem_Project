@@ -99,9 +99,10 @@ func _make_label(font: Font, size: int, col: Color) -> Label:
 
 func _process(delta: float) -> void:
 	_time += delta
-	# Paused (pause menu, the quit prompt, a game over): no hints over the menus
+	# Paused (pause menu, the quit prompt, a game over): no hints over the menus.
+	# Travelling (faded out, maybe loading): none over the black screen either.
 	var hint: Dictionary = _current_hint() if enabled and not get_tree().paused \
-			and not RewardChoice.is_open() else {}
+			and not RewardChoice.is_open() and not _travelling() else {}
 	var text: String = hint.get("text", "")
 	var sub: String = hint.get("sub", "")
 	if _label.text != text or _sub.text != sub:
@@ -563,6 +564,11 @@ func _rule_condition_text(condition_id: String) -> String:
 					if c.type_id() == condition_id:
 						return c.describe().trim_prefix("WHEN ")
 	return "enough enemies are close"
+
+
+func _travelling() -> bool:
+	var am := get_tree().get_first_node_in_group("area_manager") as AreaManager
+	return am != null and am.is_busy()
 
 
 func _in_town() -> bool:
