@@ -146,7 +146,9 @@ func _add_nav_obstacle(p: LootProp) -> void:
 
 ## A barrel or cache broke: once it's gone, bake again so paths can use that spot.
 ## Several breaking close together share one re-bake.
-func _on_prop_opened(_prop: LootProp) -> void:
+func _on_prop_opened(prop: LootProp) -> void:
+	if prop.still_blocks():                  # still standing (a chest, an open cache): nothing to open up
+		return
 	if _rebake_pending:
 		return
 	_rebake_pending = true
@@ -175,7 +177,7 @@ func _rebake() -> void:
 	if props != null:
 		for p in props.get_children():
 			var lp := p as LootProp
-			if lp == null or lp.is_open or lp.is_queued_for_deletion():
+			if lp == null or not lp.still_blocks() or lp.is_queued_for_deletion():
 				continue
 			var ob := lp.get_node_or_null("NavObstacle") as NavigationObstacle3D
 			if ob == null:

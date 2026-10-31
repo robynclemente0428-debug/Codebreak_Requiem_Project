@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://systems/props/loot_chest.gd" id="1_chest"]
+[ext_resource type="PackedScene" path="res://scenes/props/chest_model.tscn" id="2_model"]
+
+[node name="LootChest" type="StaticBody3D"]
+script = ExtResource("1_chest")
+closed_model_scene = ExtResource("2_model")
+collision_radius = 0.55
+collision_height = 0.75
+max_health = 1.0
+credits_min = 40
+credits_max = 70
+item_chance = 0.8
+item_rolls = 2
+rarity_weights = {"magic": 50, "rare": 50}

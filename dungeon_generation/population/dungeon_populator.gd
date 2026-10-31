@@ -35,6 +35,17 @@ extends Node
 ## Props along corridors: one per this many corridor floor cells (0 = none in corridors).
 @export var corridor_cells_per_prop: int = 18
 
+@export_group("Chests")
+## Opened with the interact key, pays out more than any barrel (see LootChest). Empty = the
+## default chest. Not preloaded: the chest's script refers back to this class, and a preload
+## here made the two load each other in a loop.
+@export var chest_scene: PackedScene
+const DEFAULT_CHEST := "res://scenes/props/loot_chest.tscn"
+@export var chests_enabled: bool = true
+## Chests per dungeon: chests_min at level 1, rising to chests_max by level 10.
+@export var chests_min: int = 1
+@export var chests_max: int = 3
+
 var _loot_cache: Array[ItemDefinition] = []
 var _loot_cache_level := -1
 
@@ -279,7 +290,66 @@ func place_props(is_floor: Callable, to_world: Callable) -> void:
 					corridor.append(c)
 		_scatter(corridor, corridor.size() / corridor_cells_per_prop, holder, to_world, rng, counter, taken)
 	var placed: int = counter[1]
-	print("[Populator] placed %d props" % placed)
+	var chests := _place_chests(holder, to_world, rng, counter, taken, is_floor)
+	print("[Populator] placed %d props, %d chests" % [placed, chests])
+
+
+## A few chests, one per room at most, back against a wall and facing into the room.
+## Placed after the other props with the same rng, so an instance always gets the same ones.
+func _place_chests(holder: Node3D, to_world: Callable, rng: RandomNumberGenerator,
+		counter: Array, taken: Dictionary, is_floor: Callable) -> int:
+	if not chests_enabled or chests_max <= 0:
+		return 0
+	if chest_scene == null:
+		chest_scene = load(DEFAULT_CHEST)
+	var t := clampf((_level - 1) / 9.0, 0.0, 1.0)
+	var want := roundi(lerpf(chests_min, chests_max, t))
+	var rooms: Array = []
+	for room: RoomData in director.rooms:
+		if room.room_type != "start" and room.room_type != "portal":
+			rooms.append(room)
+	# Only walls on the far side from the camera: a chest against a near wall hides behind it
+	var gm := director.grid_map
+	var away := Vector3(0.0, 0.0, -1.0)
+	var cam := get_viewport().get_camera_3d()
+	if cam != null:
+		away = Vector3(-cam.global_basis.z.x, 0.0, -cam.global_basis.z.z).normalized()
+	var made := 0
+	while made < want and not rooms.is_empty():
+		var room: RoomData = rooms.pop_at(rng.randi() % rooms.size())
+		var spots: Array = []                     # [cell, wall direction]
+		for x in range(room.rect.position.x, room.rect.end.x):
+			for y in range(room.rect.position.y, room.rect.end.y):
+				var c := Vector2i(x, y)
+				if taken.has(c) or not is_floor.call(Vector3i(x, 0, y)):
+					continue
+				for d in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+					if (gm.global_basis * Vector3(d.x, 0.0, d.y)).dot(away) < 0.1:
+						continue                      # a near wall
+					var wall: Vector2i = c + d
+					var front: Vector2i = c - d
+					var front2: Vector2i = c - d * 2
+					# Wall behind, two clear cells in front (room to stand and open it)
+					if not is_floor.call(Vector3i(wall.x, 0, wall.y)) \
+							and is_floor.call(Vector3i(front.x, 0, front.y)) and not taken.has(front) \
+							and is_floor.call(Vector3i(front2.x, 0, front2.y)):
+						spots.append([c, d])
+						break
+		if spots.is_empty():
+			continue
+		var pick: Array = spots[rng.randi() % spots.size()]
+		var cell: Vector2i = pick[0]
+		var wall_dir: Vector2i = pick[1]
+		for dx in range(-1, 2):
+			for dy in range(-1, 2):
+				taken[cell + Vector2i(dx, dy)] = true
+		var chest := _place_prop(cell, holder, to_world, rng, counter, chest_scene)
+		# Face into the room, nudged back towards the wall
+		var into := (gm.global_basis * Vector3(-wall_dir.x, 0.0, -wall_dir.y)).normalized()
+		chest.global_rotation = Vector3(0.0, atan2(into.x, into.z), 0.0)
+		chest.global_position -= into * gm.cell_size.x * 0.2
+		made += 1
+	return made
 
 
 ## Places `want` props on random free spots, each maybe with 1-2 neighbours (a pile).
@@ -306,11 +376,13 @@ func _scatter(spots: Array[Vector2i], want: int, holder: Node3D, to_world: Calla
 			made += 1
 
 
+## Places one prop: `scene`, or a barrel / supply cache picked from prop_scenes. Returns it.
 func _place_prop(cell: Vector2i, holder: Node3D, to_world: Callable,
-		rng: RandomNumberGenerator, counter: Array) -> void:
-	var scene: PackedScene = prop_scenes[0]
-	if prop_scenes.size() > 1 and rng.randf() < rare_prop_chance:
-		scene = prop_scenes[1]
+		rng: RandomNumberGenerator, counter: Array, scene: PackedScene = null) -> LootProp:
+	if scene == null:
+		scene = prop_scenes[0]
+		if prop_scenes.size() > 1 and rng.randf() < rare_prop_chance:
+			scene = prop_scenes[1]
 	var index: int = counter[0]
 	var prop := scene.instantiate() as LootProp
 	prop.index = index
@@ -325,6 +397,7 @@ func _place_prop(cell: Vector2i, holder: Node3D, to_world: Callable,
 			prop.opened.connect(func(_p) -> void: inst.opened[index] = true)
 	counter[0] = index + 1
 	counter[1] += 1
+	return prop
 
 
 ## Corridors: only where the corridor is wider than one tile, so a prop never blocks the way.

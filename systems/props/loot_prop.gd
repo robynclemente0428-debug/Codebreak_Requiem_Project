@@ -72,6 +72,12 @@ func _ready() -> void:
 		numbers.track(health)
 
 
+## True while it still stands in the way: closed, or opened but kept as an open model. Only
+## props that broke away let the navmesh through again (see dungeon.gd).
+func still_blocks() -> bool:
+	return not is_open or open_model_scene != null
+
+
 ## Shows it already looted (a revisit of the same dungeon instance). Pays nothing.
 func set_already_open() -> void:
 	is_open = true

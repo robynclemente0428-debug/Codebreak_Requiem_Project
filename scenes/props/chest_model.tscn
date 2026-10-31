@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/Sci-Fi Essentials Kit[Standard]/glTF/Prop_Chest.gltf" id="1_chest"]
+
+[node name="ChestModel" type="Node3D"]
+transform = Transform3D(0.75, 0, 0, 0, 0.75, 0, 0, 0, 0.75, 0, 0, 0)
+
+[node name="Prop_Chest" parent="." instance=ExtResource("1_chest")]
