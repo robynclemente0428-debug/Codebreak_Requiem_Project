@@ -196,6 +196,23 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 				"raise one of the %s lines (rules with conditions count as if all were active at once)" % knob.id,
 				lowering.get(knob.id, []))
 
+	# WHEN charge >= N can't ask for more charge than the skill can hold, or it never fires
+	var cap_knob := limits.get_knob(VariableStoreSupport.CAPACITY_KNOB)
+	if cap_knob != null:
+		var capacity := VariableStoreSupport.capacity_with(int(always_steps.get(cap_knob.id, 0)), cap_knob)
+		var seen := {}
+		for rule in rules:
+			seen[rule.owner] = seen.get(rule.owner, 0) + 1
+			for c in rule.conditions:
+				var charge := c as ChargeAtLeastCondition
+				if charge == null or charge.n <= capacity:
+					continue
+				var label := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
+				v.add_issue("%s: charge >= %d never fires, this skill holds at most %d charge." % [label, charge.n, capacity],
+					"never fires: this skill holds at most %d charge" % capacity,
+					"lower the number to %d or less, or raise Charge capacity in an always: rule (+%d per step)" % [
+						capacity, int(cap_knob.step)], rule, charge)
+
 	if v.points_used > limits.point_budget + EPSILON:
 		var over_by := v.points_used - limits.point_budget
 		v.add_error("Over budget by %.1f points: add drawbacks or remove buffs." % over_by,

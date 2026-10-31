@@ -55,6 +55,17 @@ static func spend(caster: Node, skill: SkillInstance, amount: int) -> void:
 	owner.set_meta(_key(skill), maxi(read(owner, skill) - amount, 0))
 
 
+## The Charge capacity knob (var_store_max).
+const CAPACITY_KNOB := &"store_capacity"
+
+
+## The most charge a skill can hold with `steps` of Charge capacity from always: rules.
+static func capacity_with(steps: int, knob: SkillKnob) -> int:
+	var def: SupportGemDefinition = SkillGemRegistry.get_support_gem("variable_store_support")
+	var base: float = def.flag_modifiers.get("var_store_max", 10.0) if def != null else 10.0
+	return int(round(base + knob.value_for(steps)))
+
+
 ## The effect multiplier for a rule that spends charge (1.0 for any other rule).
 static func rule_effect_mult(rule: ProgramRule) -> float:
 	var mult := 1.0
