@@ -10,7 +10,7 @@
 [resource]
 script = ExtResource("1_4klby")
 id = "alien_range"
-display_name = "Ranged Alien"
+display_name = "Null Spitter"
 allowed_modifier_tags = Array[int]([1, 3, 4])
 scene = ExtResource("1_gqyts")
 model_scene = ExtResource("1_s033e")

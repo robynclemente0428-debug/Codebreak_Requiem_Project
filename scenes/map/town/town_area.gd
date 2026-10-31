@@ -20,6 +20,8 @@ extends GameArea
 @export var heal_on_arrival: bool = true
 ## Spawned at every PortalMarker in the layout. Its root must use portal.gd.
 @export var portal_scene: PackedScene = preload("res://scenes/map/map_management/portal.tscn")
+## Null stains on the town's floor (see NullDecals). The town held, so only a few. 0 = none.
+@export var null_decals: int = 8
 
 const FLOOR_LAYER := 0
 
@@ -40,6 +42,7 @@ func _ready() -> void:
 	_timer.timeout.connect(_save_now)
 	add_child(_timer)
 	_read_layout()
+	_scatter_null_decals()
 	_bind_minimap.call_deferred()            # once the NPCs below us are ready too
 
 
@@ -60,6 +63,18 @@ func _bind_minimap() -> void:
 		_director.grid = g
 	var npcs: Array = find_children("*", "DialogueNPC", true, false)
 	mm.bind_dungeon(_director, _director.grid_map, null, {"town": true, "npcs": npcs})
+
+
+## Seeded by the scene's name, so the stains are in the same places every visit.
+func _scatter_null_decals() -> void:
+	if _layout == null or null_decals <= 0:
+		return
+	var cells: Array[Vector2i] = []
+	for c in _director.grid_map.get_used_cells():
+		if c.y == FLOOR_LAYER and _is_floor(Vector2i(c.x, c.z)):
+			cells.append(Vector2i(c.x, c.z))
+	NullDecals.scatter(self, cells, _cell_to_world, null_decals, hash(name),
+			_director.dungeon_theme.cell_size.x)
 
 
 # ---------- LAYOUT MARKERS ----------

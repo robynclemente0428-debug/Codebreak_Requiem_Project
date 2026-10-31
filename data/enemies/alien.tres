@@ -9,7 +9,7 @@
 [resource]
 script = ExtResource("1_sxbgx")
 id = "alien"
-display_name = "Alien"
+display_name = "Null Husk"
 allowed_modifier_tags = Array[int]([0, 2, 3, 4])
 scene = ExtResource("2_2trdi")
 model_scene = ExtResource("1_8lgb5")

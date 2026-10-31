@@ -17,13 +17,16 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ quest_ready:q05_the_leak -> ready_q05_the_leak
 @ quest_ready:q03_loop_hound_alpha -> ready_q03_loop_hound_alpha
 @ quest_ready:q02_corrupted_gate_guard -> ready_q02_corrupted_gate_guard
+@ quest_ready:q01b_clear_the_ward -> ready_q01b_clear_the_ward
 @ quest_ready:q01_glitchling_queen -> ready_q01_glitchling_queen
 @ quest_active:q06_the_mimic -> remind_q06_the_mimic
 @ quest_active:q05_the_leak -> remind_q05_the_leak
 @ quest_active:q03_loop_hound_alpha -> remind_q03_loop_hound_alpha
 @ quest_active:q02_corrupted_gate_guard -> remind_q02_corrupted_gate_guard
+@ quest_active:q01b_clear_the_ward -> remind_q01b_clear_the_ward
 @ quest_active:q01_glitchling_queen -> remind_q01_glitchling_queen
 @ can_start:q01_glitchling_queen -> offer_q01_glitchling_queen
+@ can_start:q01b_clear_the_ward -> offer_q01b_clear_the_ward
 @ can_start:q02_corrupted_gate_guard -> offer_q02_corrupted_gate_guard
 @ can_start:q03_loop_hound_alpha -> offer_q03_loop_hound_alpha
 @ can_start:q05_the_leak -> offer_q05_the_leak
@@ -77,6 +80,33 @@ Brack: Done?
 ~ turnin_q01_glitchling_queen
 > turn_in q01_glitchling_queen
 Brack: Wall’s holding. You’re useful. I’ll admit it.
+-> start
+
+~ offer_q01b_clear_the_ward
+# Quest 1.3 in the campaign dialogue doc (Clear the Ward), adapted to the ward's districts
+Brack: Half our home is Null now. Push it back before it spreads.
+Brack: Three Corrupted hold the districts between us and the Gate. Relay Trench, Coolant Vaults, the Foundry.
+* ACCEPT -> accept_q01b_clear_the_ward
+* DECLINE -> end
+
+~ accept_q01b_clear_the_ward
+> start_quest q01b_clear_the_ward
+# NEW line below
+Brack: One district at a time. Every one you take back, we keep.
+-> end
+
+~ remind_q01b_clear_the_ward
+# NEW line below
+Brack: The ward's still theirs. Relay Trench, Coolant Vaults, Foundry.
+
+~ ready_q01b_clear_the_ward
+Brack: Done?
+* TURN IN -> turnin_q01b_clear_the_ward
+* NOT YET -> end
+
+~ turnin_q01b_clear_the_ward
+> turn_in q01b_clear_the_ward
+Brack: The ward is ours again. For now.
 -> start
 
 ~ offer_q02_corrupted_gate_guard

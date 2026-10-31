@@ -192,10 +192,18 @@ func _track(enemy: Node3D) -> bool:
 	return true
 
 
+## The area scene's file name, e.g. "act_1_coolant_vaults".
+func _area_id() -> String:
+	var area := owner if owner != null else get_parent()
+	return area.scene_file_path.get_file().get_basename() if area != null else ""
+
+
 func _on_enemy_died(enemy: Node3D, rarity: String, enemy_id: String) -> void:
 	# Quest events
 	GameEvents.report("kill", enemy_id)
 	GameEvents.report("kill_rarity", rarity)      # for "kill 3 rare enemies" / "kill a champion"
+	# Where it died, for "the Raider in the Coolant Vaults": "corrupted_raider@act_1_coolant_vaults"
+	GameEvents.report("kill_at", "%s@%s" % [enemy_id, _area_id()])
 
 	# Award credits when the enemy dies
 	_award_credits(rarity, enemy.global_position)

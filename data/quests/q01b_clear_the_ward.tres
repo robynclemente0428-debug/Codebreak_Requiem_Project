@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("1_obj")
+description = "Kill the Relay Enchanter in the Relay Trench"
+kind = "kill_at"
+target = "corrupted_enchanter@act_1_relay_trench"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Kill the Vault Raider in the Coolant Vaults"
+kind = "kill_at"
+target = "corrupted_raider@act_1_coolant_vaults"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Objective_3"]
+script = ExtResource("1_obj")
+description = "Kill the Overclocked Raider in the Overclock Foundry"
+kind = "kill_at"
+target = "corrupted_raider@act_1_overclock_foundry"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q01b_clear_the_ward"
+title = "CLEAR THE WARD"
+description = "Half of Hardfault is Null now. Three Corrupted hold the districts between us and the Gate.
+Take the ward back, one district at a time."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3")])
+prerequisite_quest_ids = Array[String](["q01_glitchling_queen"])
+reward_credits = 100
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "I"

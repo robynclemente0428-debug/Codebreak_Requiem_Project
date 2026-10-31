@@ -17,6 +17,8 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 
 ~ offer_operator
 Sudo: Show me your script. I grade logic, not luck.
+# NEW line below: ties the exam to the Gate Guard fight
+Sudo: The Gate Guard swings slow. A wasteful script won't wait for your opening. A patient one will.
 * ACCEPT -> accept_operator
 * DECLINE -> end
 

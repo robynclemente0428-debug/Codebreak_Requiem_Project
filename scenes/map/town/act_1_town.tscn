@@ -11,6 +11,7 @@
 [ext_resource type="PackedScene" uid="uid://brcgbkbio4vce" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="9_rkjhf"]
 [ext_resource type="Resource" uid="uid://c58lpqc0ep3fj" path="res://data/shops/gem_vendor.tres" id="10_85p20"]
 [ext_resource type="PackedScene" path="res://scenes/npc/warden_brack.tscn" id="10_brack"]
+[ext_resource type="Resource" path="res://data/dialogue/hex.tres" id="10_t87ck"]
 [ext_resource type="PackedScene" uid="uid://dir4ecj6nb042" path="res://scenes/npc/examiner_sudo.tscn" id="11_sudo"]
 [ext_resource type="Resource" uid="uid://cj7ruy6fmca7e" path="res://data/dialogue/gem_vendor.tres" id="11_t87ck"]
 [ext_resource type="Resource" uid="uid://bw1olxgfgunn5" path="res://data/shops/weapon_vendor.tres" id="13_wgwnr"]
@@ -91,9 +92,10 @@ metadata/_custom_type_script = "uid://drtmekm517kgm"
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.565979, 1.1000004, 21.429565)
 stock_level = 10
 model_scene = ExtResource("9_rkjhf")
-npc_id = "general_vendor"
-npc_name = "General Vendor"
-info_title = "General Vendor"
+npc_id = "hex"
+npc_name = "Tinker Hex"
+dialogue = ExtResource("10_t87ck")
+info_title = "Trader"
 
 [node name="GemVendor" parent="." unique_id=1899151654 instance=ExtResource("8_4ttov")]
 transform = Transform3D(-0.7442046, 0, 0.66795176, 0, 1, 0, -0.66795176, 0, -0.7442046, 23.925287, 1.1000004, 24.469622)

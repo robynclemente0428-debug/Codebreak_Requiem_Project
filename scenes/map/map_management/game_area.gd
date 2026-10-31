@@ -12,6 +12,17 @@ extends Node3D
 
 const DEFAULT_SPAWN := &"default"
 
+## Drawn behind the level, where a sky would be (see VoidBackdrop). Act I's binary void by
+## default; give a later act its own material, or clear it for the plain sky.
+@export var backdrop: Material = preload("res://assets/shaders/void/act1_void.tres")
+
+
+# A notification rather than _ready(): dungeon.gd and town_area.gd have their own _ready()
+# and don't call super(), but every class gets its notifications.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_READY and backdrop != null:
+		VoidBackdrop.attach(self, backdrop)
+
 
 ## Returns a GLOBAL position (feet level) for the given spawn id.
 func get_spawn_position(spawn_id: StringName = DEFAULT_SPAWN) -> Vector3:

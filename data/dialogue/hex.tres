@@ -4,12 +4,42 @@
 
 [resource]
 script = ExtResource("1_dlg")
-source = "# Tinker Hex: trader. Sarcastic, fair. Gives The Overflow (Act II). Use on a ShopNPC so 'open_shop' works.
+source = "# Tinker Hex: trader. Sarcastic, fair. Gives Salvage Rights (Act I) and The Overflow (Act II).
+# Use on a ShopNPC so 'open_shop' works. Reminders and declines fall through to the shop.
 ~ start
+@ quest_ready:clear_hub -> ready_clear_hub
+@ quest_active:clear_hub -> remind_clear_hub
+@ can_start:clear_hub -> offer_clear_hub
 @ quest_ready:q04_the_overflow -> ready_q04_the_overflow
 @ quest_active:q04_the_overflow -> remind_q04_the_overflow
 @ can_start:q04_the_overflow -> offer_q04_the_overflow
 -> idle
+
+~ offer_clear_hub
+# NEW: Act I quest, not in the campaign doc
+Hex: So you're what crawled out of the outer ward. Good. I need someone expendable.
+Hex: Two Corrupted are squatting on my supply caches. One in the Spillway, one in the Cache Warrens.
+* ACCEPT -> accept_clear_hub
+* DECLINE -> idle
+
+~ accept_clear_hub
+> start_quest clear_hub
+Hex: Clear them out. I get my caches back, you get paid, and we both complain less.
+-> end
+
+~ remind_clear_hub
+Hex: My caches are still occupied. Raider in the Spillway, Enchanter in the Warrens.
+-> idle
+
+~ ready_clear_hub
+Hex: Caches clear?
+* TURN IN -> turnin_clear_hub
+* NOT YET -> idle
+
+~ turnin_clear_hub
+> turn_in clear_hub
+Hex: Sixty credits. Don't spend it all in one place. Unless the place is my shop.
+-> start
 
 ~ offer_q04_the_overflow
 Hex: A big crawler is sitting on all my power cells. Kill it and I’ll pay well.

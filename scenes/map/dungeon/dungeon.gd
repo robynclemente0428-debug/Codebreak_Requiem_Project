@@ -35,6 +35,7 @@ func _ready() -> void:
 	_place_portals()
 	populator.instance = instance           # skips enemies killed on an earlier visit
 	_spawn_enemies()
+	_scatter_null_decals()
 	randomize()                             # back to real randomness for loot and combat
 	_bind_minimap()
 	await _bake_navigation()
@@ -58,6 +59,21 @@ func _spawn_enemies() -> void:
 	populator.populate(dungeon_level, skip, _is_floor, _grid_to_world)
 	populator.spawn_marked(director.layout.enemies, dungeon_level, _is_floor, _grid_to_world)
 	populator.place_props(_is_floor, _grid_to_world)    # breakable barrels and supply caches
+
+## Null corruption stains on the floor, more of them the deeper the dungeon (see NullDecals).
+## Own seed from the instance, so rejoining shows the same stains without touching the
+## director's rng (that one decides the layout and enemies).
+func _scatter_null_decals() -> void:
+	var cells: Array[Vector2i] = []
+	for c in grid_map.get_used_cells():
+		if c.y == FLOOR_LAYER and _is_floor(c):
+			cells.append(Vector2i(c.x, c.z))
+	var rooms: Array[Rect2i] = []
+	for r: RoomData in director.rooms:
+		rooms.append(r.rect)
+	NullDecals.scatter(self, cells, _grid_to_world, NullDecals.count_for_level(dungeon_level, cells.size()),
+			instance.rng_seed ^ 0x5EED, director.dungeon_theme.cell_size.x, rooms, dungeon_level)
+
 
 ## Nodes in this group (and their children) are what the navmesh is baked from: the level's
 ## tiles, plus a NavigationObstacle3D on each breakable prop. Props live outside the

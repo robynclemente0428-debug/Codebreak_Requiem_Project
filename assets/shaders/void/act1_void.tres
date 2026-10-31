@@ -1,0 +1,7 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/void/void_binary.gdshader" id="1_void"]
+
+[resource]
+render_priority = -100
+shader = ExtResource("1_void")

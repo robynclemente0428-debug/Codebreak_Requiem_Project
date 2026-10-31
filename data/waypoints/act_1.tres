@@ -67,7 +67,7 @@ spawn_id = &"deadsector_in"
 dungeon_level = 5
 map_position = Vector2(0.45, 0.62)
 links = PackedStringArray("act1_map2", "act1_relaytrench")
-note = "Level 5  -  Alien warband"
+note = "Level 5  -  Null Husk warband"
 
 [sub_resource type="Resource" id="Waypoint_act1_relaytrench"]
 script = ExtResource("2_wp")
