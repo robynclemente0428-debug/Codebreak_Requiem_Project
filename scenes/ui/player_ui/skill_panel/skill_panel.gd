@@ -677,7 +677,7 @@ func tutorial_state() -> Dictionary:
 
 
 ## Controls the tutorial hints can outline. Empty while closed.
-## ids: picker, empty_socket, filled_socket, tab_sockets, tab_script, script_palette,
+## ids: picker, empty_socket, filled_socket, empty_support, filled_support, tab_sockets, tab_script, script_palette,
 ##      script_apply, hotkey_<action> (e.g. hotkey_attack)
 func tutorial_target(id: String) -> Array[Control]:
 	var out: Array[Control] = []
@@ -694,6 +694,16 @@ func tutorial_target(id: String) -> Array[Control]:
 				var slot: GemSlot = row["skill"]
 				if (slot.item == null) == (id == "empty_socket"):
 					out.append(slot)
+					break
+		"empty_support", "filled_support":       # first open (unlocked) support cell, or a used one
+			for row in _rows:
+				var found := false
+				for cell: GemSlot in row["supports"]:
+					if not cell.locked and (cell.item == null) == (id == "empty_support"):
+						out.append(cell)
+						found = true
+						break
+				if found:
 					break
 		"tab_sockets":
 			out.append(_tab_sockets)

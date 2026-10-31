@@ -186,6 +186,47 @@ func to_dict() -> Dictionary:
 	return {"active": list, "completed": completed_ids, "pending_choices": pending_choices}
 
 
+# ---------- TUTORIAL GUARD ----------
+## The tutorial needs the class's starting skill gem, so until these quests are turned in the
+## player can't discard or sell their last copy of it.
+const TUTORIAL_QUESTS: Array[String] = ["tut_basics", "q00_proximity_trigger"]
+
+
+func tutorial_finished() -> bool:
+	for id in TUTORIAL_QUESTS:
+		if catalog.has(id) and not is_completed(id):
+			return false
+	return true
+
+
+## "" when `item` may be thrown away (discarded or sold), otherwise a message for the player.
+func keep_reason(item: ItemInstance) -> String:
+	if item == null or tutorial_finished():
+		return ""
+	var cd = _player.get("class_data")
+	if cd == null or cd.starting_skill_gem == null or item.definition != cd.starting_skill_gem:
+		return ""
+	if _copies_owned(item.definition) > 1:
+		return ""                                # another copy stays behind for the tutorial
+	return "NEEDED FOR THE TUTORIAL: FINISH IT FIRST"
+
+
+## Copies of an item in the backpack and in skill sockets.
+func _copies_owned(def: ItemDefinition) -> int:
+	var n := 0
+	var inv: InventoryComponent = _player.get("inventory")
+	if inv != null:
+		for it in inv.items:
+			if it != null and it.definition == def:
+				n += 1
+	var skills: SkillComponent = _player.get("skills")
+	if skills != null:
+		for s in skills.sockets:
+			if s.gem != null and s.gem.definition == def:
+				n += 1
+	return n
+
+
 # ---------- SUPPORT GEM CHOICE ----------
 ## The skill gem the player's class starts with (its starting_skill_gem), or, if the class has
 ## none, the skill in the first socket. null if neither exists.

@@ -2,6 +2,9 @@ extends CanvasLayer
 ## Tutorial hints. Follows two quests, in order:
 ##   BASIC TRAINING (tut_basics)              moving, the map, gear, gems, binding, attacking
 ##   PROXIMITY TRIGGER (q00_proximity_trigger) the first script, step by step, then a fight
+## Plus short lessons outside the quests:
+##   SUPPORT GEMS   after picking the training reward: socket it next to the skill, see what it does
+##   WAYPOINTS      the first time the player is in a dungeon: open the map, see how travel works
 ## Shows a banner with the next thing to do and a second line saying why, outlines the UI to
 ## click, and points an arrow at things in the world (Warden Brack, a dungeon portal).
 ## The step shown is the quest's first objective that isn't done yet, and the scripting steps
@@ -14,6 +17,10 @@ extends CanvasLayer
 const QUEST_BASICS := "tut_basics"
 const QUEST_SCRIPT := "q00_proximity_trigger"
 const GUIDE_NPC_ID := "brack"
+## Lessons that aren't quests, kept in the character's save once seen.
+const SAVE_KEY_DONE := "tutorials_done"
+const LESSON_WAYPOINTS := "waypoints"
+const LESSON_SUPPORTS := "support_gems"
 const FONT_PATH := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_SUB := Color(0.62, 0.80, 0.86)
@@ -41,6 +48,8 @@ var _time := 0.0
 ## simply shows them again.
 var _lesson_done: Dictionary = {}
 var _lesson_start_params: Array = []      # the condition's values when the rule was made
+var _waypoint_map_seen := false           # the map was opened during the waypoint lesson
+var _support_lesson_shown := false        # the "socket your support gem" steps were shown
 
 
 func _ready() -> void:
@@ -127,6 +136,16 @@ func _current_hint() -> Dictionary:
 	var qm: QuestManager = player.get("quests")
 	if qm == null:
 		return {}
+
+	# Short and only in a dungeon, so it goes before a quest step that may be waiting there
+	var waypoint_hint := _waypoint_hint()
+	if not waypoint_hint.is_empty():
+		return waypoint_hint
+
+	# Right after the training reward, before the nudge towards the scripting lesson
+	var support_hint := _support_hint(qm)
+	if not support_hint.is_empty():
+		return support_hint
 
 	var basics := qm.get_def(QUEST_BASICS)
 	if basics != null and not qm.is_completed(QUEST_BASICS):
@@ -239,12 +258,21 @@ func _hint_for(obj: Objective, progress: int) -> Dictionary:
 				"sub": "Each use costs mana (the blue bar). It refills over time."}
 
 		"program_condition":
+			var warn := _skill_missing_hint(obj, false, inv, sp, inv_open, sp_open, sp_key, sp_state)
+			if not warn.is_empty():
+				return warn
 			return _script_hint(obj, sp, sp_open, sp_key, sp_state)
 
 		"rule_triggered":
+			var warn := _skill_missing_hint(obj, true, inv, sp, inv_open, sp_open, sp_key, sp_state)
+			if not warn.is_empty():
+				return warn
 			return _fight_hint(obj, progress, inv_open or sp_open)
 
 		"program_applied":
+			var warn := _skill_missing_hint(obj, false, inv, sp, inv_open, sp_open, sp_key, sp_state)
+			if not warn.is_empty():
+				return warn
 			if not sp_open:
 				return {"text": "Press [%s], then open the SCRIPTING tab" % sp_key}
 			if sp_state.get("tab") != "scripting":
@@ -326,6 +354,187 @@ func _script_hint(obj: Objective, sp: SkillPanel, sp_open: bool, sp_key: String,
 				% [points, float(st.get("discount", 1.0))],
 			"targets": sp.tutorial_target("script:apply") + sp.tutorial_target("script:rule_line:" + cond)}
 	return {"text": "Press  apply()  to run your script", "targets": sp.tutorial_target("script:apply")}
+
+
+# ---------- THE SUPPORT GEM LESSON ----------
+## Starts once training is turned in and its support gem is picked (it lands in the backpack).
+## Walks the player through socketing it next to their skill, then shows what it changed
+## until they close the skill menu.
+func _support_hint(qm: QuestManager) -> Dictionary:
+	if _lesson_seen(LESSON_SUPPORTS) or not qm.is_completed(QUEST_BASICS) or not qm.pending_choices.is_empty():
+		return {}
+	var player := _get_player()
+	var skills: SkillComponent = player.get("skills")
+	var inv_comp: InventoryComponent = player.get("inventory")
+	if skills == null or inv_comp == null:
+		return {}
+	var inv := get_tree().get_first_node_in_group("inventory_panel") as InventoryPanel
+	var sp := get_tree().get_first_node_in_group("skill_panel") as SkillPanel
+	var inv_open := inv != null and inv.is_open()
+	var sp_open := sp != null and sp.is_open()
+	var sp_key := OS.get_keycode_string(sp.toggle_key) if sp != null else "K"
+	var sp_state: Dictionary = sp.tutorial_state() if sp != null else {}
+
+	var socketed: ItemInstance = null            # a support gem already next to a skill
+	var has_skill := false
+	for s in skills.sockets:
+		has_skill = has_skill or s.gem != null
+		if socketed == null and not s.supports.is_empty():
+			socketed = s.supports[0]
+	var in_backpack := false
+	for it in inv_comp.items:
+		if it != null and it.definition.support_gem != null:
+			in_backpack = true
+			break
+
+	if socketed != null:
+		if not _support_lesson_shown:
+			_mark_lesson_seen(LESSON_SUPPORTS)   # socketed before the lesson ever showed (older save)
+			return {}
+		if not sp_open:
+			_mark_lesson_seen(LESSON_SUPPORTS)
+			return {}
+		return {"text": "%s now changes your skill" % socketed.definition.support_gem.display_name,
+			"sub": "Hover it to read what it does. Right-click it to take it out again. Supports also get their own file in the SCRIPTING tab. Close the menu when you're done.",
+			"targets": sp.tutorial_target("filled_support")}
+
+	if not in_backpack:
+		return {}                                # sold or not picked: nothing to teach with
+	_support_lesson_shown = true
+	var why := "Support gems go in the small cells next to a skill and change how that skill works."
+	if not has_skill:
+		return {"text": "Socket your skill gem first", "sub": why}
+	if sp_open:
+		if sp_state.get("tab") != "sockets":
+			return {"text": "Open the SOCKETS tab", "sub": why, "targets": sp.tutorial_target("tab_sockets")}
+		if sp_state.get("picker", false):
+			return {"text": "Pick your support gem",
+				"sub": "Only supports that work with this skill are listed.",
+				"targets": sp.tutorial_target("picker")}
+		return {"text": "Click an empty support cell next to your skill", "sub": why,
+			"targets": sp.tutorial_target("empty_support")}
+	if inv_open:
+		var gem := inv.tutorial_target("support_gem_item")
+		if not gem.is_empty():
+			return {"text": "Right-click the support gem to socket it",
+				"sub": "It goes next to the first skill it works with.", "targets": gem}
+	return {"text": "You got a support gem: press [%s] to socket it" % sp_key, "sub": why}
+
+
+# ---------- THE WAYPOINT LESSON ----------
+## Starts the first time the player stands in a dungeon that has a waypoint (arriving there
+## just unlocked it), and ends when they close the waypoint map after opening it once.
+func _waypoint_hint() -> Dictionary:
+	if _lesson_seen(LESSON_WAYPOINTS):
+		return {}
+	var panel := get_tree().get_first_node_in_group("waypoint_panel") as WaypointPanel
+	if panel == null:
+		return {}
+	var key := GemText.key_label(WaypointPanel.ACTION)
+	if panel.is_open():
+		if not _waypoint_map_seen and not _in_waypoint_dungeon():
+			return {}                             # opened in town before ever reaching a dungeon
+		_waypoint_map_seen = true
+		return {"text": "Lit places are unlocked. Click one to travel there",
+			"sub": "Use it to get back to town and return to a dungeon later. Ctrl + click a dungeon for a fresh layout. Press [%s] to close." % key,
+			"targets": panel.tutorial_target("map")}
+	if _waypoint_map_seen:
+		_mark_lesson_seen(LESSON_WAYPOINTS)
+		return {}
+	if not _in_waypoint_dungeon():
+		return {}
+	var w := Waypoints.for_scene(_current_scene_path())
+	return {"text": "Waypoint unlocked: %s" % w.display_name,
+		"sub": "Every area you reach is added to your waypoint map. Press [%s] to open it." % key}
+
+
+func _in_waypoint_dungeon() -> bool:
+	if _in_town():
+		return false
+	var w := Waypoints.for_scene(_current_scene_path())
+	return w != null and w.kind != Waypoint.Kind.TOWN and Waypoints.is_discovered(w)
+
+
+func _current_scene_path() -> String:
+	var am := get_tree().get_first_node_in_group("area_manager") as AreaManager
+	return am.current_scene_path() if am != null else ""
+
+
+## Lessons outside the quests are saved with the host's character (seat 0).
+func _lesson_seen(id: String) -> bool:
+	if SaveManager.party.is_empty():
+		return false
+	return id in SaveManager.get_data(SaveManager.party[0]).get(SAVE_KEY_DONE, [])
+
+
+func _mark_lesson_seen(id: String) -> void:
+	for slot in SaveManager.party:
+		var data: Dictionary = SaveManager.get_data(slot)
+		var done: Array = data.get(SAVE_KEY_DONE, [])
+		if not id in done:
+			done.append(id)
+		data[SAVE_KEY_DONE] = done
+
+
+## Warns while the scripting lesson can't go on: no skill gem in any socket, or (need_hotkey,
+## the fight step) the scripted skill isn't on a hotkey so it can't be used. {} when all is set.
+func _skill_missing_hint(obj: Objective, need_hotkey: bool, inv: InventoryPanel, sp: SkillPanel,
+		inv_open: bool, sp_open: bool, sp_key: String, sp_state: Dictionary) -> Dictionary:
+	var player := _get_player()
+	var skills: SkillComponent = player.get("skills") if player != null else null
+	if skills == null:
+		return {}
+
+	var socketed := -1                         # the scripted socket, else the first with a gem
+	for i in skills.sockets.size():
+		var s := skills.sockets[i]
+		if s.gem == null:
+			continue
+		if socketed < 0:
+			socketed = i
+		if s.program != null and _program_uses(s.program, obj.target):
+			socketed = i
+			break
+
+	if socketed < 0:
+		var why := "Scripts change how a skill behaves, so you need a skill gem in a socket first."
+		if sp_open:
+			if sp_state.get("tab") != "sockets":
+				return {"text": "No skill equipped: open the SOCKETS tab", "sub": why,
+					"targets": sp.tutorial_target("tab_sockets")}
+			if sp_state.get("picker", false):
+				return {"text": "Pick your skill gem", "sub": why, "targets": sp.tutorial_target("picker")}
+			return {"text": "No skill equipped: click an empty skill socket [+]", "sub": why,
+				"targets": sp.tutorial_target("empty_socket")}
+		if inv_open:
+			var gem := inv.tutorial_target("skill_gem_item")
+			if not gem.is_empty():
+				return {"text": "No skill equipped: right-click the skill gem to socket it", "sub": why,
+					"targets": gem}
+		return {"text": "No skill equipped: press [%s] and socket a skill gem" % sp_key, "sub": why}
+
+	if not need_hotkey or skills.action_of(socketed) != &"":
+		return {}
+	var why_key := "Your rule only fires when you use the skill, and a skill needs a hotkey to be used."
+	if not sp_open:
+		return {"text": "Your skill isn't on a hotkey: press [%s]" % sp_key, "sub": why_key}
+	if sp_state.get("tab") != "sockets":
+		return {"text": "Open the SOCKETS tab", "sub": why_key, "targets": sp.tutorial_target("tab_sockets")}
+	if sp_state.get("pending", &"") == &"":
+		var slots: Array[Control] = []
+		for action in SkillComponent.ACTIONS:
+			slots.append_array(sp.tutorial_target("hotkey_" + String(action)))
+		return {"text": "Click a hotkey slot for your skill", "sub": why_key, "targets": slots}
+	return {"text": "Now click your skill to put it on [%s]" % GemText.key_label(sp_state.get("pending")),
+		"sub": why_key, "targets": sp.tutorial_target("filled_socket")}
+
+
+func _program_uses(program: SkillProgram, condition_id: String) -> bool:
+	for rule in program.rules:
+		for c in rule.conditions:
+			if c.type_id() == condition_id:
+				return true
+	return false
 
 
 func _fight_hint(obj: Objective, progress: int, menus_open: bool) -> Dictionary:

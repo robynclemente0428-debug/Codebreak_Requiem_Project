@@ -183,6 +183,10 @@ func try_buy(item: ItemInstance, inv: InventoryComponent, wallet: CurrencyCompon
 func try_sell(item: ItemInstance, inv: InventoryComponent, wallet: CurrencyComponent) -> String:
 	if not inv.has_item(item):
 		return "ONLY BACKPACK ITEMS CAN BE SOLD"
+	var qm: QuestManager = inv.get_parent().get("quests")
+	var keep := qm.keep_reason(item) if qm != null else ""
+	if keep != "":
+		return keep
 	wallet.add(sell_price(item))
 	inv.remove_item(item)
 	return ""

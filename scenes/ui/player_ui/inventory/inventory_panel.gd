@@ -840,6 +840,11 @@ func tutorial_target(id: String) -> Array[Control]:
 				if s.item != null and s.item.definition.skill_gem != null:
 					out.append(s)
 					break
+		"support_gem_item":
+			for s in _grid_slots:
+				if s.item != null and s.item.definition.support_gem != null:
+					out.append(s)
+					break
 		"weapon_slot":
 			if _eq_slots.has(EquipmentSlots.Slot.WEAPON):
 				out.append(_eq_slots[EquipmentSlots.Slot.WEAPON])
@@ -912,8 +917,14 @@ func _unequip_selected() -> void:
 
 
 ## Deletes the item permanently. There is no confirmation.
+## The starting skill gem is kept until the tutorial is done (QuestManager.keep_reason).
 func _discard_selected() -> void:
 	if _selected == null or _inv == null or not _inv.has_item(_selected):
+		return
+	var qm: QuestManager = _inv.get_parent().get("quests")
+	var keep := qm.keep_reason(_selected) if qm != null else ""
+	if keep != "":
+		_notify(keep)
 		return
 	var item := _selected
 	_selected = null

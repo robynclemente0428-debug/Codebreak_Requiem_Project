@@ -152,6 +152,17 @@ func _on_pick(w: Waypoint, new_instance := false) -> void:
 		_on_hover(w)                                  # shows why not
 
 
+## Controls the tutorial hints (autoload/tutorial_hints.gd) can outline. Empty while closed.
+func tutorial_target(id: String) -> Array[Control]:
+	var out: Array[Control] = []
+	if not _open:
+		return out
+	match id:
+		"map":
+			out.append(_map)
+	return out
+
+
 func _change_act(step: int) -> void:
 	_act_index = clampi(_act_index + step, 0, Waypoints.acts().size() - 1)
 	_show_act()
