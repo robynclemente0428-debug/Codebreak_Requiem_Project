@@ -39,7 +39,11 @@ var _guide_search_wait := 0.0
 var _banner: PanelContainer
 var _label: Label
 var _sub: Label
-var _canvas: Control                       # draws the outlines and arrows
+var _canvas: Control                       # draws the outlines round the UI
+## The arrow over a world target is drawn on its own layer, just over the name plates (5) and
+## under the HUD (20), so a panel opened over it (dialogue, shop, inventory) covers it.
+const WORLD_LAYER := 6
+var _world_canvas: Control
 var _targets: Array[Control] = []
 var _world_target: Node3D
 var _time := 0.0
@@ -60,6 +64,14 @@ func _ready() -> void:
 	_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_canvas.draw.connect(_on_canvas_draw)
 	add_child(_canvas)
+	var world_layer := CanvasLayer.new()
+	world_layer.layer = WORLD_LAYER
+	add_child(world_layer)
+	_world_canvas = Control.new()
+	_world_canvas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_world_canvas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_world_canvas.draw.connect(_on_world_canvas_draw)
+	world_layer.add_child(_world_canvas)
 
 	_banner = PanelContainer.new()
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -127,6 +139,7 @@ func _process(delta: float) -> void:
 	_targets.assign(hint.get("targets", []))
 	_world_target = hint.get("world")
 	_canvas.queue_redraw()
+	_world_canvas.queue_redraw()
 
 
 # ---------- WHICH QUEST, WHICH STEP ----------
@@ -629,8 +642,13 @@ func _on_canvas_draw() -> void:
 		var r := _screen_rect(t).grow(4.0 + 3.0 * pulse)
 		_canvas.draw_rect(r, Color(COL_HINT, 0.10 * pulse), true)
 		_canvas.draw_rect(r, line, false, 3.0)
+
+
+func _on_world_canvas_draw() -> void:
+	var line := Color(COL_HINT, 0.55 + 0.45 * (0.5 + 0.5 * sin(_time * 5.0)))
 	if _world_target != null and is_instance_valid(_world_target):
-		_draw_world_arrow(_world_target.global_position + Vector3.UP * ARROW_HEIGHT, line)
+		_draw_world_arrow(_world_target.global_position + Vector3.UP * ARROW_HEIGHT, line,
+				NpcNameplates.top_of(_world_target))
 
 
 ## A control's rectangle on screen, through any CanvasLayer it sits in.
@@ -640,19 +658,22 @@ func _screen_rect(c: Control) -> Rect2:
 
 
 ## A bobbing arrow over a point in the world, or an arrow on the screen edge pointing
-## towards it when it's off camera.
-func _draw_world_arrow(pos: Vector3, col: Color) -> void:
+## towards it when it's off camera. `above_y` (screen y, NAN for none) is the top of an NPC's
+## name plate and quest badge: the arrow stays over it instead of covering it.
+func _draw_world_arrow(pos: Vector3, col: Color, above_y: float = NAN) -> void:
 	var pr: Dictionary = NpcNameplates.project(pos)   # same projection as the name plates
 	if pr.is_empty():
 		return
-	var screen := _canvas.get_viewport_rect().size
+	var screen := _world_canvas.get_viewport_rect().size
 	var behind: bool = pr["behind"]
 	var p: Vector2 = pr["pos"]
 	var inner := Rect2(Vector2(EDGE_MARGIN, EDGE_MARGIN), screen - Vector2(EDGE_MARGIN, EDGE_MARGIN) * 2.0)
 
+	if not behind and not is_nan(above_y):
+		p.y = minf(p.y, above_y - 18.0)        # 18 = the bob below plus a small gap
 	if not behind and inner.has_point(p):
 		var tip := p + Vector2(0.0, sin(_time * 4.0) * 6.0)
-		_canvas.draw_colored_polygon(PackedVector2Array([
+		_world_canvas.draw_colored_polygon(PackedVector2Array([
 			tip, tip + Vector2(-14.0, -24.0), tip + Vector2(14.0, -24.0)]), col)
 		return
 
@@ -667,5 +688,5 @@ func _draw_world_arrow(pos: Vector3, col: Color) -> void:
 	var reach := minf(half.x / maxf(absf(dir.x), 0.001), half.y / maxf(absf(dir.y), 0.001))
 	var tip := centre + dir * reach
 	var side := dir.orthogonal()
-	_canvas.draw_colored_polygon(PackedVector2Array([
+	_world_canvas.draw_colored_polygon(PackedVector2Array([
 		tip, tip - dir * 26.0 + side * 15.0, tip - dir * 26.0 - side * 15.0]), col)

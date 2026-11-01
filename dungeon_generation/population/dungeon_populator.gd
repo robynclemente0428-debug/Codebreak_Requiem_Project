@@ -184,6 +184,9 @@ func _spawn_enemy(def: EnemyDefinition, rarity: String, cell: Vector2i,
 	if numbers:
 		numbers.track(enemy.health)
 	print("[Populator] %s (%s)" % [enemy.display_name, rarity])   # remove once verified
+	enemy.set_meta(&"enemy_id", def.id)      # the minimap marks the ones a quest asks for
+	enemy.set_meta(&"rarity", rarity)
+	enemy.set_meta(&"base_name", def.display_name)   # without the rolled modifiers' words
 	enemy.health.died.connect(_on_enemy_died.bind(enemy, rarity, def.id))
 
 ## Returns false (and removes the enemy) if it was killed on an earlier visit.

@@ -9,6 +9,11 @@ extends Control
 ##   2. The dungeon calls bind_dungeon(director, grid_map, enemies_root) after generating.
 ##      Towns (TownArea) call it too, with {"town": true, "npcs": [...]}: no fog, NPCs marked.
 ##
+## Quests: NPCs with a quest for you carry the same "!" / "+" as their name plate, and whatever
+## an active quest still needs (the enemy to kill, the person to talk to) gets a gold quest ring.
+## Quest targets show anywhere on the map, even past the fog, and get an arrow on the rim when
+## they're off the edge, so you can always find them.
+##
 ## Keys: M shows/hides (slides in from the right like the character panel),
 ##       [ and ] change the overall opacity, - and = zoom out / in.
 ##       TAB opens the full-screen map: a see-through overlay over the whole HUD, centred on
@@ -75,6 +80,7 @@ const COL_DIM := Color(0.55, 0.78, 0.85)
 const COL_ENEMY := Color(1.0, 0.30, 0.37)
 const COL_PORTAL := Color(0.30, 1.0, 0.60)
 const COL_NPC := Color(1.0, 0.82, 0.30)
+const COL_QUEST := Color(1.0, 0.82, 0.30)    # quest targets: the quest tracker's gold
 const COL_BG := Color(0.02, 0.05, 0.09)
 ## [neighbour direction, edge start, edge end] in cell units
 const EDGES := [
@@ -117,6 +123,11 @@ var _overlay_open := false
 var _px := 8.0
 var _map_alpha := 1.0
 var _overlay_wait := 0.0                # the full-screen map redraws at most 30 times a second
+## What the active quests still need, refreshed twice a second (see _refresh_wants):
+## "kill" / "rarity" / "talk" -> {id: true}
+var _wants := {"kill": {}, "rarity": {}, "talk": {}}
+var _wants_wait := 0.0
+var _rim: Array = []                    # [screen pos, colour] of quest targets off the map edge
 
 
 func _enter_tree() -> void:
@@ -331,6 +342,10 @@ func _process(delta: float) -> void:
 		_facing = flat.normalized()
 
 	_update_hostiles()
+	_wants_wait -= delta
+	if _wants_wait <= 0.0:
+		_wants_wait = 0.5
+		_refresh_wants()
 	_set_want(_shown)
 	if visible:
 		_view.queue_redraw()
@@ -514,10 +529,12 @@ func _paint(c: Control, full := false) -> void:
 
 	# Map-space markers
 	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
+	_rim.clear()
 	_paint_portals(c, rot)
-	_paint_enemies(c)
+	_paint_enemies(c, rot, full)
 	_paint_npcs(c, rot, full)
 	_paint_player(c)
+	_paint_rim_arrows(c, rot)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -589,7 +606,7 @@ func _paint_portals(c: Control, rot: float) -> void:
 	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
 
 
-func _paint_enemies(c: Control) -> void:
+func _paint_enemies(c: Control, rot: float, full: bool) -> void:
 	if _enemies_root == null or not is_instance_valid(_enemies_root):
 		return
 	var limit := enemy_detect_radius * enemy_detect_radius
@@ -599,6 +616,9 @@ func _paint_enemies(c: Control) -> void:
 		if n == null or not is_instance_valid(n):
 			continue
 		var rel := _to_cell_f(n.global_position) - _center
+		if _is_quest_enemy(n):
+			_quest_marker(c, rel * _px, rot, str(n.get_meta(&"base_name", "")) if full else "")
+			continue
 		if rel.length_squared() > limit:
 			continue
 		var pos := rel * _px
@@ -621,10 +641,17 @@ func _paint_npcs(c: Control, rot: float, full: bool) -> void:
 			continue
 		var pos := (_to_cell_f(npc.global_position) - _center) * _px
 		var screen := pos.rotated(rot)
+		if _wants["talk"].has(str(npc.get("npc_id"))):
+			_quest_marker(c, pos, rot, "")      # the ring, or the rim arrow when off the map
 		if absf(screen.x) > half.x or absf(screen.y) > half.y:
 			continue
-		c.draw_circle(pos, 5.0, Color(COL_BG, 0.8 * _map_alpha))
-		c.draw_circle(pos, 3.5, Color(COL_NPC, _map_alpha))
+		var mark: Array = NpcNameplates.quest_mark(npc, _player.get("quests")) \
+				if npc is Interactable and _player != null else []
+		if mark.is_empty():
+			c.draw_circle(pos, 5.0, Color(COL_BG, 0.8 * _map_alpha))
+			c.draw_circle(pos, 3.5, Color(COL_NPC, _map_alpha))
+		else:
+			_glyph_badge(c, pos, rot, mark[0], mark[1])
 		if full:
 			var who: String = str(npc.get("npc_name")) if npc.get("npc_name") != null else npc.name
 			# text is drawn upright: step out of the map rotation for it
@@ -646,6 +673,112 @@ func _paint_npcs(c: Control, rot: float, full: bool) -> void:
 			c.draw_string(f, at, who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 				Color(COL_NPC, _map_alpha))
 			c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
+
+
+# ---------- QUESTS ----------
+## Reads what the active quests still need from the player's QuestManager.
+func _refresh_wants() -> void:
+	for k in _wants:
+		_wants[k].clear()
+	var qm: QuestManager = _player.get("quests") if _player != null else null
+	if qm == null:
+		return
+	var area := ""
+	if _enemies_root != null and is_instance_valid(_enemies_root) and _enemies_root.owner != null:
+		area = _enemies_root.owner.scene_file_path.get_file().get_basename()
+	for s in qm.active.values():
+		var st := s as QuestState
+		if st.status != QuestState.Status.ACTIVE:
+			continue
+		for i in st.def.objectives.size():
+			if st.objective_done(i):
+				continue
+			var o: Objective = st.def.objectives[i]
+			if o.target != "":
+				match o.kind:
+					"kill":
+						_wants["kill"][o.target] = true
+					"kill_at":                     # "corrupted_raider@act_1_coolant_vaults"
+						var parts := o.target.split("@")
+						if parts.size() == 2 and parts[1] == area:
+							_wants["kill"][parts[0]] = true
+					"kill_rarity":
+						_wants["rarity"][o.target] = true
+					"talk":
+						_wants["talk"][o.target] = true
+			if st.def.ordered:
+				break                              # later steps don't count yet
+
+
+func _is_quest_enemy(n: Node) -> bool:
+	return _wants["kill"].has(str(n.get_meta(&"enemy_id", ""))) \
+			or _wants["rarity"].has(str(n.get_meta(&"rarity", "")))
+
+
+## A pulsing gold ring round a quest target at `pos` (map space), with its name over it on the
+## full-screen map. Off the map edge it becomes an arrow on the rim instead.
+func _quest_marker(c: Control, pos: Vector2, rot: float, label: String) -> void:
+	var screen := pos.rotated(rot)
+	var half := c.size * 0.5 - Vector2(16.0, 16.0)
+	if absf(screen.x) > half.x or absf(screen.y) > half.y:
+		_rim.append([screen, COL_QUEST])
+		return
+	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
+	c.draw_circle(pos, 9.0 + pulse * 2.0, Color(COL_QUEST, 0.18 * _map_alpha))
+	c.draw_circle(pos, 6.0, Color(COL_BG, 0.9 * _map_alpha))
+	c.draw_arc(pos, 6.0, 0.0, TAU, 24, Color(COL_QUEST, _map_alpha), 2.0, true)
+	c.draw_circle(pos, 3.0, Color(COL_ENEMY, _map_alpha))
+	if label != "":
+		_upright_tag(c, screen + Vector2(0.0, -12.0), label.to_upper(), COL_QUEST, rot)
+
+
+## A quest giver's "!" or "+" on a small round badge (drawn upright, whatever the map's turn).
+func _glyph_badge(c: Control, pos: Vector2, rot: float, glyph: String, col: Color) -> void:
+	c.draw_set_transform(c.size * 0.5, 0.0, Vector2.ONE)
+	var at := pos.rotated(rot)
+	var r := 8.0
+	c.draw_circle(at, r + 3.0 + sin(_t * 3.0) * 1.5, Color(col, 0.22 * _map_alpha))
+	c.draw_circle(at, r, Color(COL_BG, 0.92 * _map_alpha))
+	c.draw_arc(at, r - 0.75, 0.0, TAU, 24, Color(col, _map_alpha), 1.5, true)
+	var f := _font if _font else ThemeDB.fallback_font
+	var fs := roundi(15 * font_scale)
+	var w := f.get_string_size(glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	c.draw_string(f, (at + Vector2(-w * 0.5, fs * 0.34)).round(), glyph,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(col, _map_alpha))
+	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
+
+
+## Upright text centred on `at` (screen space round the map's centre), with a dark outline.
+func _upright_tag(c: Control, at: Vector2, text: String, col: Color, rot: float) -> void:
+	c.draw_set_transform(c.size * 0.5, 0.0, Vector2.ONE)
+	var f := _font if _font else ThemeDB.fallback_font
+	var fs := roundi(12 * font_scale)
+	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	var p := (at - Vector2(w * 0.5, 0.0)).round()
+	c.draw_string_outline(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 4, Color(COL_BG, 0.9 * _map_alpha))
+	c.draw_string(f, p, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(col, _map_alpha))
+	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
+
+
+## Arrows on the rim for quest targets off the map edge (gathered while painting).
+func _paint_rim_arrows(c: Control, rot: float) -> void:
+	if _rim.is_empty():
+		return
+	c.draw_set_transform(c.size * 0.5, 0.0, Vector2.ONE)
+	var half := c.size * 0.5 - Vector2(16.0, 16.0)
+	var a := 0.85 + 0.15 * sin(_t * 4.0)
+	for r in _rim:
+		var screen: Vector2 = r[0]
+		var dir := screen.normalized()
+		var k := minf(half.x / maxf(absf(screen.x), 0.001), half.y / maxf(absf(screen.y), 0.001))
+		var at := screen * k
+		var side := Vector2(-dir.y, dir.x)
+		var tri := PackedVector2Array([at + dir * 12.0, at - dir * 7.0 + side * 9.0, at - dir * 7.0 - side * 9.0])
+		c.draw_circle(at, 13.0, Color(r[1], 0.18 * _map_alpha))   # glow, so it reads on any floor
+		c.draw_colored_polygon(tri, Color(r[1], a * _map_alpha))
+		tri.append(tri[0])
+		c.draw_polyline(tri, Color(COL_BG, 0.9 * _map_alpha), 1.5, true)
+	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
 
 
 func _paint_player(c: Control) -> void:

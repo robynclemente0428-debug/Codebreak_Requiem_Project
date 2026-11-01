@@ -37,6 +37,17 @@ max_steps = 2
 cost_per_step = 5.0
 unit = ""
 
+[sub_resource type="Resource" id="Knob_spread"]
+script = ExtResource("1_knob")
+id = &"spread"
+display_name = "Spread"
+flag_key = "spread_angle"
+step = 3.0
+min_steps = -4
+max_steps = 5
+cost_per_step = 0.25
+unit = "deg"
+
 [sub_resource type="Resource" id="Knob_speed"]
 script = ExtResource("1_knob")
 id = &"speed"
@@ -71,6 +82,6 @@ cost_per_step = 2.5
 
 [resource]
 script = ExtResource("1_lim")
-knobs = Array[ExtResource("1_knob")]([SubResource("Knob_damage"), SubResource("Knob_radius"), SubResource("Knob_max_projectiles"), SubResource("Knob_speed"), SubResource("Knob_mana_cost"), SubResource("Knob_attack_speed")])
+knobs = Array[ExtResource("1_knob")]([SubResource("Knob_damage"), SubResource("Knob_radius"), SubResource("Knob_max_projectiles"), SubResource("Knob_spread"), SubResource("Knob_speed"), SubResource("Knob_mana_cost"), SubResource("Knob_attack_speed")])
 point_budget = 6.0
 tiers = Array[ExtResource("2_tierscript")]([ExtResource("3_elegant"), ExtResource("4_lean")])

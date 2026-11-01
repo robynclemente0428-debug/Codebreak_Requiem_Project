@@ -17,7 +17,13 @@ const FADE_DISTANCE := 4.0        # metres before SHOW_DISTANCE where names star
 const HEAD_GAP := 0.3             # metres above the NPC's prompt_height
 const NAME_SIZE := 20
 const ROLE_SIZE := 14
-const MARK_SIZE := 30
+## The quest marker: the symbol on a round badge that floats just above the name plate. It only
+## bobs upwards from its resting spot, so it never dips into the plate.
+const MARK_SIZE := 40
+const MARK_RADIUS := 21.0         # the badge, in pixels
+const MARK_RING := 3.0
+const MARK_GAP := 6.0             # pixels between the badge and the plate's top edge
+const MARK_BOB := 5.0             # how far it bobs up
 const OUTLINE := 6
 ## The dark plate behind each name, so it stands out from busy floors.
 const PLATE_PAD := Vector2(12.0, 5.0)    # space around the text, in pixels
@@ -41,6 +47,7 @@ var _hover_portal: Portal
 var _container: SubViewportContainer
 var _viewport: SubViewport
 var _rescan_wait := 0.0
+var _tops: Dictionary = {}                # Interactable -> screen y of the top of its plate/badge
 var _time := 0.0
 
 
@@ -118,6 +125,7 @@ func _on_canvas_draw() -> void:
 		return
 	# The "[T] TALK" prompt sits right above the NPC it belongs to: lift that NPC's plate over it.
 	var prompt := get_tree().get_first_node_in_group("interact_prompt") as Control
+	_tops.clear()
 	for npc in _npcs:
 		if not is_instance_valid(npc) or not npc.is_inside_tree() or not npc.is_visible_in_tree():
 			continue
@@ -129,17 +137,27 @@ func _on_canvas_draw() -> void:
 		if pr.is_empty() or pr["behind"]:
 			continue
 		var at: Vector2 = pr["pos"]
+		if minimap != null and minimap.visible and minimap.get_global_rect().has_point(at):
+			continue                        # under the corner map: it would show through it
 		var bottom := at.y                 # the plate's bottom edge; it grows upwards from here
 		if prompt != null and prompt.visible and prompt.get("_target") == npc:
 			bottom -= prompt.size.y + 6.0
 		var top := _draw_plate(NpcInfoPanel._npc_name(npc),
 			npc.info_title if show_roles else "", at.x, bottom, alpha)
-		var mark := _quest_mark(npc, qm)
+		var mark := quest_mark(npc, qm)
 		if not mark.is_empty():
-			_text(mark[0], at.x, top - 6.0 + sin(_time * 3.0) * 3.0, MARK_SIZE, Color(mark[1], alpha))
+			_draw_mark(mark[0], mark[1], at.x, top, alpha)
+			top -= MARK_GAP + MARK_RADIUS * 2.0 + MARK_BOB
+		_tops[npc] = top
 
 	if _hover_portal != null and is_instance_valid(_hover_portal):
 		_draw_portal_card(_hover_portal)
+
+
+## Screen y of the top of what's drawn over this NPC (its plate, and the quest badge at the
+## top of its bob), or NAN when nothing is. TutorialHints keeps its arrow above it.
+func top_of(npc: Node) -> float:
+	return _tops.get(npc, NAN)
 
 
 # ---------- PORTALS ----------
@@ -225,7 +243,8 @@ func _portal_lines(portal: Portal) -> Array:
 
 
 ## ["!", gold] when a quest is ready to turn in here, ["+", green] when one can be started.
-func _quest_mark(npc: Interactable, qm: QuestManager) -> Array:
+## The minimap shows the same marks.
+func quest_mark(npc: Interactable, qm: QuestManager) -> Array:
 	if qm == null:
 		return []
 	var fresh := false
@@ -239,6 +258,17 @@ func _quest_mark(npc: Interactable, qm: QuestManager) -> Array:
 		if st == null and qm.can_start(def):
 			fresh = true
 	return ["+", NpcInfoPanel.COL_NEW] if fresh else []
+
+
+## The quest marker's badge, resting MARK_GAP above `plate_top` and bobbing up from there.
+func _draw_mark(glyph: String, col: Color, x: float, plate_top: float, alpha: float) -> void:
+	var wave := (sin(_time * 3.0) + 1.0) * 0.5
+	var center := Vector2(x, plate_top - MARK_GAP - MARK_RADIUS - wave * MARK_BOB).round()
+	_canvas.draw_circle(center, MARK_RADIUS + 4.0 + wave * 3.0, Color(col, 0.20 * alpha))   # glow
+	_canvas.draw_circle(center, MARK_RADIUS, Color(COL_PLATE, 0.95 * alpha))
+	_canvas.draw_arc(center, MARK_RADIUS - MARK_RING * 0.5, 0.0, TAU, 40, Color(col, alpha), MARK_RING, true)
+	# Capital-height symbols: their middle sits about a third of the font size above the baseline.
+	_text(glyph, center.x, center.y + MARK_SIZE * 0.32, MARK_SIZE, Color(col, alpha))
 
 
 ## Name (and role under it) on a dark plate, centred on x with its bottom edge at `bottom`.
