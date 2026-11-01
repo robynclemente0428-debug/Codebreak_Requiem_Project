@@ -48,6 +48,7 @@ script = ExtResource("5_pop")
 director = NodePath("../DungeonDirector")
 enemies_root = NodePath("../Enemies")
 loot_root = NodePath("../Loot")
+ward_beacon_id = "beacon_firewall_approach"
 metadata/_custom_type_script = "uid://gvonfu37eay0"
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=2102178962]
@@ -88,6 +89,8 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_1_map_3.tscn"
 target_spawn = &"from_map_2"
 dungeon_level = 10
+sealed_by_key = "gate_key"
+open_after_quest = "q02_corrupted_gate_guard"
 arrival_spawn_id = &"approach_out"
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
@@ -109,6 +112,7 @@ metadata/_custom_type_script = "uid://c5hhflptas7h1"
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
 script = ExtResource("10_enemym")
 enemy = ExtResource("e_enchanter")
+drops_key = "gate_key"
 metadata/_custom_type_script = "uid://bri1ph1ms875r"
 
 [node name="Guard1" type="Marker3D" parent="Layout/MiniBossArena" unique_id=808346510]

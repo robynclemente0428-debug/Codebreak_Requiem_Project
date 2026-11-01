@@ -58,6 +58,7 @@ func _spawn_enemies() -> void:
 			skip.append(r)
 	populator.populate(dungeon_level, skip, _is_floor, _grid_to_world)
 	populator.spawn_marked(director.layout.enemies, dungeon_level, _is_floor, _grid_to_world)
+	populator.place_ward_beacon(_is_floor, _grid_to_world)   # before the props, so none land on it
 	populator.place_props(_is_floor, _grid_to_world)    # breakable barrels and supply caches
 
 ## Null corruption stains on the floor, more of them the deeper the dungeon (see NullDecals).
@@ -274,11 +275,14 @@ func _nearby_floor(center: Vector2i, min_dist: int = 2, max_dist: int = 5) -> Ve
 	push_warning("No floor found near %s, using it as-is" % [center])
 	return center
 
-func _place_portal(cell: Vector2i, target: String, spawn: StringName, level: int = 0, yaw := 0.0) -> void:
+func _place_portal(cell: Vector2i, target: String, spawn: StringName, level: int = 0, yaw := 0.0,
+		sealed_by_key := "", open_after_quest := "") -> void:
 	var p := portal_scene.instantiate() as Portal
 	p.target_area = target
 	p.target_spawn = spawn
 	p.dungeon_level = level                 # above 0 = this portal leads into another dungeon instance
+	p.sealed_by_key = sealed_by_key
+	p.open_after_quest = open_after_quest
 	add_child(p)
 	p.global_position = _grid_to_world(cell)
 	p.global_basis = grid_map.global_basis.orthonormalized() * PortalMarker.portal_basis(yaw)
@@ -302,7 +306,8 @@ func _grid_to_world(grid_pos: Vector2i) -> Vector3:
 func _place_portals() -> void:
 	for p in director.layout.portals:
 		var yaw: float = p.get("yaw", 0.0)
-		_place_portal(p.cell, p.target_area, p.target_spawn, int(p.get("dungeon_level", 0)), yaw)
+		_place_portal(p.cell, p.target_area, p.target_spawn, int(p.get("dungeon_level", 0)), yaw,
+				str(p.get("sealed_by_key", "")), str(p.get("open_after_quest", "")))
 		if p.arrival_id != &"":
 			_arrival_cells[p.arrival_id] = p.cell
 			var dist := float(p.get("exit_distance", 1.6))

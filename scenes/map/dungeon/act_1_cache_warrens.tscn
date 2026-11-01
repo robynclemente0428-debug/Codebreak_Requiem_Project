@@ -47,6 +47,7 @@ script = ExtResource("5_pop")
 director = NodePath("../DungeonDirector")
 enemies_root = NodePath("../Enemies")
 loot_root = NodePath("../Loot")
+ward_beacon_id = "beacon_cache_warrens"
 metadata/_custom_type_script = "uid://gvonfu37eay0"
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1722856982]
@@ -84,6 +85,8 @@ script = ExtResource("7_portalm")
 target_area = "uid://des7ljssbcdxi"
 target_spawn = &"map_2"
 dungeon_level = 4
+sealed_by_key = "brood_key"
+open_after_quest = "q01_glitchling_queen"
 arrival_spawn_id = &"warrens_out"
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
@@ -104,6 +107,7 @@ metadata/_custom_type_script = "uid://c5hhflptas7h1"
 [node name="MiniBoss" type="Marker3D" parent="Layout/MiniBossArena" unique_id=1992853631]
 script = ExtResource("10_enemym")
 enemy = ExtResource("e_enchanter")
+drops_key = "brood_key"
 rarity = "rare"
 metadata/_custom_type_script = "uid://bri1ph1ms875r"
 

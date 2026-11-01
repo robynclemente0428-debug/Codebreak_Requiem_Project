@@ -19,6 +19,14 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ quest_ready:q02_corrupted_gate_guard -> ready_q02_corrupted_gate_guard
 @ quest_ready:q01b_clear_the_ward -> ready_q01b_clear_the_ward
 @ quest_ready:q01_glitchling_queen -> ready_q01_glitchling_queen
+@ quest_ready:ward_beacons_inner -> ready_beacons_inner
+@ quest_ready:ward_beacons_outer -> ready_beacons_outer
+# The beacon quests are side quests: offered before the reminders, and LATER goes on to them.
+@ can_start:ward_beacons_outer -> offer_beacons_outer
+@ can_start:ward_beacons_inner -> offer_beacons_inner
+-> main
+
+~ main
 @ quest_active:q06_the_mimic -> remind_q06_the_mimic
 @ quest_active:q05_the_leak -> remind_q05_the_leak
 @ quest_active:q03_loop_hound_alpha -> remind_q03_loop_hound_alpha
@@ -31,7 +39,59 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ can_start:q03_loop_hound_alpha -> offer_q03_loop_hound_alpha
 @ can_start:q05_the_leak -> offer_q05_the_leak
 @ can_start:q06_the_mimic -> offer_q06_the_mimic
+@ quest_active:ward_beacons_inner -> remind_beacons_inner
+@ quest_active:ward_beacons_outer -> remind_beacons_outer
 -> idle
+
+~ offer_beacons_outer
+# NEW: ward beacon side quest
+Brack: The ward beacons kept the Null out of Hardfault. The outer ones went dark.
+Brack: Spillway, Cache Warrens, Dead Sector. Each one sits deep in its district. Bring them back online.
+* ACCEPT -> accept_beacons_outer
+* LATER -> main
+
+~ accept_beacons_outer
+> start_quest ward_beacons_outer
+Brack: Walk up to a beacon and it wakes. Your map marks them.
+-> end
+
+~ remind_beacons_outer
+Brack: The outer beacons. Spillway, Cache Warrens, Dead Sector.
+
+~ ready_beacons_outer
+Brack: The outer ward is lit again. I saw it from the wall.
+* TURN IN -> turnin_beacons_outer
+* NOT YET -> end
+
+~ turnin_beacons_outer
+> turn_in ward_beacons_outer
+Brack: Pick something from the cache. You earned it.
+-> start
+
+~ offer_beacons_inner
+# NEW: ward beacon side quest, part two
+Brack: Four more beacons on the road to the Gate. Relay Trench, Coolant Vaults, the Foundry, the Firewall.
+Brack: Light them and the Null loses its grip on the whole ward.
+* ACCEPT -> accept_beacons_inner
+* LATER -> main
+
+~ accept_beacons_inner
+> start_quest ward_beacons_inner
+Brack: Same as before. Find them, wake them.
+-> end
+
+~ remind_beacons_inner
+Brack: The inner beacons. Relay Trench, Coolant Vaults, Foundry, Firewall.
+
+~ ready_beacons_inner
+Brack: Every beacon in the ward is burning. First time in a year.
+* TURN IN -> turnin_beacons_inner
+* NOT YET -> end
+
+~ turnin_beacons_inner
+> turn_in ward_beacons_inner
+Brack: Take your pick from the cache. Hardfault owes you.
+-> start
 
 ~ offer_q00_proximity_trigger
 Brack: Before you face anything real, teach your skill to think.
@@ -60,6 +120,8 @@ Brack: Good. Now you're ready for the Queen.
 ~ offer_q01_glitchling_queen
 Brack: You’re alive. Good. Something woke up in you, and we need it.
 Brack: A Queen is breeding Glitchlings near the wall. Kill her.
+# NEW line below
+Brack: Her nest is sealed. The Enchanter in the Cache Warrens carries the Brood Key.
 * ACCEPT -> accept_q01_glitchling_queen
 * DECLINE -> end
 
@@ -70,7 +132,7 @@ Brack: Your script works. Now use it on her.
 
 ~ remind_q01_glitchling_queen
 # NEW line below
-Brack: The Queen's still breeding. Go.
+Brack: The Queen's still breeding. No Brood Key, no way in. The Enchanter in the Cache Warrens has it.
 
 ~ ready_q01_glitchling_queen
 Brack: Done?
@@ -117,11 +179,13 @@ Brack: The Gate Guard went rogue. Nobody gets in or out until it falls.
 ~ accept_q02_corrupted_gate_guard
 > start_quest q02_corrupted_gate_guard
 Brack: Sudo will test your scripts first. No test, no rank.
+# NEW line below
+Brack: Then the Gate Key. The Enchanter at the Firewall Approach carries it.
 -> end
 
 ~ remind_q02_corrupted_gate_guard
 # NEW line below
-Brack: Talk to Sudo. Then the Guard.
+Brack: Talk to Sudo. Then the Gate Key at the Firewall. Then the Guard.
 
 ~ ready_q02_corrupted_gate_guard
 Brack: Done?

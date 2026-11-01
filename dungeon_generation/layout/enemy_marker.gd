@@ -16,6 +16,9 @@ extends DungeonMarker
 ## On: the enemy has exactly the modifiers above and nothing is rolled (an empty list means none).
 ## Off: yours are added on top of the random ones its rarity rolls.
 @export var replace_random_modifiers: bool = false
+## A quest key this enemy carries (an id from QuestItems, e.g. "brood_key"). It drops where
+## the enemy dies, until the player has picked it up once. Empty = none.
+@export var drops_key: String = ""
 ## On: no random enemies spawn in the room this marker sits in (a clean boss room).
 @export var clear_room: bool = true
 ## On: this marker also makes its own room (Room Size). Off: it is only a spot inside a room

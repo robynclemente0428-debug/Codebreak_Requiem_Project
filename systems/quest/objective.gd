@@ -11,5 +11,10 @@ extends Resource
 func matches(event_kind: String, event_target: String) -> bool:
 	return event_kind == kind and (target == "" or target == event_target)
 
-func already_met(_player: Node) -> bool:
+## Done before the quest reached this step? "quest_done" checks the quest log, so an exam
+## turned in before the quest was taken still counts.
+func already_met(player: Node) -> bool:
+	if kind == "quest_done" and target != "":
+		var qm = player.get("quests") if player != null else null
+		return qm != null and qm.is_completed(target)
 	return false

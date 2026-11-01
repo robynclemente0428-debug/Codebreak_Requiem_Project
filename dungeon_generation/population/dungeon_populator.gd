@@ -46,6 +46,12 @@ const DEFAULT_CHEST := "res://scenes/props/loot_chest.tscn"
 @export var chests_min: int = 1
 @export var chests_max: int = 3
 
+@export_group("Ward beacon")
+## This district's ward beacon (an id from QuestItems, e.g. "beacon_spillway"): placed in the
+## room farthest from the start, for the WARD BEACONS quests. Empty = no beacon here.
+@export var ward_beacon_id: String = ""
+
+var _beacon_cell := Vector2i(-99999, -99999)   # props keep clear of the ward beacon
 var _loot_cache: Array[ItemDefinition] = []
 var _loot_cache_level := -1
 
@@ -173,13 +179,14 @@ func _eligible_loot() -> Array[ItemDefinition]:
 	print("[Populator] loot pool at level %d: %d items" % [_level, out.size()])
 	return out
 
+## Returns the enemy, or null if it was killed on an earlier visit of this instance.
 func _spawn_enemy(def: EnemyDefinition, rarity: String, cell: Vector2i,
-		forced_mods: Variant = null, add_to_random: bool = false) -> void:
+		forced_mods: Variant = null, add_to_random: bool = false) -> Node3D:
 	var enemy := EnemySpawner.spawn_enemy(
 		def, rarity, enemies_root, _to_world.call(cell) + SPAWN_LIFT, _level,
 		forced_mods, add_to_random)
 	if not _track(enemy):
-		return                              # killed on an earlier visit of this instance
+		return null                         # killed on an earlier visit of this instance
 	var numbers : DamageNumbers = get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
 	if numbers:
 		numbers.track(enemy.health)
@@ -188,6 +195,7 @@ func _spawn_enemy(def: EnemyDefinition, rarity: String, cell: Vector2i,
 	enemy.set_meta(&"rarity", rarity)
 	enemy.set_meta(&"base_name", def.display_name)   # without the rolled modifiers' words
 	enemy.health.died.connect(_on_enemy_died.bind(enemy, rarity, def.id))
+	return enemy
 
 ## Returns false (and removes the enemy) if it was killed on an earlier visit.
 ## The enemy is still created first, so the random numbers stay in step and every later
@@ -261,6 +269,9 @@ func place_props(is_floor: Callable, to_world: Callable) -> void:
 			for y in range(room.rect.position.y, room.rect.end.y):
 				in_room[Vector2i(x, y)] = true
 	var taken := {}
+	for dx in range(-2, 3):
+		for dy in range(-2, 3):
+			taken[_beacon_cell + Vector2i(dx, dy)] = true
 	# Keep the cells around every enemy free: a barrel right beside an enemy cuts its spot out of
 	# the navmesh (props are baked into it), and an enemy standing off the navmesh can't path.
 	if enemies_root != null and director.grid_map != null:
@@ -469,4 +480,52 @@ func spawn_marked(entries: Array, level: int, is_floor: Callable, to_world: Call
 		# The marker's own modifiers: exactly these (replace_random), or these on top of the rolled ones
 		var mods: Array = e.get("modifiers", [])
 		var replace: bool = e.get("replace_random", true)
-		_spawn_enemy(def, e["rarity"], cell, mods, not replace)
+		var enemy := _spawn_enemy(def, e["rarity"], cell, mods, not replace)
+		var key: String = e.get("key", "")
+		if key != "" and not QuestItems.owned(get_tree(), key):
+			if enemy != null:
+				enemy.set_meta(&"carries_key", key)     # the minimap rings it while a quest wants the key
+				enemy.health.died.connect(func() -> void:
+					_drop_key.call_deferred(key, enemy.global_position))
+			else:
+				# Killed on an earlier visit but the key was left behind: it's still lying there
+				_drop_key.call_deferred(key, to_world.call(cell))
+
+
+func _drop_key(key: String, at: Vector3) -> void:
+	if not QuestItems.owned(get_tree(), key):
+		QuestKeyPickup.spawn(loot_root, at, key)
+
+
+## The district's ward beacon, in the room farthest from where the player arrives (so it's
+## worth the walk), at the free floor cell nearest that room's middle.
+func place_ward_beacon(is_floor: Callable, to_world: Callable) -> void:
+	if ward_beacon_id == "":
+		return
+	var start := director.layout.spawn_cell if director.layout != null else Vector2i.ZERO
+	var best: RoomData = null
+	for room: RoomData in director.rooms:
+		if room.room_type in ["start", "portal", "boss"]:
+			continue
+		if best == null or Vector2(room.center() - start).length() > Vector2(best.center() - start).length():
+			best = room
+	if best == null:
+		push_warning("No room for the ward beacon %s" % ward_beacon_id)
+		return
+	var c := best.center()
+	var cell := c
+	var found := false
+	for r in range(0, 6):                         # nearest floor cell, rings outwards
+		for dx in range(-r, r + 1):
+			for dy in range(-r, r + 1):
+				var t := c + Vector2i(dx, dy)
+				if not found and maxi(absi(dx), absi(dy)) == r and is_floor.call(Vector3i(t.x, 0, t.y)):
+					cell = t
+					found = true
+		if found:
+			break
+	if not found:
+		push_warning("No floor for the ward beacon %s" % ward_beacon_id)
+		return
+	_beacon_cell = cell
+	WardBeacon.spawn(get_parent(), to_world.call(cell), ward_beacon_id)

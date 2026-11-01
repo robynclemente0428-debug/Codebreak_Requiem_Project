@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+
+[sub_resource type="Resource" id="Beacon_0"]
+script = ExtResource("3_rec")
+description = "Restore the beacon in the Spillway"
+kind = "recover"
+target = "beacon_spillway"
+
+[sub_resource type="Resource" id="Beacon_1"]
+script = ExtResource("3_rec")
+description = "Restore the beacon in the Cache Warrens"
+kind = "recover"
+target = "beacon_cache_warrens"
+
+[sub_resource type="Resource" id="Beacon_2"]
+script = ExtResource("3_rec")
+description = "Restore the beacon in the Dead Sector"
+kind = "recover"
+target = "beacon_dead_sector"
+
+[resource]
+script = ExtResource("2_quest")
+id = "ward_beacons_outer"
+title = "WARD BEACONS: OUTER DISTRICTS"
+description = "The ward beacons kept the Null out of Hardfault. Now they sit dark in the outer districts.
+Reach each beacon and bring it back online. Any order. They are in the room farthest from where you arrive.
+REWARD: credits and a support gem of your choice."
+objectives = Array[ExtResource("1_obj")]([SubResource("Beacon_0"), SubResource("Beacon_1"), SubResource("Beacon_2")])
+prerequisite_quest_ids = Array[String](["tut_basics"])
+reward_credits = 150
+reward_support_choice = true
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "I"

@@ -2,6 +2,13 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+
+[sub_resource type="Resource" id="Objective_key"]
+script = ExtResource("3_rec")
+description = "Take the Gate Key from the Enchanter at the Firewall Approach"
+kind = "recover"
+target = "gate_key"
 
 [sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
@@ -21,10 +28,10 @@ metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 script = ExtResource("2_quest")
 id = "q02_corrupted_gate_guard"
 title = "THE CORRUPTED GATE GUARD"
-description = "The Gate Guard went rogue. Nobody gets in or out until it falls.
+description = "The Gate Guard went rogue. Nobody gets in or out until it falls. Its gate is sealed: the Enchanter at the Firewall Approach carries the Gate Key.
 BOSS TRAIT: slow, heavy swings. Dodge, then strike.
 SCRIPT TASK: pass Examiner Sudo's first rank exam."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_key"), SubResource("Objective_2")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q01_glitchling_queen", "q01b_clear_the_ward"])
 reward_credits = 75

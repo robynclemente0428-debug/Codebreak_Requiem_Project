@@ -55,12 +55,14 @@ func bind(quests: QuestManager) -> void:
 		_quests.quest_updated.disconnect(_on_changed)
 		_quests.quest_ready.disconnect(_on_ready)
 		_quests.quest_completed.disconnect(_on_completed)
+		_quests.item_recovered.disconnect(_on_recovered)
 	_quests = quests
 	if _quests:
 		_quests.quest_started.connect(_on_started)
 		_quests.quest_updated.connect(_on_changed)
 		_quests.quest_ready.connect(_on_ready)
 		_quests.quest_completed.connect(_on_completed)
+		_quests.item_recovered.connect(_on_recovered)
 	_refresh()
 
 
@@ -137,7 +139,7 @@ func _build_ui() -> void:
 	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast.anchor_left = 0.0
 	_toast.anchor_right = 1.0
-	_toast.offset_top = 110
+	_toast.offset_top = 215          # under the tutorial banner (TutorialHints.BANNER_Y + its height)
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.add_theme_font_size_override("font_size", base_font_size + 10)
 	_toast.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -270,7 +272,16 @@ func _add_quest(s: QuestState) -> void:
 		_box.add_child(_wrapped(mark + text, base_font_size - 2, COL_DONE if done else COL_TEXT))
 
 
+func _on_recovered(id: String) -> void:
+	_show_toast("RECOVERED: %s" % QuestItems.name_of(id), COL_READY)
+
+
 # ---------- TOAST ----------
+## For other systems (QuestItems.toast): a sealed portal, a beacon coming back online.
+func show_toast(text: String, colour: Color) -> void:
+	_show_toast(text, colour)
+
+
 func _show_toast(text: String, colour: Color) -> void:
 	_toast.text = text
 	_toast.add_theme_color_override("font_color", colour)

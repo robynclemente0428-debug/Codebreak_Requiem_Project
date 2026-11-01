@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+
+[sub_resource type="Resource" id="Beacon_0"]
+script = ExtResource("3_rec")
+description = "Restore the beacon in the Relay Trench"
+kind = "recover"
+target = "beacon_relay_trench"
+
+[sub_resource type="Resource" id="Beacon_1"]
+script = ExtResource("3_rec")
+description = "Restore the beacon in the Coolant Vaults"
+kind = "recover"
+target = "beacon_coolant_vaults"
+
+[sub_resource type="Resource" id="Beacon_2"]
+script = ExtResource("3_rec")
+description = "Restore the beacon in the Overclock Foundry"
+kind = "recover"
+target = "beacon_overclock_foundry"
+
+[sub_resource type="Resource" id="Beacon_3"]
+script = ExtResource("3_rec")
+description = "Restore the beacon at the Firewall Approach"
+kind = "recover"
+target = "beacon_firewall_approach"
+
+[resource]
+script = ExtResource("2_quest")
+id = "ward_beacons_inner"
+title = "WARD BEACONS: INNER DISTRICTS"
+description = "The inner beacons guarded the road to the Gate. Light them and the Null loses its grip on the ward.
+Reach each beacon and bring it back online. Any order.
+REWARD: credits and a support gem of your choice."
+objectives = Array[ExtResource("1_obj")]([SubResource("Beacon_0"), SubResource("Beacon_1"), SubResource("Beacon_2"), SubResource("Beacon_3")])
+prerequisite_quest_ids = Array[String](["ward_beacons_outer"])
+reward_credits = 300
+reward_support_choice = true
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "I"

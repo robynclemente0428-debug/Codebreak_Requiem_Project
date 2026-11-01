@@ -2,6 +2,13 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+
+[sub_resource type="Resource" id="Objective_key"]
+script = ExtResource("3_rec")
+description = "Take the Brood Key from the Enchanter in the Cache Warrens"
+kind = "recover"
+target = "brood_key"
 
 [sub_resource type="Resource" id="Objective_3"]
 script = ExtResource("1_obj")
@@ -14,10 +21,10 @@ metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 script = ExtResource("2_quest")
 id = "q01_glitchling_queen"
 title = "THE GLITCHLING QUEEN"
-description = "A Queen is breeding Glitchlings near the wall.
+description = "A Queen is breeding Glitchlings near the wall. Her nest is sealed: the Enchanter in the Cache Warrens carries the Brood Key.
 BOSS TRAIT: spawns small Glitchlings every 10 seconds. Kill the Queen to stop them.
 TIP: your enemies_nearby() rule fires more often as her Glitchlings swarm you."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_3")])
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_key"), SubResource("Objective_3")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q00_proximity_trigger"])
 reward_credits = 50

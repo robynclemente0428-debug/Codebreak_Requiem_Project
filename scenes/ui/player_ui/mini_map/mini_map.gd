@@ -10,7 +10,8 @@ extends Control
 ##      Towns (TownArea) call it too, with {"town": true, "npcs": [...]}: no fog, NPCs marked.
 ##
 ## Quests: NPCs with a quest for you carry the same "!" / "+" as their name plate, and whatever
-## an active quest still needs (the enemy to kill, the person to talk to) gets a gold quest ring.
+## an active quest still needs (the enemy to kill, the person to talk to, the key or its carrier,
+## a ward beacon) gets a gold quest ring.
 ## Quest targets show anywhere on the map, even past the fog, and get an arrow on the rim when
 ## they're off the edge, so you can always find them.
 ##
@@ -124,8 +125,8 @@ var _px := 8.0
 var _map_alpha := 1.0
 var _overlay_wait := 0.0                # the full-screen map redraws at most 30 times a second
 ## What the active quests still need, refreshed twice a second (see _refresh_wants):
-## "kill" / "rarity" / "talk" -> {id: true}
-var _wants := {"kill": {}, "rarity": {}, "talk": {}}
+## "kill" / "rarity" / "talk" / "recover" -> {id: true}
+var _wants := {"kill": {}, "rarity": {}, "talk": {}, "recover": {}}
 var _wants_wait := 0.0
 var _rim: Array = []                    # [screen pos, colour] of quest targets off the map edge
 
@@ -532,6 +533,7 @@ func _paint(c: Control, full := false) -> void:
 	_rim.clear()
 	_paint_portals(c, rot)
 	_paint_enemies(c, rot, full)
+	_paint_quest_spots(c, rot, full)
 	_paint_npcs(c, rot, full)
 	_paint_player(c)
 	_paint_rim_arrows(c, rot)
@@ -706,13 +708,30 @@ func _refresh_wants() -> void:
 						_wants["rarity"][o.target] = true
 					"talk":
 						_wants["talk"][o.target] = true
+					"recover":                     # a quest key, or a ward beacon
+						_wants["recover"][o.target] = true
 			if st.def.ordered:
 				break                              # later steps don't count yet
 
 
+## Ward beacons and dropped quest keys that an active quest still asks for.
+func _paint_quest_spots(c: Control, rot: float, full: bool) -> void:
+	if _wants["recover"].is_empty():
+		return
+	for group in [&"ward_beacons", &"quest_pickups"]:
+		for n in get_tree().get_nodes_in_group(group):
+			var spot := n as Node3D
+			var id := str(spot.get("beacon_id") if group == &"ward_beacons" else spot.get("key_id"))
+			if not _wants["recover"].has(id) or (spot.has_method("is_lit") and spot.is_lit()):
+				continue
+			_quest_marker(c, (_to_cell_f(spot.global_position) - _center) * _px, rot,
+					QuestItems.name_of(id) if full else "")
+
+
 func _is_quest_enemy(n: Node) -> bool:
 	return _wants["kill"].has(str(n.get_meta(&"enemy_id", ""))) \
-			or _wants["rarity"].has(str(n.get_meta(&"rarity", "")))
+			or _wants["rarity"].has(str(n.get_meta(&"rarity", ""))) \
+			or _wants["recover"].has(str(n.get_meta(&"carries_key", "")))
 
 
 ## A pulsing gold ring round a quest target at `pos` (map space), with its name over it on the

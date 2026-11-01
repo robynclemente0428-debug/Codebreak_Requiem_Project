@@ -60,6 +60,8 @@ static func read(root: Node, grid_map: GridMap, grid_w: int, grid_h: int) -> Dun
 				# rotation around Y relative to the grid, so a rotated level still lines up
 				"yaw": (grid_map.global_basis.orthonormalized().inverse() * m.global_basis.orthonormalized()).get_euler().y,
 				"exit_distance": m.exit_distance,
+				"sealed_by_key": m.sealed_by_key,
+				"open_after_quest": m.open_after_quest,
 			})
 		elif m is EnemyMarker:
 			layout.enemies.append(_enemy_entry(m, cell if fitted.has_point(cell) else room.center()))
@@ -90,4 +92,5 @@ static func _enemy_entry(m, cell: Vector2i) -> Dictionary:
 		"clear_room": m.clear_room,
 		"modifiers": m.modifiers,
 		"replace_random": m.replace_random_modifiers,
+		"key": m.drops_key,
 	}

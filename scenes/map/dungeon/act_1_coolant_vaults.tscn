@@ -48,6 +48,7 @@ script = ExtResource("5_pop")
 director = NodePath("../DungeonDirector")
 enemies_root = NodePath("../Enemies")
 loot_root = NodePath("../Loot")
+ward_beacon_id = "beacon_coolant_vaults"
 metadata/_custom_type_script = "uid://gvonfu37eay0"
 
 [node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1801463330]

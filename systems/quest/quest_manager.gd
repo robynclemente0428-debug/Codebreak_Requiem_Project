@@ -9,6 +9,8 @@ signal quest_ready(state: QuestState)        # all objectives done, waiting for 
 signal quest_completed(state: QuestState)
 ## A "pick a support gem" reward is waiting, or was just claimed (see pending_choices).
 signal reward_choice_changed
+## A quest item was picked up or a ward beacon reached for the first time (see recover()).
+signal item_recovered(id: String)
 
 ## Every quest in the game is found in this folder, so you never fill an array by hand.
 @export_dir var quest_folder: String = "res://data/quests/"
@@ -19,6 +21,10 @@ var completed_ids: Array[String] = []
 ## Quests turned in whose support gem choice hasn't been picked yet. Saved, so quitting before
 ## picking doesn't lose the reward; RewardChoice opens whenever this isn't empty.
 var pending_choices: Array[String] = []
+## Quest items and places the player has recovered: keys that open sealed portals, ward
+## beacons. Kept apart from quest progress, so one found before its quest was taken still
+## counts (RecoverObjective credits it). Saved. Names and hints: QuestItems.
+var recovered: Array[String] = []
 
 var _player: Node
 
@@ -81,6 +87,19 @@ func can_start(q: QuestDefinition) -> bool:
 		if not completed_ids.has(pre):
 			return false
 	return true
+
+
+func has_recovered(id: String) -> bool:
+	return recovered.has(id)
+
+
+## Records a quest item or beacon (once) and tells the quests about it ("recover" events).
+func recover(id: String) -> void:
+	if id == "" or recovered.has(id):
+		return
+	recovered.append(id)
+	item_recovered.emit(id)
+	GameEvents.report("recover", id)
 
 
 # ---------- STARTING ----------
@@ -183,7 +202,8 @@ func to_dict() -> Dictionary:
 	var list := []
 	for s: QuestState in active.values():
 		list.append(s.to_dict())
-	return {"active": list, "completed": completed_ids, "pending_choices": pending_choices}
+	return {"active": list, "completed": completed_ids, "pending_choices": pending_choices,
+		"recovered": recovered.duplicate()}
 
 
 # ---------- TUTORIAL GUARD ----------
@@ -282,6 +302,9 @@ func from_dict(d: Dictionary) -> void:
 	active.clear()
 	completed_ids.clear()
 	pending_choices.clear()
+	recovered.clear()
+	for id in d.get("recovered", []):
+		recovered.append(str(id))
 	for id in d.get("completed", []):
 		completed_ids.append(str(id))
 	for id in d.get("pending_choices", []):

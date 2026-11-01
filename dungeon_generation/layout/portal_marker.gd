@@ -17,6 +17,11 @@ extends DungeonMarker
 	set(v):
 		dungeon_level = v
 		_refresh_portal_preview()
+## A quest key that opens this portal (an id from QuestItems, e.g. "brood_key"). Until the
+## player has it the portal is sealed: red, and it turns them back. Empty = always open.
+@export var sealed_by_key: String = ""
+## Also open once this quest is done, for saves from before the seal existed.
+@export var open_after_quest: String = ""
 @export var arrival_spawn_id: StringName = &"exit"        # players arriving here with this id step out of this portal
 ## How far in front of the portal arriving players appear, in metres.
 @export_range(0.5, 6.0, 0.1) var exit_distance: float = 1.6:

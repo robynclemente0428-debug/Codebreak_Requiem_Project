@@ -213,12 +213,13 @@ func _draw_portal_card(portal: Portal) -> void:
 	var card := Rect2(Vector2(rect.get_center().x - size.x * 0.5, rect.position.y - size.y - 10.0), size).abs()
 	card.position = card.position.round()
 
-	_canvas.draw_rect(rect.grow(4.0), Color(NpcInfoPanel.ACCENT, 0.6), false, 2.0)   # the portal itself
+	var accent := Portal.SEALED_A if portal.is_sealed() else NpcInfoPanel.ACCENT   # red when sealed
+	_canvas.draw_rect(rect.grow(4.0), Color(accent, 0.6), false, 2.0)   # the portal itself
 	_canvas.draw_rect(card, COL_CARD, true)
-	_canvas.draw_rect(card, NpcInfoPanel.ACCENT, false, 2.0)
+	_canvas.draw_rect(card, accent, false, 2.0)
 	var cx := card.get_center().x
 	var y := card.position.y + 8.0 + PORTAL_TITLE_SIZE
-	_text(title, cx, y, PORTAL_TITLE_SIZE, NpcInfoPanel.ACCENT)
+	_text(title, cx, y, PORTAL_TITLE_SIZE, accent)
 	if sub != "":
 		_text(sub, cx, y + PORTAL_SUB_SIZE + 6.0, PORTAL_SUB_SIZE, NpcInfoPanel.COL_DIM)
 
@@ -239,6 +240,8 @@ func _portal_lines(portal: Portal) -> Array:
 		parts.append("LEVEL %d" % level)
 	if portal.instance_id == -1:
 		parts.append("NEW INSTANCE")
+	if portal.is_sealed():
+		return ["SEALED: " + title.to_upper(), "NEEDS THE " + QuestItems.name_of(portal.sealed_by_key)]
 	return ["-> " + title.to_upper(), "  ·  ".join(parts)]
 
 
