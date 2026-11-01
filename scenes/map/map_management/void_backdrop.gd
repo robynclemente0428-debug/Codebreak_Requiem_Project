@@ -43,6 +43,7 @@ func _process(_delta: float) -> void:
 		var pos := cam.global_position
 		sm.set_shader_parameter("scroll", Vector2(pos.dot(cam.global_basis.x),
 				-pos.dot(cam.global_basis.y)) * px_per_metre * PARALLAX)
+		sm.set_shader_parameter("view_px", view)          # the convoy void measures in screen heights
 
 
 func _make_quad() -> void:

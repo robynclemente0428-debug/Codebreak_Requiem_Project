@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/map/town/town_area.gd" id="1_vu4ko"]
+[ext_resource type="Material" path="res://assets/shaders/convoy/act2_convoy_void.tres" id="2_7jwyw"]
+[ext_resource type="Script" path="res://dungeon_generation/dungeon_director.gd" id="3_k8dw8"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/convoy_deck.tres" id="4_pt4un"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/convoy_deck_meshes.tres" id="5_a8gxe"]
+[ext_resource type="Script" path="res://dungeon_generation/layout/room_marker.gd" id="6_pb7ug"]
+[ext_resource type="Script" path="res://dungeon_generation/layout/spawn_marker.gd" id="7_wqvff"]
+[ext_resource type="Script" path="res://dungeon_generation/layout/portal_marker.gd" id="8_8a7s6"]
+[ext_resource type="Script" path="res://assets/shaders/convoy/convoy_motion.gd" id="9_iri4i"]
+[ext_resource type="Script" path="res://scenes/map/town/convoy/convoy_dressing.gd" id="10_imbut"]
+[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/general_vendor.tscn" id="11_hky0x"]
+[ext_resource type="Script" path="res://systems/economy/shop_npc.gd" id="12_l5764"]
+[ext_resource type="Resource" path="res://data/shops/general_vendor.tres" id="13_fnsnu"]
+[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="14_tnwyf"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_f6log"]
+
+[node name="Act2Convoy" type="Node3D" unique_id=894769551]
+script = ExtResource("1_vu4ko")
+null_decals = 0
+backdrop = ExtResource("2_7jwyw")
+
+[node name="DungeonDirector" type="Node" parent="." unique_id=1377161291 node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("3_k8dw8")
+grid_width = 60
+min_room_size = 0
+max_room_size = 0
+room_interval = 0
+room_min_gap = 0
+num_branch_rooms = 0
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_pt4un")
+use_random_seed = false
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="." unique_id=1333247378]
+navigation_mesh = SubResource("NavigationMesh_f6log")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D" unique_id=1650839645]
+mesh_library = ExtResource("5_a8gxe")
+data = {
+"cells": PackedInt32Array(7, 12, 1, 7, 13, 1, 7, 14, 1, 7, 15, 1, 7, 16, 1, 7, 17, 1, 8, 12, 1, 8, 13, 2, 8, 14, 2, 8, 15, 2, 8, 16, 2, 8, 17, 1, 9, 12, 1, 9, 13, 2, 9, 14, 2, 9, 15, 2, 9, 16, 2, 9, 17, 1, 10, 12, 1, 10, 13, 2, 10, 14, 2, 10, 15, 2, 10, 16, 2, 10, 17, 1, 11, 12, 1, 11, 13, 2, 11, 14, 2, 11, 15, 2, 11, 16, 2, 11, 17, 1, 12, 12, 1, 12, 13, 2, 12, 14, 2, 12, 15, 2, 12, 16, 2, 12, 17, 1, 13, 12, 1, 13, 13, 2, 13, 14, 2, 13, 15, 2, 13, 16, 2, 13, 17, 1, 14, 12, 1, 14, 13, 2, 14, 14, 2, 14, 15, 2, 14, 16, 2, 14, 17, 1, 15, 12, 1, 15, 13, 2, 15, 14, 2, 15, 15, 2, 15, 16, 2, 15, 17, 1, 16, 12, 1, 16, 13, 2, 16, 14, 2, 16, 15, 2, 16, 16, 2, 16, 17, 1, 17, 12, 1, 17, 13, 2, 17, 14, 2, 17, 15, 2, 17, 16, 2, 17, 17, 1, 18, 12, 1, 18, 13, 2, 18, 14, 2, 18, 15, 2, 18, 16, 2, 18, 17, 1, 19, 3, 1, 19, 4, 1, 19, 5, 1, 19, 6, 1, 19, 7, 1, 19, 8, 1, 19, 12, 1, 19, 13, 2, 19, 14, 2, 19, 15, 2, 19, 16, 2, 19, 17, 1, 20, 3, 1, 20, 4, 2, 20, 5, 2, 20, 6, 2, 20, 7, 2, 20, 8, 1, 20, 12, 1, 20, 13, 2, 20, 14, 2, 20, 15, 2, 20, 16, 2, 20, 17, 1, 21, 3, 1, 21, 4, 2, 21, 5, 2, 21, 6, 2, 21, 7, 2, 21, 8, 1, 21, 9, 1, 21, 10, 1, 21, 11, 1, 21, 12, 1, 21, 13, 2, 21, 14, 2, 21, 15, 2, 21, 16, 2, 21, 17, 1, 22, 3, 1, 22, 4, 2, 22, 5, 2, 22, 6, 2, 22, 7, 2, 22, 8, 0, 22, 9, 0, 22, 10, 0, 22, 11, 0, 22, 12, 0, 22, 13, 2, 22, 14, 2, 22, 15, 2, 22, 16, 2, 22, 17, 1, 23, 3, 1, 23, 4, 2, 23, 5, 2, 23, 6, 2, 23, 7, 2, 23, 8, 1, 23, 9, 1, 23, 10, 1, 23, 11, 1, 23, 12, 1, 23, 13, 2, 23, 14, 2, 23, 15, 2, 23, 16, 2, 23, 17, 1, 24, 3, 1, 24, 4, 2, 24, 5, 2, 24, 6, 2, 24, 7, 2, 24, 8, 1, 24, 12, 1, 24, 13, 2, 24, 14, 2, 24, 15, 2, 24, 16, 2, 24, 17, 1, 25, 3, 1, 25, 4, 1, 25, 5, 1, 25, 6, 1, 25, 7, 1, 25, 8, 1, 25, 12, 1, 25, 13, 2, 25, 14, 2, 25, 15, 2, 25, 16, 2, 25, 17, 1, 26, 12, 1, 26, 13, 2, 26, 14, 2, 26, 15, 2, 26, 16, 2, 26, 17, 1, 27, 12, 1, 27, 13, 2, 27, 14, 2, 27, 15, 2, 27, 16, 2, 27, 17, 1, 28, 12, 1, 28, 13, 2, 28, 14, 2, 28, 15, 2, 28, 16, 2, 28, 17, 1, 29, 12, 1, 29, 13, 2, 29, 14, 2, 29, 15, 2, 29, 16, 2, 29, 17, 1, 30, 12, 1, 30, 13, 2, 30, 14, 2, 30, 15, 2, 30, 16, 2, 30, 17, 1, 31, 12, 1, 31, 13, 2, 31, 14, 2, 31, 15, 2, 31, 16, 2, 31, 17, 1, 32, 12, 1, 32, 13, 1, 32, 14, 1, 32, 15, 0, 32, 16, 1, 32, 17, 1, 33, 12, 1, 33, 13, 2, 33, 14, 2, 33, 15, 2, 33, 16, 2, 33, 17, 1, 34, 12, 1, 34, 13, 2, 34, 14, 2, 34, 15, 2, 34, 16, 2, 34, 17, 1, 35, 12, 1, 35, 13, 2, 35, 14, 2, 35, 15, 2, 35, 16, 2, 35, 17, 1, 36, 12, 1, 36, 13, 2, 36, 14, 2, 36, 15, 2, 36, 16, 2, 36, 17, 1, 37, 12, 1, 37, 13, 2, 37, 14, 2, 37, 15, 2, 37, 16, 2, 37, 17, 1, 38, 12, 1, 38, 13, 1, 38, 14, 1, 38, 15, 1, 38, 16, 1, 38, 17, 1)
+}
+
+[node name="Layout" type="Node3D" parent="." unique_id=1678904339]
+
+[node name="MainDeck" type="Marker3D" parent="Layout" unique_id=1810891440]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 0, 30)
+script = ExtResource("6_pb7ug")
+room_size = Vector2i(24, 4)
+
+[node name="Bow" type="Marker3D" parent="Layout" unique_id=1743674193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 70, 0, 30)
+script = ExtResource("6_pb7ug")
+room_size = Vector2i(5, 4)
+
+[node name="CargoPod" type="Marker3D" parent="Layout" unique_id=1921201627]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 0, 12)
+script = ExtResource("6_pb7ug")
+room_size = Vector2i(5, 4)
+
+[node name="default" type="Marker3D" parent="Layout" unique_id=2056310847]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 0, 30)
+script = ExtResource("7_wqvff")
+create_room = false
+
+[node name="PortalToHardfault" type="Marker3D" parent="Layout" unique_id=946686390]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 72, 0, 30)
+script = ExtResource("8_8a7s6")
+target_area = "res://scenes/map/town/act_1_town.tscn"
+target_spawn = &"from_convoy"
+arrival_spawn_id = &"act_2_convoy"
+room_size = Vector2i(3, 3)
+
+[node name="ConvoyMotion" type="Node" parent="." unique_id=1969675849]
+script = ExtResource("9_iri4i")
+
+[node name="ConvoyDressing" type="Node3D" parent="." unique_id=1569185026]
+script = ExtResource("10_imbut")
+
+[node name="Quartermaster" type="Area3D" parent="." unique_id=1385360680 instance=ExtResource("11_hky0x")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 1.1, 29)
+collision_mask = 3
+script = ExtResource("12_l5764")
+shop = ExtResource("13_fnsnu")
+model_scene = ExtResource("14_tnwyf")
+npc_id = "quartermaster"
+npc_name = "Quartermaster"
+info_title = "Convoy Supplies"
+info_description = "Keeps the outpost supplied. Buys what you drag back from the dungeons and sells what you need to go back in."
