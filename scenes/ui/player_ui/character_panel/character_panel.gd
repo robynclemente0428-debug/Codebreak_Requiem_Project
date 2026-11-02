@@ -420,6 +420,9 @@ func _refresh_header() -> void:
 	var qm: QuestManager = player.get("quests") if player != null else null
 	var next_rank := Ranks.next(qm)
 	_rank_label.text = "RANK  %s" % Ranks.current(qm)
+	var grade := Ranks.grade(qm)
+	if grade != "":
+		_rank_label.text += " (%s)" % grade
 	if next_rank != "":
 		_rank_label.text += "  ·  NEXT: %s" % next_rank
 	_rank_label.tooltip_text = ("Next rank: %s. Pass Examiner Sudo's exam." % next_rank) if next_rank != "" \

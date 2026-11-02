@@ -2,12 +2,12 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
-[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
 
 [sub_resource type="Resource" id="Objective_1"]
-script = ExtResource("3_prog")
-description = "Apply an efficient script (any tier)"
-kind = "program_efficient"
+script = ExtResource("1_obj")
+description = "Pass the Operator exam in Sudo's sandbox"
+kind = "exam_passed"
+target = "operator"
 
 
 [resource]
@@ -15,7 +15,8 @@ script = ExtResource("2_quest")
 id = "exam_operator"
 title = "RANK EXAM: OPERATOR"
 description = "Examiner Sudo grades logic, not luck.
-Apply a script that earns an efficiency tier: 6 blocks or fewer, and valid."
+Sit the exam in Sudo's sandbox: test processes close in, and your skill must react with an enemies_nearby() rule.
+Graded PASS, MERIT or DISTINCTION. You can retake it later for a better grade."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
 ordered = false
 prerequisite_quest_ids = Array[String](["q01_glitchling_queen"])

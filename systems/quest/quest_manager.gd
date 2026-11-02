@@ -25,6 +25,9 @@ var pending_choices: Array[String] = []
 ## beacons. Kept apart from quest progress, so one found before its quest was taken still
 ## counts (RecoverObjective credits it). Saved. Names and hints: QuestItems.
 var recovered: Array[String] = []
+## Best grade on each rank exam (ExamSpec): rank id -> 0 PASS, 1 MERIT, 2 DISTINCTION. Saved.
+## Retaking an exam only ever raises it.
+var exam_grades: Dictionary = {}
 
 var _player: Node
 
@@ -100,6 +103,19 @@ func recover(id: String) -> void:
 	recovered.append(id)
 	item_recovered.emit(id)
 	GameEvents.report("recover", id)
+
+
+## Records an exam result. Returns true if it's a new best.
+func record_exam(rank: String, grade: int) -> bool:
+	if exam_grades.has(rank) and int(exam_grades[rank]) >= grade:
+		return false
+	exam_grades[rank] = grade
+	return true
+
+
+## The best grade on that exam, or -1 if it hasn't been passed.
+func exam_grade(rank: String) -> int:
+	return int(exam_grades.get(rank, -1))
 
 
 # ---------- STARTING ----------
@@ -203,7 +219,7 @@ func to_dict() -> Dictionary:
 	for s: QuestState in active.values():
 		list.append(s.to_dict())
 	return {"active": list, "completed": completed_ids, "pending_choices": pending_choices,
-		"recovered": recovered.duplicate()}
+		"recovered": recovered.duplicate(), "exam_grades": exam_grades.duplicate()}
 
 
 # ---------- TUTORIAL GUARD ----------
@@ -303,6 +319,10 @@ func from_dict(d: Dictionary) -> void:
 	completed_ids.clear()
 	pending_choices.clear()
 	recovered.clear()
+	exam_grades.clear()
+	var grades: Dictionary = d.get("exam_grades", {})
+	for k in grades:
+		exam_grades[str(k)] = int(grades[k])
 	for id in d.get("recovered", []):
 		recovered.append(str(id))
 	for id in d.get("completed", []):

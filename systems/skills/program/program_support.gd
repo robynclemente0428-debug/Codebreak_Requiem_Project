@@ -222,3 +222,6 @@ func _report_triggered(rule: ProgramRule, cast: SkillCast) -> void:
 		return
 	for c in rule.conditions:
 		GameEvents.report("rule_triggered", c.type_id())
+	# Which rule of which skill: "<gem id>#<rule index>" (the exam debrief counts these)
+	if cast.skill != null and cast.skill.gem != null:
+		GameEvents.report("rule_fired", "%s#%d" % [cast.skill.gem.id, program.rules.find(rule)])

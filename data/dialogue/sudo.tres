@@ -6,13 +6,16 @@
 script = ExtResource("1_dlg")
 source = "# Examiner Sudo: rank examiner. Dry, patient.
 # Exams are quests (exam_operator, exam_engineer). Passing reports 'rank_up' for the rank system.
+# The Operator exam is sat in the sandbox (> exam operator, see ExamChamber), and can be retaken
+# for a better grade once passed.
 ~ start
 @ quest_ready:exam_engineer -> pass_engineer
 @ quest_ready:exam_operator -> pass_operator
 @ quest_active:exam_engineer -> fail
-@ quest_active:exam_operator -> fail
+@ quest_active:exam_operator -> ready_operator
 @ can_start:exam_engineer -> offer_engineer
 @ can_start:exam_operator -> offer_operator
+@ quest_done:exam_operator -> retake_operator
 -> idle
 
 ~ offer_operator
@@ -24,9 +27,23 @@ Sudo: The Gate Guard swings slow. A wasteful script won't wait for your opening.
 
 ~ accept_operator
 > start_quest exam_operator
-# NEW line below
-Sudo: Six blocks or fewer. Make every one count.
--> end
+# NEW lines below: the sandbox exam
+Sudo: The exam runs in my sandbox. Test processes, closing in from every side.
+Sudo: Your skill reacts when they crowd you, or it doesn't. Read the spec, then run it.
+-> ready_operator
+
+~ ready_operator
+Sudo: The sandbox is ready when you are.
+* ENTER THE SANDBOX -> go_operator
+* NOT YET -> end
+
+~ go_operator
+> exam operator
+
+~ retake_operator
+Sudo: Efficiency is just laziness with a plan.
+* RETAKE THE OPERATOR EXAM -> go_operator
+* LEAVE -> end
 
 ~ offer_engineer
 # NEW line below
@@ -46,7 +63,8 @@ Sudo: Too many wasted steps. Trim it and try again.
 ~ pass_operator
 > turn_in exam_operator
 > report rank_up operator
-Sudo: Clean and efficient. Rank up.
+Sudo: Clean and efficient. Rank up. Operator.
+Sudo: Retake it whenever you like. I keep your best grade.
 -> end
 
 ~ pass_engineer

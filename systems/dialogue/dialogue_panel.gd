@@ -339,6 +339,11 @@ func _do(e: Dictionary) -> String:
 		"report":
 			if args.size() > 0:
 				GameEvents.report(args[0], args[1] if args.size() > 1 else "")
+		"exam":                                  # > exam operator: into Sudo's sandbox
+			if args.size() > 0:
+				close()
+				ExamChamber.enter(get_tree(), args[0])
+			return "end"
 		"open_shop":
 			if _npc is ShopNPC:
 				var shop_panel := get_tree().get_first_node_in_group("shop_panel") as ShopPanel
