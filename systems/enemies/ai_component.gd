@@ -176,7 +176,21 @@ func _physics_process(delta: float) -> void:
 	
 
 
+## The owner died: stop thinking and moving. Avoidance keeps sending the last velocity back
+## through velocity_computed even with physics off, so that is cut too.
+func halt() -> void:
+	set_physics_process(false)
+	target = null                                 # (state is left alone: the model would play idle)
+	if _nav != null:
+		if _nav.velocity_computed.is_connected(_on_velocity_computed):
+			_nav.velocity_computed.disconnect(_on_velocity_computed)
+		_nav.avoidance_enabled = false
+		_nav.velocity = Vector3.ZERO
+
+
 func _on_velocity_computed(safe_velocity: Vector3) -> void:
+	if not is_physics_processing():
+		return                                    # halted (dead)
 	_apply_velocity(safe_velocity, get_physics_process_delta_time())
 	
 func _apply_velocity(v: Vector3, delta: float) -> void:

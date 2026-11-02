@@ -12,6 +12,7 @@ extends Control
 @export var font_size: int = 22             # at ui_scale 1.0
 @export var show_scanlines := true
 ## Shake when damaged (Settings > Gameplay > shake life bar when hit).
+const COL_BARRIER := Color(0.45, 0.85, 1.0)
 var shake_enabled := true
 @export var debug_keys := false             # J = take damage, K = heal (for tuning the look)
 @export_group("Size and opacity")
@@ -195,6 +196,9 @@ func _draw() -> void:
 	_text(fnt, Vector2(pad, base_y), label_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, accent)
 	var max_shown := roundi(_max)
 	var readout := "%03d / %03d" % [mini(ceili(_shown * _max), max_shown), max_shown]
+	var shield := _health.barrier if _health != null else 0.0
+	if shield >= 1.0:
+		readout = "+%d  %s" % [roundi(shield), readout]       # barrier from skill scripts
 	_text(fnt, Vector2(pad, base_y), readout, HORIZONTAL_ALIGNMENT_RIGHT, w - pad * 2.0, fs,
 		accent.lerp(Color.WHITE, 0.6))
 	if low:
@@ -217,6 +221,12 @@ func _draw() -> void:
 		var f := clampf(_shown * n - i, 0.0, 1.0)
 		if f > 0.0:
 			_seg(x, bar_y, sw, f, fill_col, true)                          # health
+
+	# Barrier: a cyan strip along the top of the bar, as long as the shield is big
+	if shield >= 1.0 and _max > 0.0:
+		var bw := (bar_w + slant) * clampf(shield / _max, 0.0, 1.0)
+		draw_line(Vector2(bar_x, bar_y - 3.0 * s), Vector2(bar_x + bw, bar_y - 3.0 * s),
+			COL_BARRIER, 3.0 * s)
 
 	# Tick marks under the bar, every 5 segments
 	for i in range(0, n + 1, 5):

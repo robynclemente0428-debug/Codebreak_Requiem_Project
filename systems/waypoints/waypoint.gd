@@ -20,3 +20,10 @@ enum Kind { TOWN, DUNGEON, BOSS }
 @export var links: PackedStringArray = []
 ## Short line shown when hovered, e.g. "Glitchling Queen".
 @export var note: String = ""
+## What fights here favour (DungeonThreats ids: "swarm", "firewalled", "reflector"): these
+## are in every instance. The dungeon spawns accordingly, and its portals list them so
+## players can swap scripts first.
+@export var threats: PackedStringArray = []
+## How many MORE threats each new instance rolls at random (from the ones not listed above),
+## min to max. (0, 0) = always exactly `threats`.
+@export var random_threats := Vector2i.ZERO

@@ -13,6 +13,10 @@ extends Resource
 ## Smallest max_actions first.
 @export var tiers: Array[EfficiencyTier] = []
 
+## Knobs every programmable skill gets on top of its own (leech, barrier, guard). They belong
+## to the skill itself and share its budget.
+const DEFENSE_KNOBS := "res://data/skill_programs/defense_knobs.tres"
+
 ## Which gem each knob belongs to: knob id -> "" for the skill, or the support's id.
 ## Filled by for_socket(); empty on the .tres (every knob belongs to the skill).
 var knob_owner: Dictionary = {}
@@ -20,6 +24,8 @@ var knob_owner: Dictionary = {}
 var support_ids: PackedStringArray = []
 ## The caster's class trait (null for enemies, or a class without one).
 var class_trait: ClassTrait
+## The caster's rank (Ranks.LADDER index): blocks above it don't exist (Ranks.LOCKED_BLOCKS).
+var rank := 0
 
 
 func get_knob(knob_id: StringName) -> SkillKnob:
@@ -44,8 +50,9 @@ func knobs_for(owner_id: String) -> Array[SkillKnob]:
 
 
 ## The limits for one socket: the skill's knobs plus the knobs of its socketed supports.
-## Everything shares one point budget, block limit and set of tiers.
-static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: ClassTrait = null) -> SkillProgramLimits:
+## Everything shares one point budget, block limit and set of tiers. `rank` (Ranks.LADDER index)
+## adds the rank's extra rules and blocks.
+static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: ClassTrait = null, rank := 0) -> SkillProgramLimits:
 	var base := gem.program_limits if gem != null else null
 	if base == null:
 		return null
@@ -53,12 +60,20 @@ static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: Clas
 	out.knobs = base.knobs.duplicate()
 	out.point_budget = base.point_budget
 	out.max_actions = base.max_actions
-	out.max_rules = base.max_rules
+	out.max_rules = base.max_rules + int(Ranks.perk(rank, "rules"))
+	out.max_actions += int(Ranks.perk(rank, "blocks"))
 	out.tiers = base.tiers.duplicate()
+	out.rank = rank
+	var defense := load(DEFENSE_KNOBS) as SkillProgramLimits
+	if defense != null:
+		for k in defense.knobs:
+			if out.get_knob(k.id) == null:       # a gem may define its own version
+				out.knobs.append(k)
+	out.knobs.assign(out.knobs.filter(func(k: SkillKnob) -> bool: return out.allows("knob:" + String(k.id))))
 	for sup in supports:
 		var def := sup as SupportGemDefinition
-		if def == null:
-			continue
+		if def == null or not out.allows("gem:" + def.id):
+			continue                             # a gem above the player's rank does nothing
 		out.support_ids.append(def.id)
 		for k in def.program_knobs:
 			out.knobs.append(k)
@@ -69,6 +84,11 @@ static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: Clas
 		for i in out.knobs.size():
 			out.knobs[i] = trait_res.adjust_knob(out.knobs[i])
 	return out
+
+
+## True when the caster's rank may use a script block ("loop", "cond:<id>", "knob:<id>", "gem:<id>").
+func allows(block: String) -> bool:
+	return Ranks.allows(rank, block)
 
 
 ## Class trait helpers (1.0 / false when there is no trait).

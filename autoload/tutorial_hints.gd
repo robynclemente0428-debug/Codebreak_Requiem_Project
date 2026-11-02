@@ -48,9 +48,10 @@ var _targets: Array[Control] = []
 var _world_target: Node3D
 var _time := 0.0
 ## Hands-on steps of the scripting lesson, done once tried (even if the player changes the
-## values back afterwards): "raised_knob", "changed_condition". Not saved: a restarted game
-## simply shows them again.
+## values back afterwards): "raised_knob", "changed_condition", "lowered_knob", "spent_points".
+## Not saved: a restarted game simply shows them again.
 var _lesson_done: Dictionary = {}
+var _points_when_lowered := 0.0           # buff points spent when the trade-off knob went below 0
 var _lesson_start_params: Array = []      # the condition's values when the rule was made
 var _waypoint_map_seen := false           # the map was opened during the waypoint lesson
 var _support_lesson_shown := false        # the "socket your support gem" steps were shown
@@ -356,6 +357,42 @@ func _script_hint(obj: Objective, sp: SkillPanel, sp_open: bool, sp_key: String,
 			return {"text": "Now click the enemy count in  when %s" % fn,
 				"sub": why,
 				"targets": sp.tutorial_target("script:cond_numbers:" + cond)}
+	# Trade-off: lowering a knob in an always: rule pays points back, for any other knob
+	var trade: String = st.get("trade_knob", "attack_speed")
+	var trade_name := trade.replace("_", " ")
+	if not _lesson_done.has("lowered_knob"):
+		if float(st.get("drawback_points", 0.0)) > 0.0:
+			_lesson_done["lowered_knob"] = true
+			_points_when_lowered = float(st.get("points", 0.0))
+		elif not st.get("always_rule", false):
+			if st.get("any_selected", false):
+				return {"text": "Click the  drop a snippet here  line to start a new rule",
+					"sub": "Knobs can cost points, or give them back. Next you'll trade a little %s for more damage." % trade_name,
+					"targets": sp.tutorial_target("script:new_rule")}
+			return {"text": "Click  %s  in SNIPPETS" % trade,
+				"sub": "A rule with no condition is  always:  it's on all the time. %s can only be changed in an always: rule." % trade_name.capitalize(),
+				"targets": sp.tutorial_target("script:knob:" + trade)}
+		elif not st.get("trade_line", false) and not st.get("always_selected", false):
+			return {"text": "Click your  always:  line to select it",
+				"sub": "Then  %s  in SNIPPETS goes into that rule." % trade,
+				"targets": sp.tutorial_target("script:always_line")}
+		elif not st.get("trade_line", false):
+			return {"text": "Click  %s  in SNIPPETS" % trade,
+				"sub": "It goes into your always: rule. %s can only be changed there." % trade_name.capitalize(),
+				"targets": sp.tutorial_target("script:knob:" + trade)}
+		else:
+			var at := int(st.get("trade_steps", 0))
+			var left := "It's at 0 now: one more right-click." if at == 0 					else "%d more right-clicks." % (at + 1)
+			return {"text": "Right-click the  %s  number until it goes below 0" % trade,
+				"sub": "%s Lowering a knob is a drawback: your skill gets a little slower, and you get points back that ANY rule can spend. Now: %s." % [left, points],
+				"targets": sp.tutorial_target("script:always_knob_number:" + trade)}
+	if not _lesson_done.has("spent_points"):
+		if float(st.get("points", 0.0)) > _points_when_lowered + 0.01:
+			_lesson_done["spent_points"] = true
+		else:
+			return {"text": "Spend them: click the damage number in  when %s  again" % fn,
+				"sub": "You gave up some %s for more damage when you're crowded. Any knob trades the same way: lower what you need least, raise what you need most. Now: %s." % [trade_name, points],
+				"targets": sp.tutorial_target("script:knob_number:%s:damage" % cond)}
 	if not st.get("valid", false):
 		var fix := "Hover the red line in the code to see how to fix it."
 		if st.get("over", false):

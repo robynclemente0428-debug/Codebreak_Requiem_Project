@@ -18,6 +18,9 @@ const GRADE_COLORS := [Color(0.85, 0.96, 1.0), Color(0.25, 1.0, 0.55), Color(1.0
 var chamber: ExamChamber
 var _font: Font
 var _card: PanelContainer
+## The card sits under the HUD (20), so the skills menu and inventory open over it. The result
+## panel stays on this layer (21) so its buttons work.
+const CARD_LAYER := 19
 var _card_box: VBoxContainer
 var _result: PanelContainer
 var _result_box: VBoxContainer
@@ -33,11 +36,14 @@ func _ready() -> void:
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 
+	var card_layer := CanvasLayer.new()
+	card_layer.layer = CARD_LAYER
+	add_child(card_layer)
 	_card = _panel()
 	_card.custom_minimum_size.x = 440
 	_card.position = Vector2(24, 190)
 	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(_card)
+	card_layer.add_child(_card)
 	_card_box = _vbox(6)
 	_card.add_child(_card_box)
 
@@ -152,6 +158,9 @@ func show_result(r: Dictionary) -> void:
 		var note := ""
 		if r["first_pass"]:
 			note = "Report to Examiner Sudo to receive your rank."
+			var unlocks := Ranks.unlock_lines(Ranks.LADDER.map(func(r: Dictionary) -> String: return r["id"]).find(spec.rank_id))
+			if not unlocks.is_empty():
+				note += "\nUnlocks: " +", ".join(unlocks) + "."
 		elif r["new_best"]:
 			note = "New best grade recorded."
 		else:

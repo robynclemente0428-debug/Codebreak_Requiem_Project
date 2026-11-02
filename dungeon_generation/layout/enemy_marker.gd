@@ -16,6 +16,9 @@ extends DungeonMarker
 ## On: the enemy has exactly the modifiers above and nothing is rolled (an empty list means none).
 ## Off: yours are added on top of the random ones its rarity rolls.
 @export var replace_random_modifiers: bool = false
+## On: it rolls the dungeon's Firewalled / Reflector threats like any enemy of its rarity
+## (a champion always gets them). Swarm never applies to a marked enemy. Off: never.
+@export var threat_traits: bool = true
 ## A quest key this enemy carries (an id from QuestItems, e.g. "brood_key"). It drops where
 ## the enemy dies, until the player has picked it up once. Empty = none.
 @export var drops_key: String = ""

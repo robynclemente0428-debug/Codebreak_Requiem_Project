@@ -92,5 +92,6 @@ static func _enemy_entry(m, cell: Vector2i) -> Dictionary:
 		"clear_room": m.clear_room,
 		"modifiers": m.modifiers,
 		"replace_random": m.replace_random_modifiers,
+		"threat_traits": m.threat_traits,
 		"key": m.drops_key,
 	}

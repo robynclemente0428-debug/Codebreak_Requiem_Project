@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="SkillProgramLimits" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="1_knob"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_program_limits.gd" id="2_lim"]
+
+[sub_resource type="Resource" id="Knob_leech"]
+script = ExtResource("1_knob")
+id = &"leech"
+display_name = "Leech"
+kind = 1
+flag_key = "leech"
+step = 0.02
+min_steps = 0
+max_steps = 5
+cost_per_step = 2.0
+defensive = true
+
+[sub_resource type="Resource" id="Knob_barrier"]
+script = ExtResource("1_knob")
+id = &"barrier"
+display_name = "Barrier"
+kind = 1
+flag_key = "barrier"
+step = 4.0
+min_steps = 0
+max_steps = 5
+cost_per_step = 1.5
+unit = ""
+defensive = true
+
+[sub_resource type="Resource" id="Knob_guard"]
+script = ExtResource("1_knob")
+id = &"guard"
+display_name = "Guard"
+kind = 1
+flag_key = "guard"
+step = 0.05
+min_steps = 0
+max_steps = 6
+cost_per_step = 2.0
+defensive = true
+
+[resource]
+script = ExtResource("2_lim")
+knobs = Array[ExtResource("1_knob")]([SubResource("Knob_leech"), SubResource("Knob_barrier"), SubResource("Knob_guard")])

@@ -425,8 +425,22 @@ func _refresh_header() -> void:
 		_rank_label.text += " (%s)" % grade
 	if next_rank != "":
 		_rank_label.text += "  ·  NEXT: %s" % next_rank
-	_rank_label.tooltip_text = ("Next rank: %s. Pass Examiner Sudo's exam." % next_rank) if next_rank != "" \
-			else "Highest rank."
+	var tip := PackedStringArray()
+	var held := Ranks.index_of(qm)
+	for r in range(1, held + 1):
+		for line in Ranks.unlock_lines(r):
+			tip.append("  + " + line)
+	if not tip.is_empty():
+		tip.insert(0, "Your rank unlocks:")
+	if next_rank != "":
+		tip.append("Next rank: %s. Pass Examiner Sudo's exam." % next_rank)
+		for line in Ranks.unlock_lines(held + 1):
+			tip.append("  + " + line)
+	else:
+		tip.append("Highest rank.")
+	for r in Ranks.waiting(qm):
+		tip.append("%s exam passed: it counts once you reach %s." % [r, r])
+	_rank_label.tooltip_text = "\n".join(tip)
 	_rank_label.mouse_filter = Control.MOUSE_FILTER_PASS        # so the tooltip shows
 
 	var t := ClassTrait.for_class(class_id)

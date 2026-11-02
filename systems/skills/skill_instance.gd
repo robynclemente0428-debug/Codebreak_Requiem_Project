@@ -19,6 +19,8 @@ var _anim_override := ""
 var flag_overrides: Dictionary = {}
 ## The owner's class trait (set by SkillComponent; null for enemies).
 var class_trait: ClassTrait
+## The owner's rank (Ranks.LADDER index, set by SkillComponent): more rules and blocks.
+var rank := 0
 
 ## Skill-local numbers only (currently just the mana cost). Everything that changes what the
 ## skill does to the world lives in _modifiers and is applied on top of the caster's stats.
@@ -119,7 +121,7 @@ func get_program_limits() -> SkillProgramLimits:
 	for support in supports:
 		if _tags_compatible(support.allowed_tags, gem.tags):
 			active.append(support)
-	return SkillProgramLimits.for_socket(gem, active, class_trait)
+	return SkillProgramLimits.for_socket(gem, active, class_trait, rank)
 
 ## Never edit the shared resource: every skill gets its own copy of each modifier.
 func _tagged(m: Modifier, source: String) -> Modifier:

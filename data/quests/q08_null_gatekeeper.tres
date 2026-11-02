@@ -5,9 +5,9 @@
 
 [sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
-description = "Pass Examiner Sudo's advanced exam"
+description = "Pass Examiner Sudo's Architect exam"
 kind = "quest_done"
-target = "exam_engineer"
+target = "exam_architect"
 metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 
 [sub_resource type="Resource" id="Objective_2"]
@@ -23,7 +23,7 @@ id = "q08_null_gatekeeper"
 title = "THE NULL GATEKEEPER"
 description = "The Gatekeeper guards the Core.
 BOSS TRAIT: shifts between a fast form and a slow, heavy form.
-SCRIPT TASK: pass Examiner Sudo's advanced rank exam."
+SCRIPT TASK: pass Examiner Sudo's Architect rank exam."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q07_null_weaver_prime"])

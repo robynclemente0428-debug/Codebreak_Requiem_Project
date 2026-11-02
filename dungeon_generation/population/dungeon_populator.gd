@@ -69,6 +69,10 @@ var _level := 1
 var instance: DungeonInstance
 var _enemy_index := 0                   # every spawn attempt gets the next number, in a fixed order
 var _is_floor: Callable      # (Vector3i) -> bool   supplied by dungeon.gd
+## What this dungeon's fights favour (DungeonThreats ids): the instance's rolled threats.
+## Set it before populate() to override (a test scene).
+var threats: PackedStringArray = []
+var _threat_rng := RandomNumberGenerator.new()
 var _to_world: Callable      # (Vector2i) -> Vector3  supplied by dungeon.gd
 
 func populate(level: int, skip_rooms: Array, is_floor: Callable, to_world: Callable) -> void:
@@ -82,6 +86,14 @@ func populate(level: int, skip_rooms: Array, is_floor: Callable, to_world: Calla
 		return
 
 	var rng := director.rng                       # seeded: same seed, same layout and rarities
+	if threats.is_empty():
+		if instance != null:
+			threats = instance.threats
+		else:                                     # no instance record (a test scene): roll here
+			var area := owner if owner != null else get_parent()
+			threats = DungeonThreats.roll_for(area.scene_file_path, rng.seed) if area != null else PackedStringArray()
+	_threat_rng.seed = rng.seed + 7177            # its own stream, so the layout rolls stay the same
+	var swarm := DungeonThreats.SWARM_COUNT if "swarm" in threats else 1
 	var used: Dictionary = {}
 	var spawned := 0
 	for room: RoomData in director.rooms:
@@ -92,6 +104,7 @@ func populate(level: int, skip_rooms: Array, is_floor: Callable, to_world: Calla
 			dungeon_theme.enemies_per_room_min, dungeon_theme.enemies_per_room_max)
 		if is_branch:
 			target = maxi(1, target / 2)
+		target *= swarm
 		var weights: Dictionary = dungeon_theme.branch_rarity_weights if is_branch \
 			else dungeon_theme.room_rarity_weights
 
@@ -107,7 +120,7 @@ func populate(level: int, skip_rooms: Array, is_floor: Callable, to_world: Calla
 			used[cell] = true
 			var def: EnemyDefinition = dungeon_theme.enemy_pool[
 				rng.randi() % dungeon_theme.enemy_pool.size()]
-			_spawn_enemy(def, _roll_rarity(weights, rng), cell)
+			_spawn_threat(def, _roll_rarity(weights, rng), cell)
 			placed += 1
 			spawned += 1
 
@@ -147,6 +160,8 @@ func _populate_corridors(rng: RandomNumberGenerator, used: Dictionary) -> int:
 			break
 		var anchor: Vector2i = cells[rng.randi() % cells.size()]
 		var size := rng.randi_range(corridor_group_min, corridor_group_max)
+		if "swarm" in threats:
+			size *= DungeonThreats.SWARM_COUNT
 		var def: EnemyDefinition = pool[rng.randi() % pool.size()]   # one kind per group
 		for i in size:
 			# members stand on free floor next to the anchor
@@ -159,7 +174,7 @@ func _populate_corridors(rng: RandomNumberGenerator, used: Dictionary) -> int:
 			if used.has(spot):
 				continue
 			used[spot] = true
-			_spawn_enemy(def, _roll_rarity(corridor_rarity_weights, rng), spot)
+			_spawn_threat(def, _roll_rarity(corridor_rarity_weights, rng), spot)
 			spawned += 1
 	return spawned
 
@@ -174,6 +189,8 @@ func _eligible_loot() -> Array[ItemDefinition]:
 	for def in theme.loot_pool:                      # hand-placed extras
 		if def not in out and def.item_level <= _level and def.item_level >= _level - loot_level_window:
 			out.append(def)
+	var rank := Ranks.of_player(get_tree())         # gems above the player's rank don't drop
+	out.assign(out.filter(func(d: ItemDefinition) -> bool: return not ShopNPC._locked(d, rank)))
 	_loot_cache = out
 	_loot_cache_level = _level
 	print("[Populator] loot pool at level %d: %d items" % [_level, out.size()])
@@ -196,6 +213,10 @@ func _spawn_enemy(def: EnemyDefinition, rarity: String, cell: Vector2i,
 	enemy.set_meta(&"base_name", def.display_name)   # without the rolled modifiers' words
 	enemy.health.died.connect(_on_enemy_died.bind(enemy, rarity, def.id))
 	return enemy
+
+## A rolled enemy with this dungeon's threat traits on top of its random modifiers.
+func _spawn_threat(def: EnemyDefinition, rarity: String, cell: Vector2i) -> Node3D:
+	return _spawn_enemy(def, rarity, cell, DungeonThreats.roll_traits(threats, rarity, _threat_rng), true)
 
 ## Returns false (and removes the enemy) if it was killed on an earlier visit.
 ## The enemy is still created first, so the random numbers stay in step and every later
@@ -478,8 +499,15 @@ func spawn_marked(entries: Array, level: int, is_floor: Callable, to_world: Call
 			push_warning("EnemyMarker at %s is not on floor, skipped" % [cell])
 			continue
 		# The marker's own modifiers: exactly these (replace_random), or these on top of the rolled ones
-		var mods: Array = e.get("modifiers", [])
+		var mods: Array = e.get("modifiers", []).duplicate()
 		var replace: bool = e.get("replace_random", true)
+		if e.get("threat_traits", true):
+			# The dungeon's traits on top (they are the dungeon's, not random modifiers, so they
+			# apply even with replace_random). No Swarm: one placed enemy can't be doubled.
+			var no_swarm := PackedStringArray(Array(threats).filter(func(t) -> bool: return t != "swarm"))
+			for extra in DungeonThreats.roll_traits(no_swarm, e["rarity"], _threat_rng):
+				if not mods.has(extra):
+					mods.append(extra)
 		var enemy := _spawn_enemy(def, e["rarity"], cell, mods, not replace)
 		var key: String = e.get("key", "")
 		if key != "" and not QuestItems.owned(get_tree(), key):

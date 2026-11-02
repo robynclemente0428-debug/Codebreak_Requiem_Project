@@ -8,6 +8,9 @@ const TYPES := {
 	"caster_life_below": preload("res://systems/skills/program/conditions/caster_life_below_condition.gd"),
 	"target_life_below": preload("res://systems/skills/program/conditions/target_life_below_condition.gd"),
 	"every_nth_cast": preload("res://systems/skills/program/conditions/every_nth_cast_condition.gd"),
+	# Defensive
+	"hit_recently": preload("res://systems/skills/program/conditions/hit_recently_condition.gd"),
+	"enemies_attacking_me": preload("res://systems/skills/program/conditions/enemies_attacking_me_condition.gd"),
 	# Loops (see ProgramLoop)
 	"loop_index": preload("res://systems/skills/program/conditions/loop_index_condition.gd"),
 	"target_alive": preload("res://systems/skills/program/conditions/target_alive_condition.gd"),

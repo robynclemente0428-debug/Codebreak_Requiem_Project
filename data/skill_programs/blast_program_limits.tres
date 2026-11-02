@@ -44,7 +44,6 @@ display_name = "Spread"
 flag_key = "spread_angle"
 step = 3.0
 min_steps = -4
-max_steps = 5
 cost_per_step = 0.25
 unit = "deg"
 

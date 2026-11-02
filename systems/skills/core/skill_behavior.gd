@@ -18,6 +18,14 @@ extends RefCounted
 ## Flags every skill understands (set per gem in SkillGemRegistry):
 ##   recovery_mult  how much longer than a normal attack the cast takes (minimum 1)
 ##   combo_grace    extra seconds before an animation combo restarts from the first clip
+## Defensive flags (the DEFENSE knobs in skill scripts, data/skill_programs/defense_knobs.tres):
+##   leech          share of the damage each hit deals that heals the caster (0.04 = 4%)
+##   barrier        a shield of this much life on every cast, for BARRIER_SECONDS
+##   guard          share of damage taken removed for the length of the cast (0.1 = 10%)
+
+const BARRIER_SECONDS := 4.0
+const GUARD_MIN_SECONDS := 0.6
+const GUARD_MAX_SECONDS := 2.0          # slow skills (or no weapon: 0 attack speed) can't guard forever
 
 
 ## Called by SkillInstance.cast(). `stats` are the effective stats (caster + gem + supports).
@@ -35,7 +43,24 @@ func execute(caster: Node3D, skill: SkillInstance, stats: StatComponent) -> void
 		return
 	for s in skill.support_behaviors:
 		s.before_release(cast)
+	_apply_defense(cast)
 	release(cast)
+
+
+## Barrier and guard from the cast's flags (after the supports, so WHEN rules count).
+## Only the original cast: echoes, repeats and holograms don't shield you again.
+func _apply_defense(cast: SkillCast) -> void:
+	if cast.depth > 0 or cast.extra.get("hologram", false):
+		return
+	var hp := cast.caster.get("health") as HealthComponent
+	if hp == null:
+		return
+	var barrier := cast.flag("barrier")
+	if barrier > 0.0:
+		hp.add_barrier(barrier, BARRIER_SECONDS)
+	var guard := cast.flag("guard")
+	if guard > 0.0:
+		hp.add_guard(guard, clampf(recovery_time(cast), GUARD_MIN_SECONDS, GUARD_MAX_SECONDS))
 
 
 ## True when this node has a HealthComponent at 0 life (a dead enemy or player).
@@ -114,6 +139,11 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 		s.modify_hit(cast, target, info)
 	if info.cancelled:
 		return info
+	var traits: Array = target.get("traits") if "traits" in target else []   # Firewalled, Reflector...
+	for t: EnemyTrait in traits:
+		t.modify_incoming(info)
+	if info.cancelled:
+		return info
 
 	info.dealt = target_health.take_damage(info.damage)
 	if info.dealt <= 0.0:
@@ -121,9 +151,17 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 	info.landed = true
 	info.killed = target_health.current_health <= 0.0
 	cast.already_hit.append(target)
+	for t: EnemyTrait in traits:
+		if is_instance_valid(t):
+			t.after_hit(info)
 
 	if not target.is_in_group(&"breakables"):      # barrels don't feed life / mana on hit
 		_apply_on_hit_stats(cast)
+		var leech := cast.flag("leech")
+		if leech > 0.0:
+			var caster_hp := cast.caster.get("health") as HealthComponent
+			if caster_hp != null:
+				caster_hp.heal(info.dealt * leech)
 
 	for s in cast.skill.support_behaviors:
 		s.on_hit(cast, target, info)

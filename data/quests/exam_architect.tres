@@ -19,9 +19,9 @@ kind = "program_nested"
 
 [resource]
 script = ExtResource("2_quest")
-id = "exam_engineer"
-title = "RANK EXAM: ENGINEER"
-description = "Examiner Sudo's advanced exam.
+id = "exam_architect"
+title = "RANK EXAM: ARCHITECT"
+description = "Examiner Sudo's Architect exam: structure over brute force.
 Apply a script that earns the ELEGANT tier (3 blocks or fewer) and a rule with two conditions."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = false

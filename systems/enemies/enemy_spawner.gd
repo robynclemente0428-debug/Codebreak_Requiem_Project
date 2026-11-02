@@ -73,10 +73,22 @@ static func spawn_enemy(def: EnemyDefinition, rarity: String, parent: Node,
 			instance.source_id = "enemymod_%s" % mod_def.id
 			enemy.stats.add_modifier(instance)
 		name_parts.append(mod_def.display_name_prefix)
+		if mod_def.on_spawn_script != null and "traits" in enemy:
+			var t := Node.new()
+			t.set_script(mod_def.on_spawn_script)
+			if t is EnemyTrait:
+				t.name = "Trait_%s" % mod_def.id
+				enemy.add_child(t)
+				(t as EnemyTrait).setup(enemy)
+				enemy.traits.append(t)
+			else:
+				t.free()
+				push_warning("Modifier %s: on_spawn_script is not an EnemyTrait" % mod_def.id)
 
 	if "modifiers" in enemy:                    # needs `var modifiers: Array = []` on enemy_base.gd
 		enemy.modifiers = mods                  # the hover plate reads this
 	enemy.rarity = rarity                       # needs `var rarity := "normal"` on enemy_base.gd
+	enemy.level = level                         # traits scale with it (Reflector's zap)
 	enemy.display_name = ("%s %s" % [" ".join(name_parts), def.display_name]).strip_edges()
 	if not def.skills.is_empty():               # needs `skills` on EnemyDefinition
 		var caster := EnemySkills.new()

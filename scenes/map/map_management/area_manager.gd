@@ -90,6 +90,9 @@ func _add_waypoint_panel() -> void:
 	var stims := STIM_HUD.new()
 	stims.name = "StimHud"
 	stim_layer.add_child(stims)
+	var threats := ThreatPanel.new()      # the dungeon's threats, top left
+	threats.name = "ThreatPanel"
+	stim_layer.add_child(threats)
 	host.add_child.call_deferred(stim_layer)
 
 

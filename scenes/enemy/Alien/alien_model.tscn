@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://c2tjv2jq65eq7" path="res://scenes/enemy/enemy_model.gd" id="1_83exw"]
 [ext_resource type="Texture2D" uid="uid://jpycnemryxya" path="res://assets/models/enemy/alien/alien_Monster05_Color01.png" id="2_83exw"]
 [ext_resource type="Shader" uid="uid://kmidfmyy8ewt" path="res://assets/shaders/materials/game_shaders/orb_crimson.gdshader" id="2_h0enm"]
+[ext_resource type="Shader" uid="uid://kfcd702mcvha" path="res://assets/shaders/materials/game_shaders/hologram_glitch.gdshader" id="3_t73l6"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_t73l6"]
 render_priority = 0
@@ -12,6 +13,32 @@ shader_parameter/color_blood = Color(0.65, 0.02, 0.05, 1)
 shader_parameter/color_glow = Color(1, 0.25, 0.18, 1)
 shader_parameter/beat_speed = 4.0
 shader_parameter/intensity = 1.6
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_u7k2d"]
+render_priority = 0
+shader = ExtResource("3_t73l6")
+shader_parameter/holo_color = Color(0.1, 0.55, 1, 1)
+shader_parameter/glitch_tint = Color(0.6, 1, 1, 1)
+shader_parameter/intensity = 1.6
+shader_parameter/base_alpha = 0.25
+shader_parameter/tex_mix = 0.0
+shader_parameter/fresnel_power = 2.5
+shader_parameter/fresnel_strength = 1.2
+shader_parameter/scan_density = 60.0
+shader_parameter/scan_speed = 1.5
+shader_parameter/scan_strength = 0.5
+shader_parameter/sweep_speed = 0.6
+shader_parameter/sweep_width = 0.15
+shader_parameter/sweep_strength = 1.0
+shader_parameter/height_min = -1.0
+shader_parameter/height_max = 1.0
+shader_parameter/glitch_strength = 0.12
+shader_parameter/glitch_chance = 0.15
+shader_parameter/glitch_speed = 8.0
+shader_parameter/band_density = 12.0
+shader_parameter/burst_chance = 0.25
+shader_parameter/flicker_speed = 18.0
+shader_parameter/flicker_amount = 0.25
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7a031"]
 resource_name = "Material.001"
@@ -6244,6 +6271,7 @@ bones/48/scale = Vector3(1, 1.0000007, 1.0000012)
 
 [node name="Mesh_0" type="MeshInstance3D" parent="alien/Object_001/Skeleton3D" unique_id=1136376259]
 material_override = SubResource("ShaderMaterial_t73l6")
+material_overlay = SubResource("ShaderMaterial_u7k2d")
 mesh = SubResource("ArrayMesh_vcdpi")
 skin = SubResource("Skin_51mh0")
 skeleton = NodePath("..")

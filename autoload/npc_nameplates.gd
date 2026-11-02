@@ -33,6 +33,7 @@ const COL_NAME := Color(0.80, 0.98, 1.0)  # near-white cyan: reads on light and 
 const COL_ROLE := Color(0.62, 0.84, 0.90)
 const PORTAL_TITLE_SIZE := 18
 const PORTAL_SUB_SIZE := 13
+const THREAT_SEP := "  ·  "
 const COL_CARD := Color(0.02, 0.06, 0.08, 0.88)
 
 var enabled := true
@@ -206,10 +207,20 @@ func _draw_portal_card(portal: Portal) -> void:
 	var lines := _portal_lines(portal)
 	var title: String = lines[0]
 	var sub: String = lines[1]
+	# What the fights there favour, as coloured tags ("SWARM  ·  REFLECTOR"), so players can
+	# swap scripts before stepping through
+	var threats := DungeonThreats.preview(portal.target_area, portal.dungeon_level, portal.instance_id == -1) \
+			if portal.target_area != "" else PackedStringArray()
+	var tag_gap := _font.get_string_size(THREAT_SEP, HORIZONTAL_ALIGNMENT_LEFT, -1, PORTAL_SUB_SIZE).x
+	var tag_w := 0.0
+	for id in threats:
+		tag_w += _font.get_string_size(DungeonThreats.label(id), HORIZONTAL_ALIGNMENT_LEFT, -1, PORTAL_SUB_SIZE).x
+	tag_w += tag_gap * maxi(threats.size() - 1, 0)
 	var tw := _font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, PORTAL_TITLE_SIZE).x
 	var sw := _font.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, PORTAL_SUB_SIZE).x if sub != "" else 0.0
-	var height := PORTAL_TITLE_SIZE + 16.0 + (PORTAL_SUB_SIZE + 6.0 if sub != "" else 0.0)
-	var size := Vector2(maxf(tw, sw) + 28.0, height)
+	var height := PORTAL_TITLE_SIZE + 16.0 + (PORTAL_SUB_SIZE + 6.0 if sub != "" else 0.0) \
+			+ (PORTAL_SUB_SIZE + 8.0 if not threats.is_empty() else 0.0)
+	var size := Vector2(maxf(maxf(tw, sw), tag_w) + 28.0, height)
 	var card := Rect2(Vector2(rect.get_center().x - size.x * 0.5, rect.position.y - size.y - 10.0), size).abs()
 	card.position = card.position.round()
 
@@ -221,7 +232,20 @@ func _draw_portal_card(portal: Portal) -> void:
 	var y := card.position.y + 8.0 + PORTAL_TITLE_SIZE
 	_text(title, cx, y, PORTAL_TITLE_SIZE, accent)
 	if sub != "":
-		_text(sub, cx, y + PORTAL_SUB_SIZE + 6.0, PORTAL_SUB_SIZE, NpcInfoPanel.COL_DIM)
+		y += PORTAL_SUB_SIZE + 6.0
+		_text(sub, cx, y, PORTAL_SUB_SIZE, NpcInfoPanel.COL_DIM)
+	if not threats.is_empty():
+		y += PORTAL_SUB_SIZE + 8.0
+		var x := cx - tag_w * 0.5
+		for i in threats.size():
+			if i > 0:
+				_canvas.draw_string(_font, Vector2(x, y), THREAT_SEP, HORIZONTAL_ALIGNMENT_LEFT, -1,
+						PORTAL_SUB_SIZE, NpcInfoPanel.COL_DIM)
+				x += tag_gap
+			var tag := DungeonThreats.label(threats[i])
+			_canvas.draw_string(_font, Vector2(x, y), tag, HORIZONTAL_ALIGNMENT_LEFT, -1,
+					PORTAL_SUB_SIZE, DungeonThreats.color(threats[i]))
+			x += _font.get_string_size(tag, HORIZONTAL_ALIGNMENT_LEFT, -1, PORTAL_SUB_SIZE).x
 
 
 ## [title, subtitle] for where a portal leads. Uses the waypoint list for the area's name,

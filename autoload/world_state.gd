@@ -114,6 +114,7 @@ func _create(scene_path: String, level: int) -> DungeonInstance:
 	inst.scene_path = scene_path
 	inst.level = level
 	inst.rng_seed = randi()
+	inst.threats = DungeonThreats.roll_for(scene_path, inst.rng_seed)
 	inst.created_msec = Time.get_ticks_msec()
 	inst.empty_since_msec = inst.created_msec     # a prepared but never entered instance also expires
 	instances[inst.id] = inst

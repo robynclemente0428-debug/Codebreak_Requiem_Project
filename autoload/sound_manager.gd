@@ -267,9 +267,9 @@ func _play_flat(path: String, volume_db: float, pitch := 1.0, max_len := 0.0) ->
 	p.finished.connect(p.queue_free)
 	p.play()
 	if max_len > 0.0:
-		get_tree().create_timer(max_len, false).timeout.connect(func() -> void:
-			if is_instance_valid(p):
-				p.queue_free())
+		# Bound to p itself (not a lambda capturing it), so the connection goes away if the
+		# sound already finished and freed itself
+		get_tree().create_timer(max_len, false).timeout.connect(p.queue_free)
 
 
 ## A one-off sound coming from `source` (enemies). Respects MAX_ENEMY_VOICES.
@@ -285,17 +285,24 @@ func _play_at(source: Node3D, path: String, volume_db: float, pitch := 1.0, max_
 	p3.max_distance = 30.0
 	source.add_child(p3)                             # same 3D world as the camera that hears it
 	_enemy_voices += 1
-	var done := func() -> void:
-		if is_instance_valid(p3) and not p3.is_queued_for_deletion():
-			_enemy_voices -= 1
-			p3.queue_free()
-	p3.finished.connect(done)
-	p3.tree_exiting.connect(func() -> void:          # the enemy was removed mid-sound
-		if not p3.is_queued_for_deletion():
-			_enemy_voices -= 1)
+	# Bound, not lambdas capturing p3: the timer can fire after the enemy (and p3) was freed
+	p3.finished.connect(_end_voice.bind(p3))
+	p3.tree_exiting.connect(_voice_removed.bind(p3))   # the enemy was removed mid-sound
 	if max_len > 0.0:
-		get_tree().create_timer(max_len, false).timeout.connect(done)
+		get_tree().create_timer(max_len, false).timeout.connect(_end_voice.bind(p3))
 	p3.play()
+
+
+## An enemy sound ended (or was cut off): free it and its voice slot. p3 may be freed already.
+func _end_voice(p3) -> void:
+	if is_instance_valid(p3) and not p3.is_queued_for_deletion():
+		_enemy_voices -= 1
+		p3.queue_free()
+
+
+func _voice_removed(p3) -> void:
+	if is_instance_valid(p3) and not p3.is_queued_for_deletion():
+		_enemy_voices -= 1
 
 
 # ---------- FOOTSTEPS ----------

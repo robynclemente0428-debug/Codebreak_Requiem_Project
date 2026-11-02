@@ -21,7 +21,16 @@ extends VBoxContainer
 ##                     Right-click a line to delete it. Click a line to select its rule.
 ##  - SNIPPETS (right): conditions and the selected file's knobs. Drag one into the editor, or
 ##                     click it to add it to the selected rule (or start a new rule).
+##                     Two tabs: OFFENSE (damage, reach, loops, the gem blocks) and DEFENSE
+##                     (staying alive: my_life_below, hit_recently, leech, barrier, guard...).
 ##  - OUTPUT (bottom): points, blocks, tier and compile errors. apply() runs the program.
+##  - SET A / B / C (top right): the script sets. Each skill keeps one program per set and the
+##                     script_set key swaps them all in the field (SkillComponent.switch_script_set).
+##                     Sets start empty; on an empty set, copy_from(A) copies another set into it.
+##                     rename() (or double-clicking a set) renames the current set ("SWARM", "BOSS"...).
+##                     Sets past the player's rank aren't shown (Ranks.PERKS: B at OPERATOR, C at STRATEGIST),
+##                     nor are blocks above it (Ranks.LOCKED_BLOCKS: loops need ARCHITECT).
+##  - save_as() / load() (OUTPUT, rank ARCHITECT): the script library (SkillComponent.library).
 ##
 ## Edits are a draft until apply(). Built in code like the rest of SkillPanel, using its styling.
 
@@ -68,10 +77,26 @@ var _rule_line: Dictionary = {}    # ProgramRule -> its first editor line
 var _snippets: Dictionary = {}     # "cond:<type id>" / "knob:<knob id>" -> snippet in SNIPPETS
 var _skill_file_btn: Dictionary = {}  # socket -> the skill's file button in the explorer
 var _effect_num: Dictionary = {}   # ProgramEffect -> its editable number
+var _new_rule_ctrl: Control        # the "drop a snippet here to start a new rule" line
 var _cond_nums: Dictionary = {}    # ProgramCondition -> [its editable numbers]
 var _apply_btn: Button
 var _revert_btn: Button
 var _clear_btn: Button
+var _set_btns: Array[Button] = []
+var _copy_btns: Array[Button] = []  # copy_from(<set>): shown while the current set is empty
+var _rename_edit: LineEdit         # takes a set button's place while it is being renamed
+var _renaming := -1
+var _rename_btn: Button            # rename(): renames the current set
+var _palette_tab := "offense"      # "offense" or "defense": which snippets are listed
+var _tab_btns := {}                # tab name -> its button
+var _set_note: Label              # why a set didn't swap
+# Script library (rank ARCHITECT): save_as() names the draft, load() lists the saved ones
+var _save_edit: LineEdit
+var _save_btn: Button
+var _load_btn: Button
+var _library_box: VBoxContainer   # under OUTPUT's buttons while load() is open
+var _library_open := false
+var _set_hooked: SkillComponent   # the SkillComponent whose script_set_changed we listen to
 
 
 # ---------- BUILDING ----------
@@ -100,9 +125,35 @@ func build() -> void:
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mid.add_theme_constant_override("separation", 6)
 	body.add_child(mid)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 6)
+	mid.add_child(head)
 	_title = panel._label("", _sz(14), panel.accent)
 	_shrinkable(_title)
-	mid.add_child(_title)
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(_title)
+	_set_note = panel._label("", _sz(11), COL_DRAW)
+	head.add_child(_set_note)
+	for i in SkillComponent.SCRIPT_SETS:
+		var c := _code_button("copy_from(%s)" % SkillComponent.SET_NAMES[i], "")
+		c.pressed.connect(_copy_set.bind(i))
+		c.visible = false
+		head.add_child(c)
+		_copy_btns.append(c)
+	for i in SkillComponent.SCRIPT_SETS:
+		var b := _code_button("SET %s" % SkillComponent.SET_NAMES[i], "")
+		b.pressed.connect(_pick_set.bind(i))
+		b.gui_input.connect(_on_set_button_input.bind(i))
+		head.add_child(b)
+		_set_btns.append(b)
+	_rename_edit = _name_edit(SkillComponent.SET_NAME_MAX, "NAME")
+	_rename_edit.text_submitted.connect(func(_t: String) -> void: _finish_rename())
+	_rename_edit.focus_exited.connect(_finish_rename)
+	head.add_child(_rename_edit)
+	_rename_btn = _code_button("rename()", "Rename the current script set (\"SWARM\", \"BOSS\"...). "
+			+ "Enter to save. You can also double-click a set.")
+	_rename_btn.pressed.connect(func() -> void: _start_rename(_skills().script_set))
+	head.add_child(_rename_btn)
 	var editor := PanelContainer.new()
 	editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	editor.add_theme_stylebox_override("panel", _box_style(Color(0.0, 0.02, 0.04, 0.6), Color(panel.accent, 0.3)))
@@ -120,6 +171,16 @@ func build() -> void:
 	right.custom_minimum_size.x = 170.0 * _k()
 	body.add_child(right)
 	right.add_child(panel._label("SNIPPETS", _sz(13), SkillPanel.COL_DIM))
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 4)
+	right.add_child(tabs)
+	for tab_name in ["offense", "defense"]:
+		var tb := _code_button(tab_name.to_upper(), "Damage, reach, loops and the gem blocks." if tab_name == "offense"
+				else "Staying alive: life and hit conditions, leech, barrier, guard and defensive supports.")
+		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.pressed.connect(_set_palette_tab.bind(tab_name))
+		tabs.add_child(tb)
+		_tab_btns[tab_name] = tb
 	var right_scroll := _scroll()
 	right.add_child(right_scroll)
 	_palette_box = VBoxContainer.new()
@@ -162,6 +223,20 @@ func _build_output() -> Control:
 	_clear_btn = _code_button("clear()", "Delete every rule in this file.")
 	_clear_btn.pressed.connect(_clear_gem)
 	head.add_child(_clear_btn)
+	_save_edit = _name_edit(SkillComponent.LIBRARY_NAME_MAX, "SCRIPT NAME")
+	_save_edit.text_submitted.connect(func(_t: String) -> void: _finish_save(true))
+	_save_edit.focus_exited.connect(_finish_save.bind(false))
+	head.add_child(_save_edit)
+	_save_btn = _code_button("save_as()", "")
+	_save_btn.pressed.connect(_start_save)
+	head.add_child(_save_btn)
+	_load_btn = _code_button("load()", "")
+	_load_btn.pressed.connect(_toggle_library)
+	head.add_child(_load_btn)
+	_library_box = VBoxContainer.new()
+	_library_box.visible = false
+	_library_box.add_theme_constant_override("separation", 2)
+	box.add_child(_library_box)
 
 	_console = RichTextLabel.new()
 	_console.bbcode_enabled = true
@@ -245,7 +320,18 @@ func tutorial_target(id: String) -> Array[Control]:
 		"skill_file":
 			if _skill_file_btn.has(_socket):
 				out.append(_skill_file_btn[_socket])
+		"new_rule":
+			if _new_rule_ctrl != null and is_instance_valid(_new_rule_ctrl):
+				out.append(_new_rule_ctrl)
+		"always_line":
+			var always := _tutorial_always_rule()
+			if always != null and _rule_line.has(always) and is_instance_valid(_rule_line[always]):
+				out.append(_rule_line[always])
 		_:
+			var tab := _tab_of(id)
+			if tab != "" and tab != _palette_tab:
+				_palette_tab = tab                     # the hint points at a snippet on the other tab
+				_build_palette()
 			if _snippets.has(id) and is_instance_valid(_snippets[id]):
 				out.append(_snippets[id])
 			elif id.begins_with("knob_number:"):        # knob_number:<condition id>:<knob id>
@@ -254,6 +340,12 @@ func tutorial_target(id: String) -> Array[Control]:
 				if rule != null:
 					for e in rule.effects:
 						if String(e.knob) == bits[2] and _effect_num.has(e) and is_instance_valid(_effect_num[e]):
+							out.append(_effect_num[e])
+			elif id.begins_with("always_knob_number:"):  # always_knob_number:<knob id>
+				var rule := _tutorial_always_rule()
+				if rule != null:
+					for e in rule.effects:
+						if String(e.knob) == id.trim_prefix("always_knob_number:") and _effect_num.has(e) 								and is_instance_valid(_effect_num[e]):
 							out.append(_effect_num[e])
 			elif id.begins_with("cond_numbers:"):       # cond_numbers:<condition id>
 				var rule := _tutorial_rule(id.trim_prefix("cond_numbers:"))
@@ -273,8 +365,21 @@ func tutorial_target(id: String) -> Array[Control]:
 ## Where the player is with a rule that uses `condition_id`, for the scripting tutorial.
 ##   knob_steps  steps of `knob_id` in that rule      params    the condition's values, e.g. [3, 4.0]
 ##   discount    its "buffs xN" multiplier             points / budget   as OUTPUT shows them
-func tutorial_state(condition_id: String, knob_id: StringName = &"damage") -> Dictionary:
+func tutorial_state(condition_id: String, knob_id: StringName = &"damage",
+		trade_knob: StringName = &"attack_speed") -> Dictionary:
 	var rule := _tutorial_rule(condition_id)
+	# The trade-off lesson: an always: rule that lowers a knob to pay for others
+	var always := _tutorial_always_rule()
+	var limits := _limits()
+	if limits != null and limits.get_knob(trade_knob) == null:
+		trade_knob = knob_id                     # this skill has no attack speed: trade damage
+	var trade_steps := 0
+	var trade_line := false                  # the knob's line is in the rule (it stays at 0 steps)
+	if always != null:
+		for e in always.effects:
+			if e.knob == trade_knob:
+				trade_steps += e.steps
+				trade_line = true
 	var knob_steps := 0
 	var params: Array = []
 	if rule != null:
@@ -300,7 +405,24 @@ func tutorial_state(condition_id: String, knob_id: StringName = &"damage") -> Di
 		"effects": rule.effects.size() if rule != null else 0,
 		"valid": _validation != null and _validation.valid,
 		"dirty": _sock() != null and _is_dirty(_socket),
+		"any_selected": _selected != null,
+		"always_rule": always != null,
+		"always_selected": always != null and _selected == always,
+		"trade_knob": String(trade_knob),
+		"trade_steps": trade_steps,
+		"trade_line": trade_line,
+		"drawback_points": v.drawback_points if v != null else 0.0,
 	}
+
+
+## The first always: rule (no conditions) of the open skill's own file.
+func _tutorial_always_rule() -> ProgramRule:
+	if _sock() == null or _limits() == null:
+		return null
+	for rule in _draft().rules_of(""):
+		if rule.is_always() and rule.loop == null:
+			return rule
+	return null
 
 
 ## The first rule of the open skill's own file that uses `condition_id`.
@@ -318,6 +440,11 @@ func refresh() -> void:
 	var sk := _skills()
 	if sk == null:
 		return
+	if _set_hooked != sk:
+		if _set_hooked != null and is_instance_valid(_set_hooked) 				and _set_hooked.script_set_changed.is_connected(_on_set_changed):
+			_set_hooked.script_set_changed.disconnect(_on_set_changed)
+		_set_hooked = sk
+		sk.script_set_changed.connect(_on_set_changed)
 	# Forget drafts for sockets that were emptied, drop rules of removed supports
 	for i in _drafts.keys():
 		if i >= sk.sockets.size() or sk.sockets[i].gem == null:
@@ -361,6 +488,200 @@ func _rebuild() -> void:
 	_build_rules()
 	_build_palette()
 	_update_status()
+	_update_set_buttons()
+	_update_library()
+
+
+# ---------- SCRIPT SETS ----------
+func _pick_set(index: int) -> void:
+	var why := _skills().switch_script_set(index)
+	_set_note.text = why
+	_update_set_buttons()
+
+
+func _copy_set(from: int) -> void:
+	_skills().copy_set(from)
+
+
+## Double-clicking a set's button renames it: a text box takes the button's place.
+func _on_set_button_input(event: InputEvent, index: int) -> void:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.pressed and mb.double_click and mb.button_index == MOUSE_BUTTON_LEFT \
+			and _skills().set_unlocked(index):
+		_start_rename(index)
+
+
+func _start_rename(index: int) -> void:
+	_renaming = index
+	var b := _set_btns[index]
+	_rename_edit.get_parent().move_child(_rename_edit, b.get_index())
+	b.visible = false
+	_rename_edit.text = _skills().set_label(index)
+	_rename_edit.visible = true
+	_rename_btn.visible = false
+	_rename_edit.grab_focus()
+	_rename_edit.select_all()
+	_lock_player(true)                      # typing WASD must not walk the character
+
+
+func _finish_rename() -> void:
+	if _renaming < 0:
+		return
+	var index := _renaming
+	_renaming = -1
+	_rename_edit.visible = false
+	_set_btns[index].visible = true
+	_rename_btn.visible = true
+	_lock_player(false)
+	_skills().rename_set(index, _rename_edit.text)
+	_update_set_buttons()
+
+
+# ---------- SCRIPT LIBRARY ----------
+## save_as(): a name box takes the button's place; Enter saves the draft under that name.
+func _start_save() -> void:
+	if _sock() == null or not _skills().has_library():
+		return
+	if not _draft().has_rules():
+		panel._notify("NOTHING TO SAVE")
+		return
+	_save_btn.visible = false
+	_save_edit.text = _skills().set_label(_skills().script_set)
+	_save_edit.visible = true
+	_save_edit.grab_focus()
+	_save_edit.select_all()
+	_lock_player(true)
+
+
+## Enter (save = true) saves; clicking away just closes the box.
+func _finish_save(save: bool) -> void:
+	if not _save_edit.visible:
+		return
+	_save_edit.visible = false
+	_save_btn.visible = true
+	_lock_player(false)
+	if not save:
+		return
+	var why := _skills().library_save(_socket, _save_edit.text, _draft())
+	panel._notify("SAVED TO LIBRARY" if why == "" else why)
+	_update_library()
+
+
+func _toggle_library() -> void:
+	_library_open = not _library_open
+	_update_library()
+
+
+## The library buttons (locked below rank ARCHITECT) and, while load() is open, the list of
+## scripts saved for this skill: load("NAME") puts one in the editor as a draft; del() drops it.
+func _update_library() -> void:
+	if _save_btn == null:
+		return
+	var sk := _skills()
+	var unlocked := sk != null and sk.has_library()
+	var has_skill := _sock() != null and _limits() != null
+	_save_btn.visible = unlocked and not _save_edit.visible       # not shown below the rank
+	_load_btn.visible = unlocked
+	_save_btn.disabled = not has_skill
+	_save_btn.tooltip_text = "Save this script to the library under a name, to load it again later (into another set, or after swapping gems)."
+	_load_btn.disabled = not has_skill
+	_load_btn.tooltip_text = "Load a script saved for this skill. It opens as a draft: apply() to run it."
+	_library_open = _library_open and unlocked and has_skill
+	_load_btn.text = "load() v" if _library_open else "load()"
+	_clear(_library_box)
+	_library_box.visible = _library_open
+	if not _library_open:
+		return
+	var entries := sk.library_for(_socket)
+	_library_box.add_child(panel._label("// library: %s  (%d / %d saved)" % [_file_name(_sock().gem.get_display_name()),
+			sk.library.size(), SkillComponent.LIBRARY_SIZE], _sz(11), COL_COMMENT))
+	if entries.is_empty():
+		_library_box.add_child(panel._label("// nothing saved for this skill yet: save_as()", _sz(11), COL_COMMENT))
+	for e: Dictionary in entries:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_library_box.add_child(row)
+		var rules: Array = e["program"].get("rules", [])
+		var b := _code_button('load("%s")' % e["name"], "%d rule%s. Replaces this skill's draft; apply() to run it." % [
+				rules.size(), "" if rules.size() == 1 else "s"])
+		b.pressed.connect(_load_entry.bind(e))
+		row.add_child(b)
+		var d := _code_button("del()", "Delete %s from the library." % e["name"])
+		d.add_theme_color_override("font_color", COL_DRAW)
+		d.pressed.connect(_delete_entry.bind(e))
+		row.add_child(d)
+
+
+func _load_entry(entry: Dictionary) -> void:
+	_drafts[_socket] = _skills().library_program(_socket, entry)
+	_selected = null
+	_library_open = false
+	panel._notify("LOADED %s: apply() TO RUN IT" % entry["name"])
+	_queue_rebuild()
+
+
+func _delete_entry(entry: Dictionary) -> void:
+	_skills().library_delete(entry)
+	_update_library()
+
+
+## A one-line name box styled like the editor (set names, library names).
+func _name_edit(max_len: int, placeholder: String) -> LineEdit:
+	var e := LineEdit.new()
+	e.visible = false
+	e.max_length = max_len
+	e.custom_minimum_size.x = 120.0 * _k()
+	e.placeholder_text = placeholder
+	if panel._font:
+		e.add_theme_font_override("font", panel._font)
+	e.add_theme_font_size_override("font_size", roundi(_sz(12) * panel.font_scale))
+	e.add_theme_color_override("font_color", panel.accent)
+	e.add_theme_color_override("caret_color", panel.accent)
+	e.add_theme_color_override("selection_color", Color(panel.accent, 0.3))
+	var edit_box := _box_style(Color(0.0, 0.02, 0.04, 0.9), panel.accent)
+	edit_box.content_margin_left = 6
+	edit_box.content_margin_right = 6
+	e.add_theme_stylebox_override("normal", edit_box)
+	e.add_theme_stylebox_override("focus", edit_box)
+	return e
+
+
+func _lock_player(on: bool) -> void:
+	var player := _skills().get_parent()
+	if player != null and "input_locked" in player:
+		player.input_locked = on
+
+
+## Swapped (here or with the key in the field): the drafts belonged to the old set.
+func _on_set_changed(_index: int) -> void:
+	_drafts.clear()
+	_selected = null
+	_set_note.text = ""
+	if is_inside_tree():
+		_queue_rebuild()
+
+
+func _update_set_buttons() -> void:
+	var sk := _skills()
+	var empty := sk != null and sk.set_is_empty(sk.script_set)
+	for i in _copy_btns.size():
+		_copy_btns[i].visible = empty and i != sk.script_set and not sk.set_is_empty(i) and sk.set_unlocked(i)
+	# Sets above the player's rank aren't shown at all (Ranks.PERKS)
+		_copy_btns[i].text = "copy_from(%s)" % sk.set_label(i)
+		_copy_btns[i].tooltip_text = "This set is empty. Copy every skill's script from %s into it, then change what you need." % sk.set_label(i)
+	for i in _set_btns.size():
+		var active := sk != null and sk.script_set == i
+		var b := _set_btns[i]
+		var label := sk.set_label(i)
+		b.text = ("SET " + label) if label == SkillComponent.SET_NAMES[i] else label
+		b.tooltip_text = "Script set %s. Every skill keeps one program per set; [%s] swaps sets in the field between fights. Each set starts empty. Double-click to rename it." % [label, GemText.key_label(&"script_set")]
+		b.visible = sk.set_unlocked(i) and _renaming != i
+		b.add_theme_color_override("font_color", panel.accent if active else COL_GUTTER)
+		b.add_theme_color_override("font_disabled_color", Color(COL_GUTTER, 0.35))
+		var st := (b.get_theme_stylebox("normal") as StyleBoxFlat).duplicate() as StyleBoxFlat
+		st.border_color = panel.accent if active else Color(COL_GUTTER, 0.4)
+		st.bg_color = Color(panel.accent, 0.15) if active else Color(0, 0, 0, 0)
+		b.add_theme_stylebox_override("normal", st)
 
 
 # ---------- LEFT: EXPLORER ----------
@@ -676,6 +997,7 @@ func _new_rule_line() -> void:
 	var line: Control = parts[0]
 	var code: HBoxContainer = parts[1]
 	code.add_child(_comment_tok("drop a snippet here to start a new rule"))
+	_new_rule_ctrl = line
 	line.set_drag_forwarding(Callable(), _can_drop_new_rule, _drop_new_rule)
 	line.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and not e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
@@ -856,10 +1178,14 @@ func _build_palette() -> void:
 	if limits == null:
 		return
 	# Core blocks first; blocks a support gem adds get a section of their own (below)
+	_update_tab_buttons()
+	var defense := _palette_tab == "defense"
 	var by_gem := {}                                   # support id -> [condition type ids]
 	_palette_box.add_child(_comment_tok("conditions"))
 	for type_id in ProgramConditions.TYPES.keys():
 		var sample := ProgramConditions.create(type_id)
+		if sample.defensive() != defense or not limits.allows("cond:" + type_id):
+			continue                                   # wrong tab, or above the player's rank
 		var gem_id := sample.required_support()
 		if gem_id != "":
 			if limits.support_ids.has(gem_id):
@@ -870,13 +1196,8 @@ func _build_palette() -> void:
 		var cond_snippet := _condition_snippet(type_id, sample, COL_FN, "")
 		_snippets["cond:" + type_id] = cond_snippet
 		_palette_box.add_child(cond_snippet)
-	_palette_box.add_child(_comment_tok("loops"))
-	_palette_box.add_child(_snippet("for range()", COL_KEYWORD, {"src": "palette", "kind": "loop", "mode": ProgramLoop.Mode.FOR},
-		_loop_tip(ProgramLoop.Mode.FOR, limits) + "\nDrag into a rule, or click to add."))
-	_palette_box.add_child(_snippet("while", COL_KEYWORD, {"src": "palette", "kind": "loop", "mode": ProgramLoop.Mode.WHILE},
-		_loop_tip(ProgramLoop.Mode.WHILE, limits) + "\nDrag into a rule with a condition, or click to add."))
-	_palette_box.add_child(_snippet("break", COL_KEYWORD, {"src": "palette", "kind": "break"},
-		"Stops a loop early, once a repeat kills (click the word to switch to: once one hits nothing).\nThe loop costs x%.2f points.\nDrag into a rule that has a loop." % ProgramLoop.BREAK_COST_MULT))
+	if not defense and limits.allows("loop"):
+		_add_loop_snippets(limits)
 	# One section per socketed support gem that adds blocks, in socket order
 	for gem_id in limits.support_ids:
 		if not by_gem.has(gem_id):
@@ -888,10 +1209,10 @@ func _build_palette() -> void:
 			_palette_box.add_child(_condition_snippet(type_id, ProgramConditions.create(type_id),
 				COL_GEM, gem_name))
 	_palette_box.add_child(_comment_tok("knobs"))
-	var knobs := limits.knobs_for(_owner)
+	var knobs := limits.knobs_for(_owner).filter(func(k: SkillKnob) -> bool: return k.defensive == defense)
 	if knobs.is_empty():
-		_palette_box.add_child(_comment_tok("nothing to change"))
-	for knob in knobs:
+		_palette_box.add_child(_comment_tok("nothing to change" if not defense else "no defensive knobs here"))
+	for knob: SkillKnob in knobs:
 		var tip := "%s\n+1 step: %s for %+.1f points.\nLimits: %d to %+d steps." % [
 			knob.display_name, knob.describe(1), knob.cost_for(1), knob.min_steps, knob.max_steps]
 		if knob.kind == SkillKnob.Kind.STAT:
@@ -902,6 +1223,45 @@ func _build_palette() -> void:
 		_snippets["knob:" + String(knob.id)] = knob_snippet
 		_palette_box.add_child(knob_snippet)
 
+
+func _add_loop_snippets(limits: SkillProgramLimits) -> void:
+	_palette_box.add_child(_comment_tok("loops"))
+	_palette_box.add_child(_snippet("for range()", COL_KEYWORD, {"src": "palette", "kind": "loop", "mode": ProgramLoop.Mode.FOR},
+		_loop_tip(ProgramLoop.Mode.FOR, limits) + "\nDrag into a rule, or click to add."))
+	_palette_box.add_child(_snippet("while", COL_KEYWORD, {"src": "palette", "kind": "loop", "mode": ProgramLoop.Mode.WHILE},
+		_loop_tip(ProgramLoop.Mode.WHILE, limits) + "\nDrag into a rule with a condition, or click to add."))
+	_palette_box.add_child(_snippet("break", COL_KEYWORD, {"src": "palette", "kind": "break"},
+		"Stops a loop early, once a repeat kills (click the word to switch to: once one hits nothing).\nThe loop costs x%.2f points.\nDrag into a rule that has a loop." % ProgramLoop.BREAK_COST_MULT))
+
+
+func _set_palette_tab(tab_name: String) -> void:
+	if _palette_tab == tab_name:
+		return
+	_palette_tab = tab_name
+	_queue_rebuild()
+
+
+func _update_tab_buttons() -> void:
+	for tab_name in _tab_btns:
+		var b: Button = _tab_btns[tab_name]
+		var active: bool = tab_name == _palette_tab
+		b.add_theme_color_override("font_color", panel.accent if active else COL_GUTTER)
+		var st := (b.get_theme_stylebox("normal") as StyleBoxFlat).duplicate() as StyleBoxFlat
+		st.border_color = panel.accent if active else Color(COL_GUTTER, 0.4)
+		st.bg_color = Color(panel.accent, 0.15) if active else Color(0, 0, 0, 0)
+		b.add_theme_stylebox_override("normal", st)
+
+
+## The tab a snippet id ("cond:<type>" / "knob:<id>") is listed under, or "" if unknown.
+func _tab_of(snippet_id: String) -> String:
+	if snippet_id.begins_with("cond:"):
+		var c := ProgramConditions.create(snippet_id.trim_prefix("cond:"))
+		return "" if c == null else ("defense" if c.defensive() else "offense")
+	if snippet_id.begins_with("knob:"):
+		var limits := _limits()
+		var k := limits.get_knob(StringName(snippet_id.trim_prefix("knob:"))) if limits != null else null
+		return "" if k == null else ("defense" if k.defensive else "offense")
+	return ""
 
 func _condition_snippet(type_id: String, sample: ProgramCondition, col: Color, gem_name: String) -> Control:
 	var label := (sample.keyword() + " " + _fn_name(sample)) if sample.keyword() != "" else _fn_name(sample) + "()"

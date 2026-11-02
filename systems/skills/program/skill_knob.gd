@@ -38,6 +38,8 @@ enum Kind {
 @export var cost_per_step: float = 1.0
 ## How the value is shown: "%" (0.05 -> +5%), "m" (0.25 -> +0.25 m) or "" (plain number).
 @export var unit: String = "%"
+## Listed under DEFENSE in the script editor's snippets (leech, barrier, guard...).
+@export var defensive := false
 
 
 func value_for(steps: int) -> float:

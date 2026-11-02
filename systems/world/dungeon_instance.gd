@@ -13,6 +13,7 @@ var occupants := 0                      # players inside right now
 var empty_since_msec := 0               # when the last player left (only meaningful at 0 occupants)
 var killed: Dictionary = {}             # enemy index -> true, so dead enemies stay dead
 var opened: Dictionary = {}             # prop index -> true, so looted barrels stay looted
+var threats := PackedStringArray()      # DungeonThreats ids, rolled when the instance opens
 
 
 ## Seconds the instance has been empty (0 while anyone is inside).

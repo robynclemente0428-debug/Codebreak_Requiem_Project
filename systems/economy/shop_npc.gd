@@ -15,6 +15,7 @@ signal stock_changed
 var stock: Array[ItemInstance] = []
 var _infinite: Array[ItemInstance] = []
 var _rerolls := 0                     # rerolls since the last natural restock
+var _stock_rank := 0                  # the player rank the stock was filtered for (_locked)
 
 func _ready() -> void:
 	super._ready()
@@ -54,8 +55,11 @@ func restock() -> void:
 	_rerolls = 0
 	if shop == null:
 		return
+	_stock_rank = Ranks.of_player(get_tree())
 
 	for def in shop.fixed_stock:
+		if _locked(def, _stock_rank):
+			continue
 		var item := _make_item(def, false)
 		if item == null:
 			continue
@@ -121,7 +125,7 @@ func _build_random_pool() -> Array[ItemDefinition]:
 
 	var pool: Array[ItemDefinition] = []
 	for def in found:
-		if def in shop.excluded_items or def in shop.fixed_stock:
+		if def in shop.excluded_items or def in shop.fixed_stock or _locked(def, _stock_rank):
 			continue
 		pool.append(def)
 	return pool
@@ -190,6 +194,36 @@ func try_sell(item: ItemInstance, inv: InventoryComponent, wallet: CurrencyCompo
 	wallet.add(sell_price(item))
 	inv.remove_item(item)
 	return ""
+
+# ---------- RANKS ----------
+## Support gems above the player's rank (Ranks.LOCKED_BLOCKS: For Loop below ARCHITECT) aren't sold.
+static func _locked(def: ItemDefinition, rank: int) -> bool:
+	return def != null and def.support_gem != null and not Ranks.allows(rank, "gem:" + def.support_gem.id)
+
+
+## Opening the shop: gems the player's rank unlocked since the stock was made go on sale.
+func engage(player: Node3D) -> void:
+	super.engage(player)
+	var rank := Ranks.of(player)
+	if shop == null or rank <= _stock_rank:
+		return
+	var before := _stock_rank
+	_stock_rank = rank
+	for def in shop.fixed_stock:
+		if _locked(def, before) and not _locked(def, rank):
+			var item := _make_item(def, false)
+			if item == null:
+				continue
+			stock.append(item)
+			if shop.infinite_fixed:
+				_infinite.append(item)
+	for def in _build_random_pool():       # random stock (the gem vendor): one of each, on top
+		if _locked(def, before):
+			var item := _make_item(def, false)
+			if item != null:
+				stock.append(item)
+	stock_changed.emit()
+
 
 func _make_item(def: ItemDefinition, roll_rarity: bool) -> ItemInstance:
 	if def.is_gem():

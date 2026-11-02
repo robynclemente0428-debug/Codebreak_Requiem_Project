@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="SupportGemDefinition" format=3]
+
+[ext_resource type="Script" path="res://systems/skills/support_gem_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/skills/program/skill_knob.gd" id="3_knob"]
+
+[sub_resource type="Resource" id="Knob_rollback_window"]
+script = ExtResource("3_knob")
+id = &"rollback_window"
+display_name = "Rollback window"
+kind = 1
+always_only = true
+flag_key = "rollback_window"
+step = 0.5
+min_steps = -2
+max_steps = 4
+cost_per_step = 1.0
+unit = ""
+defensive = true
+
+[sub_resource type="Resource" id="Knob_rollback_cooldown"]
+script = ExtResource("3_knob")
+id = &"rollback_cooldown"
+display_name = "Rollback cooldown"
+kind = 1
+always_only = true
+flag_key = "rollback_cooldown"
+step = -2.0
+min_steps = -2
+max_steps = 4
+cost_per_step = 1.5
+unit = ""
+defensive = true
+
+[resource]
+script = ExtResource("1_def")
+id = "rollback_support"
+display_name = "Rollback Support"
+allowed_tags = Array[int]([0, 1, 2, 3])
+program_knobs = Array[ExtResource("3_knob")]([SubResource("Knob_rollback_window"), SubResource("Knob_rollback_cooldown")])
+mana_cost_increase = 0.1
+description = "Any skill. Keeps a 3-second history of your life. When your life drops below 30%, it is restored to what it was 3 seconds ago, then Rollback needs 20 seconds to recharge. Works while socketed, without casting. Script the window (further back) and the cooldown (shorter) in always: rules."

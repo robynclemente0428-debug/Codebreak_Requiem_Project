@@ -40,6 +40,12 @@ func per_repeat() -> bool:
 	return false
 
 
+## True for blocks about staying alive (my life, being hit, being surrounded): the script
+## editor lists them under DEFENSE instead of OFFENSE.
+func defensive() -> bool:
+	return false
+
+
 ## A keyword that replaces "when" in the editor, for blocks that read like statements
 ## ("except" -> except missed:). "" = a normal when-block with parentheses.
 func keyword() -> String:

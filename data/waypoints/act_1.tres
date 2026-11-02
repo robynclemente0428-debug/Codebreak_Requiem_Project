@@ -45,6 +45,7 @@ dungeon_level = 3
 map_position = Vector2(0.56, 0.25)
 links = PackedStringArray("act1_spillway", "act1_map2")
 note = "Level 3  -  Corrupted Enchanter"
+random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act1_map2"]
 script = ExtResource("2_wp")
@@ -57,6 +58,8 @@ kind = 2
 map_position = Vector2(0.62, 0.48)
 links = PackedStringArray("act1_warrens", "act1_deadsector")
 note = "Level 4  -  Glitchling Queen"
+threats = PackedStringArray("swarm")
+random_threats = Vector2i(0, 1)
 
 [sub_resource type="Resource" id="Waypoint_act1_deadsector"]
 script = ExtResource("2_wp")
@@ -68,6 +71,7 @@ dungeon_level = 5
 map_position = Vector2(0.45, 0.62)
 links = PackedStringArray("act1_map2", "act1_relaytrench")
 note = "Level 5  -  Null Husk warband"
+random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act1_relaytrench"]
 script = ExtResource("2_wp")
@@ -79,6 +83,7 @@ dungeon_level = 6
 map_position = Vector2(0.29, 0.8)
 links = PackedStringArray("act1_deadsector", "act1_coolant")
 note = "Level 6  -  Relay Enchanter"
+random_threats = Vector2i(1, 2)
 
 [sub_resource type="Resource" id="Waypoint_act1_coolant"]
 script = ExtResource("2_wp")
@@ -90,6 +95,7 @@ dungeon_level = 7
 map_position = Vector2(0.49, 0.92)
 links = PackedStringArray("act1_relaytrench", "act1_foundry")
 note = "Level 7  -  Vault Raider"
+random_threats = Vector2i(1, 2)
 
 [sub_resource type="Resource" id="Waypoint_act1_foundry"]
 script = ExtResource("2_wp")
@@ -101,6 +107,7 @@ dungeon_level = 8
 map_position = Vector2(0.7, 0.8)
 links = PackedStringArray("act1_coolant", "act1_approach")
 note = "Level 8  -  Overclocked Raider"
+random_threats = Vector2i(1, 2)
 
 [sub_resource type="Resource" id="Waypoint_act1_approach"]
 script = ExtResource("2_wp")
@@ -112,6 +119,8 @@ dungeon_level = 9
 map_position = Vector2(0.82, 0.55)
 links = PackedStringArray("act1_foundry", "act1_map3")
 note = "Level 9  -  Firewall Wardens"
+threats = PackedStringArray("firewalled")
+random_threats = Vector2i(0, 1)
 
 [sub_resource type="Resource" id="Waypoint_act1_map3"]
 script = ExtResource("2_wp")
@@ -124,6 +133,7 @@ kind = 2
 map_position = Vector2(0.94, 0.28)
 links = PackedStringArray("act1_approach")
 note = "Level 10  -  Corrupted Gate Guard"
+random_threats = Vector2i(2, 2)
 
 [resource]
 script = ExtResource("1_act")

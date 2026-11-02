@@ -28,6 +28,10 @@ var recovered: Array[String] = []
 ## Best grade on each rank exam (ExamSpec): rank id -> 0 PASS, 1 MERIT, 2 DISTINCTION. Saved.
 ## Retaking an exam only ever raises it.
 var exam_grades: Dictionary = {}
+## Quest ids that were renamed: old saves load them under the new id.
+## exam_engineer was Act I's advanced exam before it became the Architect exam. Drop that entry
+## before an Act IV quest takes the id exam_engineer again.
+const RENAMED := {"exam_engineer": "exam_architect"}
 
 var _player: Node
 
@@ -289,6 +293,8 @@ func support_choices() -> Array[ItemDefinition]:
 		var item := def as ItemDefinition
 		if item == null or item.support_gem == null:
 			continue
+		if not Ranks.allows(Ranks.index_of(self), "gem:" + item.support_gem.id):
+			continue                     # above the player's rank (For Loop before ARCHITECT)
 		for t in item.support_gem.allowed_tags:
 			if t in skill.tags:
 				out.append(item)
@@ -326,11 +332,11 @@ func from_dict(d: Dictionary) -> void:
 	for id in d.get("recovered", []):
 		recovered.append(str(id))
 	for id in d.get("completed", []):
-		completed_ids.append(str(id))
+		completed_ids.append(RENAMED.get(str(id), str(id)))
 	for id in d.get("pending_choices", []):
 		pending_choices.append(str(id))
 	for e in d.get("active", []):
-		var q := get_def(str(e.get("id", "")))
+		var q := get_def(RENAMED.get(str(e.get("id", "")), str(e.get("id", ""))))
 		if q == null:
 			push_warning("QuestManager: saved quest %s no longer exists, dropped" % str(e.get("id", "")))
 			continue

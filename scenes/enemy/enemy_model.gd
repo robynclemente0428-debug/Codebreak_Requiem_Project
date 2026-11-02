@@ -72,7 +72,7 @@ func _ready() -> void:
 
 ## Plays the attack sped up to fit the cooldown. Returns seconds until the hit lands.
 func play_attack(fit_duration: float) -> float:
-	if animation_player == null or not animation_player.has_animation(attack_anim):
+	if _dead or animation_player == null or not animation_player.has_animation(attack_anim):
 		return 0.0
 	var anim := animation_player.get_animation(attack_anim)
 	anim.loop_mode = Animation.LOOP_NONE
@@ -85,7 +85,7 @@ func play_attack(fit_duration: float) -> float:
 ## Returns seconds until the hit lands, or 0 if there is nothing to play.
 ## Same job as Player.play_skill_animation(), so skill behaviors can't tell the difference.
 func play_skill(key: String, fit_duration: float) -> float:
-	if animation_player == null or key == "" or fit_duration <= 0.0:
+	if _dead or animation_player == null or key == "" or fit_duration <= 0.0:
 		return 0.0
 	var clip := _skill_clip(key)
 	if clip == &"":
@@ -163,6 +163,8 @@ func bind(ai: AIComponent, health: HealthComponent, body: CharacterBody3D) -> vo
 	_play(idle_anim)
 
 func _on_state_changed(new_state: AIComponent.State) -> void:
+	if _dead:
+		return                                # nothing replaces the death clip
 	_chasing = new_state == AIComponent.State.CHASE
 	if _chasing:
 		_speed = _flat_speed()
@@ -177,8 +179,13 @@ func _on_died() -> void:
 	_chasing = false                          # stop the speed logic overriding the death clip
 	_skill_busy_until = 0                     # death always wins over a skill clip
 	if animation_player and animation_player.has_animation(death_anim):
-		_play(death_anim)
-		await animation_player.animation_finished
+		animation_player.clear_queue()        # an attack queues idle after itself
+		var clip := animation_player.get_animation(death_anim)
+		clip.loop_mode = Animation.LOOP_NONE
+		animation_player.play(death_anim)
+		# Wait for the clip's length rather than animation_finished, which never comes if
+		# anything else gets played meanwhile
+		await get_tree().create_timer(clip.length + 0.1, false).timeout
 	else:
 		await get_tree().process_frame
 	death_finished.emit()

@@ -35,6 +35,7 @@ var _support_flag_modifiers: Dictionary = {
 	"overclock_support": {"overclock_speed": 0.08, "overclock_max": 5.0, "overclock_grace": 0.6},
 	# Any skill
 	"multicast_support": {"multicast_effectiveness": 0.6, "multicast_offset": 0.0, "multicast_linger": 0.6},
+	"rollback_support": {"rollback_window": 3.0, "rollback_cooldown": 20.0, "rollback_trigger": 0.3},
 }
 
 func _ready() -> void:

@@ -137,6 +137,12 @@ func _on_hover(w: Waypoint) -> void:
 	_info_name.add_theme_color_override("font_color", _MapView.kind_color(w))
 	var kind := "TOWN" if w.kind == Waypoint.Kind.TOWN else "DUNGEON  ·  LEVEL %d" % w.dungeon_level
 	_info_line.text = kind + ("   " + w.note if w.note != "" else "")
+	var threats := DungeonThreats.preview(w.scene, w.dungeon_level)
+	if not threats.is_empty():
+		var tags := PackedStringArray()
+		for id in threats:
+			tags.append(DungeonThreats.label(id))
+		_info_line.text += "   [%s]" % "  ·  ".join(tags)
 	var why := Waypoints.blocked_reason(w, get_tree())
 	_info_status.text = "CLICK TO TRAVEL" if why == "" else why
 	_info_status.add_theme_color_override("font_color", ACCENT if why == "" else COL_WARN)

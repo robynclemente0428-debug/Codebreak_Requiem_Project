@@ -68,13 +68,13 @@ dungeon_level = 1
 arrival_spawn_id = &"act_1_town"
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
-[node name="TestPortalToConvoy" type="Marker3D" parent="Layout"]
+[node name="TestPortalToConvoy" type="Marker3D" parent="Layout" unique_id=148915472]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 0, 13)
 script = ExtResource("7_0spvh")
 target_area = "res://scenes/map/town/act_2_convoy.tscn"
 target_spawn = &"act_2_convoy"
 arrival_spawn_id = &"from_convoy"
-room_size = Vector2i(1, 1)
+room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 metadata/_note = "TEST: Act II convoy camp prototype. Remove once Act II has a real way in."
 

@@ -28,7 +28,7 @@ const ACTIONS := [
 	[&"attack", "ATTACK"], [&"attack_2", "ATTACK 2"],
 	[&"skill_1", "SKILL 1"], [&"skill_2", "SKILL 2"], [&"skill_3", "SKILL 3"], [&"skill_4", "SKILL 4"],
 	[&"pickup", "PICK UP / SHOW LOOT"], [&"interact", "INTERACT / TALK"],
-	[&"stim_1", "USE STIM 1"], [&"stim_2", "USE STIM 2"],
+	[&"stim_1", "USE STIM 1"], [&"stim_2", "USE STIM 2"], [&"script_set", "SWAP SCRIPT SET"],
 ]
 ## Menu keys and Esc can't be given to an action.
 const RESERVED_KEYS: Array[int] = [KEY_ESCAPE, KEY_K, KEY_I, KEY_C, KEY_M]

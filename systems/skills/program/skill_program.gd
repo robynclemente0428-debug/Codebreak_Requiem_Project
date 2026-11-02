@@ -89,6 +89,21 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 				"needs the %s gem in this skill" % gem,
 				"socket %s, or delete this line" % gem, rule, missing)
 			continue
+		# Blocks above the player's rank (Ranks.LOCKED_BLOCKS): only an old save or library
+		# script can still hold one, since the editor doesn't offer them.
+		var locked: ProgramCondition = null
+		for c in rule.conditions:
+			if not limits.allows("cond:" + c.type_id()):
+				locked = c
+		if locked != null:
+			var lfn := locked.palette_name().to_lower().replace(" ", "_")
+			v.add_issue("%s: %s() isn't available at your rank." % [label, lfn],
+				"%s() isn't available at your rank" % lfn, "delete this line", rule, locked)
+			continue
+		if rule.loop != null and not limits.allows("loop"):
+			v.add_issue("%s: loops aren't available at your rank." % label,
+				"loops aren't available at your rank", "delete the loop", rule, rule.loop)
+			continue
 		if rule.only_on_repeats() and not has_loop:
 			var needs: ProgramCondition = null
 			for c in rule.conditions:

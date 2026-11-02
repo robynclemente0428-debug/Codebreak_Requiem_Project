@@ -1,0 +1,38 @@
+extends EnemyTrait
+## REFLECTOR: every hit that lands zaps the attacker for flat damage, through armour. The zap
+## grows with the Reflector's level, not with the hit, so a light hit costs as much as a heavy
+## one: attacking fast hurts, and fewer, bigger hits (or lowering attack speed) is the answer.
+##   zap = zap_base + zap_per_level * (level - 1)     level 1: 5, level 6: 8, level 10: 10.4
+
+const COL := Color(0.80, 0.45, 1.0)
+
+## Damage of each zap at level 1.
+@export var zap_base := 5.0
+## Added for every level above 1.
+@export var zap_per_level := 0.6
+## At most one zap per this many seconds from one Reflector (an area hit counts once).
+@export var zap_gap := 0.12
+
+var _zapped_at := -10.0
+
+
+func zap_damage() -> float:
+	var lvl: int = enemy.get("level") if is_instance_valid(enemy) and enemy.get("level") != null else 1
+	return zap_base + zap_per_level * maxi(lvl - 1, 0)
+
+
+func after_hit(info: HitInfo) -> void:
+	if info.cast == null or not info.cast.is_valid():
+		return
+	var caster := info.cast.caster
+	if caster == null or not caster.is_in_group(&"players"):
+		return                                    # enemies' own skills never trip it
+	var now := Time.get_ticks_msec() / 1000.0
+	if now - _zapped_at < zap_gap:
+		return
+	_zapped_at = now
+	var hp := caster.get("health") as HealthComponent
+	if hp == null:
+		return
+	hp.take_damage(zap_damage(), true)
+	pop("REFLECT", COL, 0.8)

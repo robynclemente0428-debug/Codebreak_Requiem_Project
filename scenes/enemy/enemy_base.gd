@@ -9,8 +9,12 @@ extends CharacterBody3D
 @onready var nav: NavigationAgent3D = $NavigationAgent3D
 
 var modifiers: Array = []
+## EnemyTrait nodes from modifiers with an on_spawn_script (Firewalled, Reflector...).
+## SkillBehavior.hit() runs every hit on this enemy through them.
+var traits: Array[EnemyTrait] = []
 
 var rarity: String = "normal"
+var level := 1                          # the dungeon level it spawned at (EnemySpawner)
 
 @export var hit_delay: float = 0.5     # seconds from swing start until the damage lands
 
@@ -65,10 +69,18 @@ func _on_attack_requested(target: Node3D) -> void:
 		stats.get_stat(StatTypes.Stat.MAX_ATTACK_DAMAGE))
 	target.health.take_damage(dmg)
 
+## Longest a corpse may stay, even if the death clip never reports finishing.
+const CORPSE_MAX_TIME := 3.0
+
+
 func _on_died() -> void:
 	remove_from_group("enemies")            # corpses stop absorbing hits and pushing others
-	ai.set_physics_process(false)
+	ai.halt()                               # no more steering, including avoidance callbacks
+	velocity = Vector3.ZERO
 	collision.set_deferred("disabled", true)
+	# Freed when the death clip ends, or after CORPSE_MAX_TIME at the latest: a corpse that
+	# never got freed kept sliding after the player (untargetable, it had 0 health)
+	get_tree().create_timer(CORPSE_MAX_TIME, false).timeout.connect(queue_free)
 	if model:
 		await model.death_finished
 	queue_free()

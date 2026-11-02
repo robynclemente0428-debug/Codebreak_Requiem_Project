@@ -34,6 +34,9 @@ var _hooks: Array = []                  # [{skill, call}] so old connections can
 var _tip: PanelContainer
 var _tip_box: VBoxContainer
 var _hover_action: StringName = &""     # the hotkey whose slot the mouse is over
+var _set_label: RichTextLabel           # "SCRIPT SET  A  B  C  [X]" over the bar's left end
+var _set_msg: Label                     # "ENEMIES NEARBY..." / "SCRIPT SET B", fading
+var _set_tween: Tween
 
 
 func _enter_tree() -> void:
@@ -92,6 +95,33 @@ func _build() -> void:
 		row.add_child(slot)
 		_slots[action] = slot
 
+	# Script sets: which one is running, over the bar's left end (only once the player scripts)
+	_set_label = RichTextLabel.new()
+	_set_label.bbcode_enabled = true
+	_set_label.fit_content = true
+	_set_label.scroll_active = false
+	_set_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_set_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_set_label.position = Vector2(0.0, -26.0 * font_scale)
+	_set_label.size = Vector2(400.0, 24.0 * font_scale)
+	if _font:
+		_set_label.add_theme_font_override("normal_font", _font)
+	_set_label.add_theme_font_size_override("normal_font_size", roundi(14 * font_scale))
+	_set_label.add_theme_constant_override("outline_size", 4)
+	_set_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	_set_label.visible = false
+	add_child(_set_label)
+	_set_msg = Label.new()
+	_set_msg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_set_msg.position = Vector2(0.0, -52.0 * font_scale)
+	if _font:
+		_set_msg.add_theme_font_override("font", _font)
+	_set_msg.add_theme_font_size_override("font_size", roundi(15 * font_scale))
+	_set_msg.add_theme_constant_override("outline_size", 4)
+	_set_msg.add_theme_color_override("font_outline_color", Color.BLACK)
+	_set_msg.modulate.a = 0.0
+	add_child(_set_msg)
+
 	# Tooltip: top_level so it positions in screen space, and it never takes the mouse
 	_tip = PanelContainer.new()
 	_tip.top_level = true
@@ -118,6 +148,7 @@ func _build() -> void:
 
 ## Re-reads which skill sits on which hotkey, and listens to those skills being used.
 func _sync() -> void:
+	_refresh_set()
 	_hover_action = &""
 	if _tip:
 		_tip.visible = false
@@ -147,6 +178,40 @@ func _sync() -> void:
 			var c := _on_skill_used.bind(action)
 			skill.used.connect(c)
 			_hooks.append({"skill": skill, "call": c})
+
+
+func _refresh_set() -> void:
+	if _set_label == null:
+		return
+	_set_label.visible = _skills != null and _skills.uses_scripts()
+	if not _set_label.visible:
+		return
+	var parts := PackedStringArray()
+	for i in _skills.sets_unlocked():           # locked sets (Ranks.PERKS) aren't shown
+		var n: String = _skills.set_label(i)
+		parts.append("[color=#%s]%s[/color]" % [(accent if i == _skills.script_set else Color(0.45, 0.55, 0.6)).to_html(false),
+				"[%s]" % n if i == _skills.script_set else " %s " % n])
+	_set_label.text = "[color=#8fb3bf]SCRIPT SET[/color] %s  [color=#8fb3bf][%s][/color]" % [
+			"".join(parts), GemText.key_label(&"script_set")]
+
+
+## After the swap key: the new set's name, or why it didn't swap (in red).
+func show_set_message(why: String) -> void:
+	_refresh_set()
+	if _set_msg == null:
+		return
+	if why == "":
+		_set_msg.text = "SCRIPT SET %s" % _skills.set_label(_skills.script_set)
+		_set_msg.add_theme_color_override("font_color", accent)
+	else:
+		_set_msg.text = why
+		_set_msg.add_theme_color_override("font_color", COL_WARN)
+	_set_msg.modulate.a = 1.0
+	if _set_tween:
+		_set_tween.kill()
+	_set_tween = create_tween()
+	_set_tween.tween_interval(1.6)
+	_set_tween.tween_property(_set_msg, "modulate:a", 0.0, 0.4)
 
 
 func _on_skill_used(duration: float, action: StringName) -> void:

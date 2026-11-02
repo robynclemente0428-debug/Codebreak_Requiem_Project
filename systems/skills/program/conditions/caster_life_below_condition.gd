@@ -13,6 +13,10 @@ func changes_during_cast() -> bool:
 	return true
 
 
+func defensive() -> bool:
+	return true
+
+
 func is_true(cast: SkillCast, _target: Node) -> bool:
 	return ProgramCondition.health_fraction(cast.caster) < fraction
 

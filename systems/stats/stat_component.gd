@@ -68,5 +68,9 @@ func _recompute() -> void:
 					override_val = m.value
 		var result: float = override_val if override_val != null \
 		else (base + flat) * (1.0 + percent_add) * percent_mult
+		if stat == StatTypes.Stat.MAX_HEALTH and override_val == null:
+			# Stacked "-x% health" modifiers can sum past -100%. Below 1 the owner would spawn
+			# dead: unhittable, never attacking, but still chasing (seen on swarm champions).
+			result = maxf(result, 1.0)
 		_cache[stat] = result
 	_dirty = false

@@ -12,7 +12,7 @@
 script = ExtResource("4_avm4w")
 stat = 10
 op = 2
-value = 0.8
+value = 1.0
 metadata/_custom_type_script = "uid://c4ewwdjeurelq"
 
 [resource]

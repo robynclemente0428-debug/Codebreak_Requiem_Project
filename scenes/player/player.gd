@@ -121,13 +121,13 @@ func _ready() -> void:
 	
 	if not data.is_empty():
 		GameEvents.muted = true 
+		if data.has('quests'):
+			quests.from_dict(data['quests'])     # first: the rank (Ranks) sets how big scripts may be
 		_apply_saved_equipment(data)
 		_apply_saved_skills(data)
 		_apply_saved_inventory(data)
 		if data.has('currency'):
 			currency.from_dict(data['currency'])
-		if data.has('quests'):
-			quests.from_dict(data['quests'])     # once you add the QuestManager
 		
 		GameEvents.muted = false
 		# Saved gear raised max health / mana after they were filled, so start full
@@ -187,6 +187,11 @@ func _apply_saved_inventory(data: Dictionary) -> void:
 
 func _apply_saved_skills(data: Dictionary) -> void:
 	var saved: Array = data.get('skills', [])
+	skills.script_set = clampi(int(data.get('script_set', 0)), 0, skills.sets_unlocked() - 1)
+	if data.get('script_set_names') is Array:
+		skills.restore_set_names(data['script_set_names'])
+	if data.get('script_library') is Array:
+		skills.restore_library(data['script_library'])
 	for i in mini(saved.size(), skills.sockets.size()):
 		var entry: Dictionary = saved[i]
 		var gem_def := ItemDatabase.get_item(str(entry.get('gem', '')))
@@ -201,16 +206,22 @@ func _apply_saved_skills(data: Dictionary) -> void:
 		var action := StringName(entry.get('action', ''))
 		if action != &"":
 			skills.bind_action(action, i)
-		if entry.get('program') is Dictionary:
-			var result := skills.set_program(i, SkillProgram.from_dict(entry['program']))
-			if result != null and not result.valid:
-				push_warning("Saved program for socket %d no longer fits: %s" % [i, "; ".join(result.errors)])
+		var result: ProgramValidation = null
+		if entry.get('sets') is Array:
+			result = skills.restore_sets(i, entry['sets'])
+		elif entry.get('program') is Dictionary:           # saves from before script sets: set A
+			result = skills.restore_sets(i, [entry['program']])
+		if result != null and not result.valid:
+			push_warning("Saved program for socket %d no longer fits: %s" % [i, "; ".join(result.errors)])
 
 func write_save() -> void:
 	if save_slot < 0:
 		return
 	var data := SaveManager.get_data(save_slot)   # the live dictionary, so edits get saved
 	data['skills'] = _collect_skills()
+	data['script_set'] = skills.script_set
+	data['script_set_names'] = skills.set_names_list()
+	data['script_library'] = skills.library.duplicate(true)
 	data['equipment'] = _collect_equipment()
 	data['inventory'] = _collect_inventory()
 	data['currency'] = currency.to_dict()
@@ -239,8 +250,8 @@ func _collect_skills() -> Array:
 			'supports': support_ids,
 			'action': String(skills.action_of(i)),
 		}
-		if s.program != null and s.program.has_rules():
-			entry['program'] = s.program.to_dict()
+		if skills.uses_scripts():
+			entry['sets'] = skills.sets_to_list(i)
 		out.append(entry)
 	return out
 
@@ -306,11 +317,32 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("interact") and _interactable != null:
 		_interactable.interact(self)
 		get_viewport().set_input_as_handled()
+	if event.is_action_pressed("script_set"):
+		_next_script_set()
+		get_viewport().set_input_as_handled()
 	for action in SkillComponent.ACTIONS:
 		if event.is_action_pressed(action):
 			_held[action] = true
 		elif event.is_action_released(action):
 			_held[action] = false
+
+
+## The script_set key: every skill swaps to its program in the next set (A -> B -> C -> A),
+## among the sets the player's rank unlocks (Ranks.PERKS).
+## The skill bar shows the set, or why it can't swap (enemies nearby).
+func _next_script_set() -> void:
+	var bar := get_tree().get_first_node_in_group("skill_bar") as SkillBar
+	if not skills.uses_scripts():
+		if bar:
+			bar.show_set_message("NO SCRIPTS YET: WRITE ONE IN THE SKILLS MENU [K]")
+		return
+	if skills.sets_unlocked() <= 1:
+		if bar:
+			bar.show_set_message("ONLY ONE SCRIPT SET")
+		return
+	var why := skills.switch_script_set((skills.script_set + 1) % skills.sets_unlocked())
+	if bar:
+		bar.show_set_message(why)
 
 
 func _wants(action: StringName) -> bool:   # one place to change when co-op needs per-player input
