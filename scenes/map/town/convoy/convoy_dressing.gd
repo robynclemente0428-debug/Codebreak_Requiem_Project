@@ -48,10 +48,13 @@ func _ready() -> void:
 	var left := INF
 	var right := -INF
 	var y := 0.0
-	var cells := gm.get_used_cells()
+	# Deck cells only: the walls are on the same layer
+	var wall_id := gm.mesh_library.find_item_by_name(director.dungeon_theme.wall_name)
+	var cells: Array[Vector3i] = []
+	for c in gm.get_used_cells():
+		if c.y == FLOOR_LAYER and gm.get_cell_item(c) != wall_id:
+			cells.append(c)
 	for c in cells:
-		if c.y != FLOOR_LAYER:
-			continue
 		var p := to_local(gm.to_global(gm.map_to_local(c)))
 		y = p.y
 		lo = minf(lo, p.dot(heading))
@@ -65,6 +68,7 @@ func _ready() -> void:
 	# bow's corners (not the whole ship's width, which takes in the side pods)
 	var stern := _row_span(gm, cells, heading, side, lo, cell)
 	var bow_row := _row_span(gm, cells, heading, side, hi, cell)
+	# The stern wall stands one cell behind the last floor row: its outer face is 1.5 cells back
 	_build_engines(heading, side, lo - cell * 1.5, stern.x, stern.y, y)
 	_build_dust(heading, side, lo, hi, left, right, y)
 	var bow := hi + cell * 0.5
@@ -74,20 +78,21 @@ func _ready() -> void:
 			Color(1.0, 0.85, 0.4))
 
 
-## (left, right) across the ship of the floor cells in the row at `along` on the heading.
+## (left, right) across the ship of the deck cells in the row at `along` on the heading.
 func _row_span(gm: GridMap, cells: Array[Vector3i], heading: Vector3, side: Vector3, along: float,
 		cell: float) -> Vector2:
 	var span := Vector2(INF, -INF)
 	for c in cells:
-		if c.y != FLOOR_LAYER:
-			continue
 		var p := to_local(gm.to_global(gm.map_to_local(c)))
 		if absf(p.dot(heading) - along) <= cell * 0.5:
 			span = Vector2(minf(span.x, p.dot(side)), maxf(span.y, p.dot(side)))
 	return span
 
 
-func _build_engines(heading: Vector3, side: Vector3, back: float, from: float, to: float, y: float) -> void:
+## Engines bolted to the stern wall's outer face (`face`, along the heading), at hull height
+## (`y`, the middle of the wall), so they read as part of the ship: a housing block set into the
+## wall, a flared nozzle on it, and the plume out of the nozzle.
+func _build_engines(heading: Vector3, side: Vector3, face: float, from: float, to: float, y: float) -> void:
 	var hull_mat := StandardMaterial3D.new()
 	hull_mat.albedo_color = Color(0.10, 0.11, 0.14)
 	hull_mat.metallic = 0.7
@@ -100,14 +105,26 @@ func _build_engines(heading: Vector3, side: Vector3, back: float, from: float, t
 	plume_mat.albedo_color = Color(engine_color, 0.55)
 	# Points the cylinders' Y axis backwards (out of the stern)
 	var aim := Basis(side, -heading, side.cross(-heading)).orthonormalized()
+	var flat := Basis(heading, Vector3.UP, heading.cross(Vector3.UP)).orthonormalized()
 	for i in engine_count:
 		var t := (i + 0.5) / engine_count
 		var s := lerpf(from, to, t)
-		var at := heading * back + side * s + Vector3.UP * (y + 1.0)
+		var base := heading * face + side * s + Vector3.UP * y
+		# Housing: half sunk into the wall
+		var box_mesh := BoxMesh.new()
+		box_mesh.size = Vector3(1.2, 1.3, 1.7)          # along the heading, up, across
+		box_mesh.material = hull_mat
+		var housing := MeshInstance3D.new()
+		housing.mesh = box_mesh
+		housing.basis = flat
+		housing.position = base - heading * 0.4
+		add_child(housing)
+		# Nozzle: flares out towards the exhaust
+		var at := base - heading * 1.5
 		var nozzle_mesh := CylinderMesh.new()
-		nozzle_mesh.top_radius = 0.55
-		nozzle_mesh.bottom_radius = 0.75
-		nozzle_mesh.height = 1.6
+		nozzle_mesh.top_radius = 0.6
+		nozzle_mesh.bottom_radius = 0.4
+		nozzle_mesh.height = 1.4
 		nozzle_mesh.radial_segments = 8
 		nozzle_mesh.material = hull_mat
 		var nozzle := MeshInstance3D.new()
@@ -117,14 +134,14 @@ func _build_engines(heading: Vector3, side: Vector3, back: float, from: float, t
 		add_child(nozzle)
 		var plume_mesh := CylinderMesh.new()
 		plume_mesh.top_radius = 0.05                     # tapers away from the ship
-		plume_mesh.bottom_radius = 0.5
+		plume_mesh.bottom_radius = 0.45
 		plume_mesh.height = 3.5
 		plume_mesh.radial_segments = 10
 		plume_mesh.material = plume_mat
 		var plume := MeshInstance3D.new()
 		plume.mesh = plume_mesh
 		plume.basis = aim
-		plume.position = at - heading * 2.5
+		plume.position = at - heading * (0.7 + 1.75)      # starts at the nozzle's mouth
 		plume.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(plume)
 		_plumes.append(plume)

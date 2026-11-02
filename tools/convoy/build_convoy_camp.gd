@@ -22,8 +22,8 @@ const PORTAL_TO := "res://scenes/map/town/act_1_town.tscn"
 # name, position (metres, 2 m cells), room size in cells
 # The deck is kept narrow so the void shows on both sides wherever you stand.
 const ROOMS := [
-	["MainDeck", Vector3(40, 0, 30), Vector2i(24, 4)],
-	["Bow", Vector3(70, 0, 30), Vector2i(5, 4)],
+	["MainDeck", Vector3(40, 0, 30), Vector2i(14, 4)],
+	["Bow", Vector3(60, 0, 30), Vector2i(5, 4)],
 	["CargoPod", Vector3(44, 0, 12), Vector2i(5, 4)],
 ]
 
@@ -88,7 +88,7 @@ func _build() -> void:
 	portal.arrival_spawn_id = &"act_2_convoy"
 	portal.room_size = Vector2i(3, 3)
 	layout.add_child(portal)
-	portal.position = Vector3(72, 0, 30)
+	portal.position = Vector3(62, 0, 30)
 	portal.rotation.y = -PI * 0.5                  # arrivals step out towards the deck
 
 	director.grid_map = gm

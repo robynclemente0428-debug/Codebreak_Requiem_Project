@@ -48,9 +48,11 @@ func _process(delta: float) -> void:
 	_travel += speed * delta
 	_mat.set_shader_parameter("travel", _travel)
 	_mat.set_shader_parameter("stretch", _stretch)
-	var flow := -screen_heading()
-	if flow != Vector2.ZERO:
-		_mat.set_shader_parameter("direction", flow)
+	# The shader samples the texture at  uv + direction x travel,  which moves the picture the
+	# other way. Passing the heading makes the stars drift towards the stern, with the streaks.
+	var bow := screen_heading()
+	if bow != Vector2.ZERO:
+		_mat.set_shader_parameter("direction", bow)
 
 
 ## The bow's direction on screen (y down), or ZERO without a camera.
