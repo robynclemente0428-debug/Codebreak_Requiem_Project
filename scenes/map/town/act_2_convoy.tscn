@@ -14,11 +14,15 @@
 [ext_resource type="Script" path="res://systems/economy/shop_npc.gd" id="12_l5764"]
 [ext_resource type="Resource" path="res://data/shops/general_vendor.tres" id="13_fnsnu"]
 [ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="14_tnwyf"]
+[ext_resource type="PackedScene" path="res://scenes/npc/warden_brack.tscn" id="15_brack"]
+[ext_resource type="PackedScene" path="res://scenes/npc/examiner_sudo.tscn" id="16_sudo"]
+[ext_resource type="Resource" path="res://data/dialogue/hex.tres" id="17_hex"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_f6log"]
 
 [node name="Act2Convoy" type="Node3D" unique_id=106002020]
 script = ExtResource("1_vu4ko")
+act = "II"
 null_decals = 0
 backdrop = ExtResource("2_7jwyw")
 
@@ -92,3 +96,18 @@ npc_id = "quartermaster"
 npc_name = "Quartermaster"
 info_title = "Convoy Supplies"
 info_description = "Keeps the outpost supplied. Buys what you drag back from the dungeons and sells what you need to go back in."
+
+[node name="WardenBrack" parent="." unique_id=730114521 instance=ExtResource("15_brack")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39, 1.1, 28.6)
+
+[node name="ExaminerSudo" parent="." unique_id=730114522 instance=ExtResource("16_sudo")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 1.1, 28.6)
+
+[node name="TinkerHex" parent="." unique_id=730114523 instance=ExtResource("11_hky0x")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 41, 1.1, 31.4)
+stock_level = 10
+model_scene = ExtResource("14_tnwyf")
+npc_id = "hex"
+npc_name = "Tinker Hex"
+dialogue = ExtResource("17_hex")
+info_title = "Trader"

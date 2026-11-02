@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("1_obj")
+description = "Board the convoy docked past the Gate"
+kind = "enter_area"
+target = "act_2_convoy"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q02b_the_road_out"
+title = "THE ROAD OUT"
+description = "Hardfault can't hold out here. It's leaving, and taking everyone with it.
+The convoy is docked past the Gate. Get on board and report to Brack."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q02_corrupted_gate_guard"])
+reward_credits = 100
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "I"

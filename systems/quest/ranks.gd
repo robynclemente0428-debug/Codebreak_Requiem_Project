@@ -62,9 +62,16 @@ const LOCKED_BLOCKS := {
 }
 
 
+## Flag perks lent for now whatever the rank: Sudo's sandbox lends what its exam asks for
+## (ExamSpec.lends: the Architect exam lends "loops"), and takes them back on leaving.
+static var lent := PackedStringArray()
+
+
 ## A perk's value at rank index `rank`: numbers add up over the ranks held ("rules", "blocks"),
 ## "sets" is the highest reached, flags stay on once unlocked.
 static func perk(rank: int, key: String) -> Variant:
+	if key in FLAG_PERKS and key in lent:
+		return true
 	var out: Variant = null
 	for i in mini(rank + 1, PERKS.size()):
 		if not PERKS[i].has(key):

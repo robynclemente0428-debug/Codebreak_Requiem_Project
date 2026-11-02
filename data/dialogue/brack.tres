@@ -16,6 +16,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ quest_ready:q06_the_mimic -> ready_q06_the_mimic
 @ quest_ready:q05_the_leak -> ready_q05_the_leak
 @ quest_ready:q03_loop_hound_alpha -> ready_q03_loop_hound_alpha
+@ quest_ready:q02b_the_road_out -> ready_q02b_the_road_out
 @ quest_ready:q02_corrupted_gate_guard -> ready_q02_corrupted_gate_guard
 @ quest_ready:q01b_clear_the_ward -> ready_q01b_clear_the_ward
 @ quest_ready:q01_glitchling_queen -> ready_q01_glitchling_queen
@@ -30,12 +31,14 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ quest_active:q06_the_mimic -> remind_q06_the_mimic
 @ quest_active:q05_the_leak -> remind_q05_the_leak
 @ quest_active:q03_loop_hound_alpha -> remind_q03_loop_hound_alpha
+@ quest_active:q02b_the_road_out -> remind_q02b_the_road_out
 @ quest_active:q02_corrupted_gate_guard -> remind_q02_corrupted_gate_guard
 @ quest_active:q01b_clear_the_ward -> remind_q01b_clear_the_ward
 @ quest_active:q01_glitchling_queen -> remind_q01_glitchling_queen
 @ can_start:q01_glitchling_queen -> offer_q01_glitchling_queen
 @ can_start:q01b_clear_the_ward -> offer_q01b_clear_the_ward
 @ can_start:q02_corrupted_gate_guard -> offer_q02_corrupted_gate_guard
+@ can_start:q02b_the_road_out -> offer_q02b_the_road_out
 @ can_start:q03_loop_hound_alpha -> offer_q03_loop_hound_alpha
 @ can_start:q05_the_leak -> offer_q05_the_leak
 @ can_start:q06_the_mimic -> offer_q06_the_mimic
@@ -195,6 +198,34 @@ Brack: Done?
 ~ turnin_q02_corrupted_gate_guard
 > turn_in q02_corrupted_gate_guard
 Brack: The gate is open. Time to move.
+-> start
+
+~ offer_q02b_the_road_out
+# NEW: the Act I to Act II transition
+Brack: We're not holding Hardfault. Not out here, not with the Null this close.
+Brack: So we're taking it with us. Every crate, every cell, everyone who can walk.
+Brack: A convoy is docked past the Gate. Get on board.
+* ACCEPT -> accept_q02b_the_road_out
+* NOT YET -> end
+
+~ accept_q02b_the_road_out
+> start_quest q02b_the_road_out
+Brack: The way through is open now. Step through and you're on the deck.
+Brack: Finish what you need here first. Hex and Sudo are already loading up.
+-> end
+
+~ remind_q02b_the_road_out
+Brack: The convoy won't wait forever. The way's open, through the Gate.
+
+~ ready_q02b_the_road_out
+Brack: You made it aboard.
+* TURN IN -> turnin_q02b_the_road_out
+* NOT YET -> end
+
+~ turnin_q02b_the_road_out
+> turn_in q02b_the_road_out
+Brack: Hardfault's behind us. The road isn't.
+Brack: Whatever's out there, we meet it moving.
 -> start
 
 ~ offer_q03_loop_hound_alpha

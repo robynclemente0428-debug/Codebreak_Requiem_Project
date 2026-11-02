@@ -60,6 +60,12 @@ func cost(gem_mult := 1.0) -> float:
 
 
 ## "killed" / "missed": the word shown in  if killed: break
+## True for a loop that can end before its count: a while (its conditions turn false), or a
+## for with break. What Brack calls a stop condition, and what the Architect exam asks for.
+func stops_itself() -> bool:
+	return mode == Mode.WHILE or break_on != Break.NONE
+
+
 func break_word() -> String:
 	return "missed" if break_on == Break.MISS else "killed"
 

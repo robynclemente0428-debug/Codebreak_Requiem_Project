@@ -16,6 +16,9 @@ extends GameArea
 ## A spawn id is looked up in that order, then in SpawnPoints/<id> (hand-placed Marker3Ds),
 ## then falls back to "default".
 
+## The act this town is the hub of ("I" Hardfault, "II" the convoy). Quests tagged for another
+## act (QuestDefinition metadata/act) can't be started here: see QuestManager.can_start.
+@export var act := "I"
 @export var autosave_delay_sec: float = 1.0     # wait this long after the last change
 @export var heal_on_arrival: bool = true
 ## Spawned at every PortalMarker in the layout. Its root must use portal.gd.
@@ -112,6 +115,7 @@ func _read_layout() -> void:
 		portal.target_area = p.target_area
 		portal.target_spawn = p.target_spawn
 		portal.dungeon_level = int(p.get("dungeon_level", 0))
+		portal.set_routing(p)
 		add_child(portal)
 		portal.global_position = _cell_to_world(p.cell)
 		portal.global_basis = gm.global_basis.orthonormalized() * PortalMarker.portal_basis(yaw)
@@ -173,6 +177,8 @@ func on_player_arrived(player: Node3D) -> void:
 	_connect_once(_player.equipment.equipment_changed)
 	_connect_once(_player.skills.changed)
 	_remember_town()
+	# Quest event: arriving in this town ("enter_area", "act_2_convoy"): THE ROAD OUT
+	GameEvents.report("enter_area", scene_file_path.get_file().get_basename())
 	_save_now()
 
 

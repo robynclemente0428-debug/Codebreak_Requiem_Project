@@ -115,6 +115,9 @@ script = ExtResource("7_f6dcc")
 target_area = "uid://de57t2qg8my1n"
 target_spawn = &"_from_act_1_map_1"
 room_size = Vector2i(3, 3)
+route_after_quest = "q02b_the_road_out"
+routed_area = "res://scenes/map/town/act_2_convoy.tscn"
+routed_spawn = &"act_2_convoy"
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
 [node name="RoomMarker" type="Marker3D" parent="Layout" unique_id=1686782260]

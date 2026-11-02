@@ -5,16 +5,20 @@
 [resource]
 script = ExtResource("1_dlg")
 source = "# Examiner Sudo: rank examiner. Dry, patient.
-# Exams are quests (exam_operator, exam_architect). Passing reports 'rank_up' for the rank system.
-# The Operator exam is sat in the sandbox (> exam operator, see ExamChamber), and can be retaken
-# for a better grade once passed.
+# Exams are quests (exam_operator, exam_architect, exam_engineer). Passing reports 'rank_up' for the rank system.
+# The Operator and Architect exams are sat in the sandbox (> exam operator, > exam architect, see
+# ExamChamber), and can be retaken for a better grade once passed.
 ~ start
-@ quest_ready:exam_architect -> pass_architect
+@ quest_ready:exam_engineer -> pass_engineer
 @ quest_ready:exam_operator -> pass_operator
-@ quest_active:exam_architect -> fail
+@ quest_ready:exam_architect -> pass_architect
+@ quest_active:exam_engineer -> fail
 @ quest_active:exam_operator -> ready_operator
-@ can_start:exam_architect -> offer_architect
+@ quest_active:exam_architect -> ready_architect
+@ can_start:exam_engineer -> offer_engineer
 @ can_start:exam_operator -> offer_operator
+@ can_start:exam_architect -> offer_architect
+@ quest_done:exam_architect -> retake_architect
 @ quest_done:exam_operator -> retake_operator
 -> idle
 
@@ -46,13 +50,39 @@ Sudo: Efficiency is just laziness with a plan.
 * LEAVE -> end
 
 ~ offer_architect
-# NEW line below
-Sudo: The Architect exam. Fewer steps, deeper logic.
+Sudo: Past the Gate, scripts get longer. Long scripts that never stop get you killed.
+Sudo: The Architect exam. A loop that knows when to quit.
 * ACCEPT -> accept_architect
 * DECLINE -> end
 
 ~ accept_architect
 > start_quest exam_architect
+Sudo: I'll lend you loops in the sandbox. A while, or a for with break. Your choice.
+Sudo: Repeat while it's worth it. Stop when it isn't. Read the spec, then run it.
+-> ready_architect
+
+~ ready_architect
+Sudo: The sandbox is ready when you are.
+* ENTER THE SANDBOX -> go_architect
+* NOT YET -> end
+
+~ go_architect
+> exam architect
+
+~ retake_architect
+Sudo: Structure is just patience written down.
+* RETAKE THE ARCHITECT EXAM -> go_architect
+* RETAKE THE OPERATOR EXAM -> go_operator
+* LEAVE -> end
+
+~ offer_engineer
+# NEW line below
+Sudo: The advanced exam. Fewer steps, deeper logic.
+* ACCEPT -> accept_engineer
+* DECLINE -> end
+
+~ accept_engineer
+> start_quest exam_engineer
 # NEW line below
 Sudo: Three blocks. Two conditions. Show me.
 -> end
@@ -70,8 +100,14 @@ Sudo: Retake it whenever you like. I keep your best grade.
 ~ pass_architect
 > turn_in exam_architect
 > report rank_up architect
-Sudo: Clean and efficient. Rank up. Architect.
-Sudo: Your scripts have room to grow now. Build them to last.
+Sudo: It stopped when it should. Rank up. Architect.
+Sudo: Loops are yours now, outside the sandbox too. Retake it whenever you like.
+-> end
+
+~ pass_engineer
+> turn_in exam_engineer
+> report rank_up engineer
+Sudo: Clean and efficient. Rank up.
 -> end
 
 ~ idle

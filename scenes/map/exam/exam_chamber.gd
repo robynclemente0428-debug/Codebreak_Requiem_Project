@@ -14,6 +14,8 @@ extends GameArea
 ##      completes the exam quest; Sudo hands out the rank. The best grade is kept (QuestManager).
 ##
 ## Enter with ExamChamber.enter(tree, "operator") (Sudo's dialogue: > exam operator).
+## While inside, the sandbox lends the perks the exam asks for (ExamSpec.lends, Ranks.lent):
+## the Architect exam lends loops to players who don't hold the rank yet.
 
 const SCENE := "res://scenes/map/exam/exam_chamber.tscn"
 const RADIUS := 11.0                     # metres: the arena floor
@@ -72,6 +74,17 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if is_instance_valid(_hud):
 		_hud.queue_free()
+	if not Ranks.lent.is_empty():
+		Ranks.lent = PackedStringArray()          # leaving: the lent perks go back
+		_refresh_skills()
+
+
+## Rebuilds the player's skills against the perks held now (lent or taken back).
+func _refresh_skills() -> void:
+	var p := _player if is_instance_valid(_player) else get_tree().get_first_node_in_group("players")
+	var skills: SkillComponent = p.get("skills") if p != null else null
+	if skills != null:
+		skills.refresh_rank()
 
 
 func get_spawn_position(_spawn_id: StringName = DEFAULT_SPAWN) -> Vector3:
@@ -80,6 +93,9 @@ func get_spawn_position(_spawn_id: StringName = DEFAULT_SPAWN) -> Vector3:
 
 func on_player_arrived(player: Node3D) -> void:
 	_player = player
+	if spec != null and not spec.lends.is_empty():
+		Ranks.lent = spec.lends
+		_refresh_skills()
 	_hud.show_brief()
 
 
@@ -103,6 +119,8 @@ func try_start() -> void:
 
 ## "" if the player's applied script meets the spec, otherwise what's wrong.
 func _spec_problem() -> String:
+	if spec.required_stop_loop and not _any_applied(_has_stop_loop):
+		return "SPEC NOT MET: no applied script has a loop that stops itself.\nUse a while loop, or a for loop with break. Open your skill script with [K]."
 	if spec.required_condition == "":
 		return ""
 	var check := ProgramObjective.new()
@@ -138,7 +156,8 @@ func _process(delta: float) -> void:
 	if _state != State.RUNNING or _wave == 0:
 		return
 	_time += delta
-	_alive = _alive.filter(func(e: Node3D) -> bool: return is_instance_valid(e) and e.is_in_group("enemies"))
+	# assign(): filter() returns an untyped Array. Untyped `e`: freed enemies are still in the list.
+	_alive.assign(_alive.filter(func(e) -> bool: return is_instance_valid(e) and e.is_in_group("enemies")))
 	if _alive.is_empty():
 		if _wave >= spec.wave_sizes.size():
 			_finish("")
@@ -201,6 +220,9 @@ func _on_event(kind: String, target: String, _amount: int) -> void:
 	match kind:
 		"rule_triggered":
 			if target == spec.required_condition:
+				_fires += 1
+		"loop_repeat":
+			if spec.required_stop_loop and target == "stop":
 				_fires += 1
 		"rule_fired":
 			_rule_fires[target] = int(_rule_fires.get(target, 0)) + 1
@@ -271,10 +293,29 @@ func _best_tier() -> String:
 
 
 func _uses_condition(program: SkillProgram) -> bool:
+	if spec.required_stop_loop:
+		return _has_stop_loop(program)
 	for rule in program.rules:
 		for c in rule.conditions:
 			if spec.required_condition == "" or c.type_id() == spec.required_condition:
 				return true
+	return false
+
+
+static func _has_stop_loop(program: SkillProgram) -> bool:
+	for rule in program.rules:
+		if rule.loop != null and rule.loop.stops_itself():
+			return true
+	return false
+
+
+## True when one of the player's applied (valid) scripts passes `check`.
+func _any_applied(check: Callable) -> bool:
+	var skills: SkillComponent = _player.get("skills")
+	for s in skills.sockets:
+		if s.program != null and s.skill != null and s.skill.program_validation != null \
+				and s.skill.program_validation.valid and check.call(s.program):
+			return true
 	return false
 
 

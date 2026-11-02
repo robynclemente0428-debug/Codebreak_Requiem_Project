@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="ExamSpec" format=3]
+
+[ext_resource type="Script" path="res://systems/exam/exam_spec.gd" id="1_spec"]
+[ext_resource type="Resource" path="res://data/enemies/alien.tres" id="2_enemy"]
+
+[resource]
+script = ExtResource("1_spec")
+rank_id = "architect"
+title = "ARCHITECT EXAM"
+brief = PackedStringArray("Tougher test processes, a few at a time, in 3 waves.", "Your script needs a loop that knows when to stop: a while loop, or a for loop with break.", "The sandbox lends you loops for this exam.", "The loop must repeat at least 6 times.", "Clear every wave within 90 seconds.", "Graded on: your script's efficiency tier, time (par 55 s), damage taken (par 30%).")
+required_condition = ""
+required_condition_label = "loop repeats"
+required_fires = 6
+required_stop_loop = true
+lends = PackedStringArray("loops")
+time_limit = 90.0
+par_time = 55.0
+par_damage = 0.3
+fail_health = 0.25
+wave_enemy = ExtResource("2_enemy")
+wave_sizes = PackedInt32Array(2, 3, 4)
+enemy_level = 4
+spawn_radius = 8.5

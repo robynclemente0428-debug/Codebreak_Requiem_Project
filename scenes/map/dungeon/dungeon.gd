@@ -276,8 +276,9 @@ func _nearby_floor(center: Vector2i, min_dist: int = 2, max_dist: int = 5) -> Ve
 	return center
 
 func _place_portal(cell: Vector2i, target: String, spawn: StringName, level: int = 0, yaw := 0.0,
-		sealed_by_key := "", open_after_quest := "") -> void:
+		sealed_by_key := "", open_after_quest := "", routing: Dictionary = {}) -> void:
 	var p := portal_scene.instantiate() as Portal
+	p.set_routing(routing)
 	p.target_area = target
 	p.target_spawn = spawn
 	p.dungeon_level = level                 # above 0 = this portal leads into another dungeon instance
@@ -307,7 +308,7 @@ func _place_portals() -> void:
 	for p in director.layout.portals:
 		var yaw: float = p.get("yaw", 0.0)
 		_place_portal(p.cell, p.target_area, p.target_spawn, int(p.get("dungeon_level", 0)), yaw,
-				str(p.get("sealed_by_key", "")), str(p.get("open_after_quest", "")))
+				str(p.get("sealed_by_key", "")), str(p.get("open_after_quest", "")), p)
 		if p.arrival_id != &"":
 			_arrival_cells[p.arrival_id] = p.cell
 			var dist := float(p.get("exit_distance", 1.6))

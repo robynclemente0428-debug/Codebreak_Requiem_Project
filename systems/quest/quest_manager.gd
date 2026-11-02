@@ -28,10 +28,6 @@ var recovered: Array[String] = []
 ## Best grade on each rank exam (ExamSpec): rank id -> 0 PASS, 1 MERIT, 2 DISTINCTION. Saved.
 ## Retaking an exam only ever raises it.
 var exam_grades: Dictionary = {}
-## Quest ids that were renamed: old saves load them under the new id.
-## exam_engineer was Act I's advanced exam before it became the Architect exam. Drop that entry
-## before an Act IV quest takes the id exam_engineer again.
-const RENAMED := {"exam_engineer": "exam_architect"}
 
 var _player: Node
 
@@ -93,7 +89,19 @@ func can_start(q: QuestDefinition) -> bool:
 	for pre in q.prerequisite_quest_ids:
 		if not completed_ids.has(pre):
 			return false
-	return true
+	return _act_allows(q)
+
+
+## Story quests belong to an act (metadata/act). In a town of another act they can't be started,
+## so Act II's quests are offered on the convoy (TownArea.act "II"), not in Hardfault.
+## Outside towns (and without an act tag) any quest may start.
+func _act_allows(q: QuestDefinition) -> bool:
+	var act := str(q.get_meta("act", ""))
+	if act == "" or not is_inside_tree():
+		return true
+	var am := get_tree().get_first_node_in_group("area_manager") as AreaManager
+	var town := am.current_area as TownArea if am != null else null
+	return town == null or town.act == act
 
 
 func has_recovered(id: String) -> bool:
@@ -332,11 +340,11 @@ func from_dict(d: Dictionary) -> void:
 	for id in d.get("recovered", []):
 		recovered.append(str(id))
 	for id in d.get("completed", []):
-		completed_ids.append(RENAMED.get(str(id), str(id)))
+		completed_ids.append(str(id))
 	for id in d.get("pending_choices", []):
 		pending_choices.append(str(id))
 	for e in d.get("active", []):
-		var q := get_def(RENAMED.get(str(e.get("id", "")), str(e.get("id", ""))))
+		var q := get_def(str(e.get("id", "")))
 		if q == null:
 			push_warning("QuestManager: saved quest %s no longer exists, dropped" % str(e.get("id", "")))
 			continue

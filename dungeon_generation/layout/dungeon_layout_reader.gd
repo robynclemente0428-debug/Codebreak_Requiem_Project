@@ -62,6 +62,10 @@ static func read(root: Node, grid_map: GridMap, grid_w: int, grid_h: int) -> Dun
 				"exit_distance": m.exit_distance,
 				"sealed_by_key": m.sealed_by_key,
 				"open_after_quest": m.open_after_quest,
+				"shown_after_quest": m.shown_after_quest,
+				"route_after_quest": m.route_after_quest,
+				"routed_area": m.routed_area,
+				"routed_spawn": m.routed_spawn,
 			})
 		elif m is EnemyMarker:
 			layout.enemies.append(_enemy_entry(m, cell if fitted.has_point(cell) else room.center()))

@@ -156,6 +156,8 @@ func _iteration_done(cast: SkillCast) -> void:
 	if mana != null and cost > 0.0 and mana.spend(cost):
 		_current_paid = cost
 	index += 1
+	if not SkillTargets.is_enemy(root.caster):      # the Architect exam counts these
+		GameEvents.report("loop_repeat", "stop" if rule.loop.stops_itself() else "for")
 	_repeat(rule)
 
 

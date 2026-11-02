@@ -5,7 +5,8 @@ extends Resource
 ## One file per rank in data/exams/<rank_id>.tres.
 ##
 ## Pass:  every wave cleared within time_limit, health never under fail_health, and a rule
-##        using required_condition fired at least required_fires times.
+##        using required_condition fired at least required_fires times (or, with
+##        required_stop_loop, a self-stopping loop repeated that often).
 ## Grade: PASS / MERIT / DISTINCTION from points:
 ##        the script's efficiency tier (Lean 1, Elegant 2) + cleared within par_time (1)
 ##        + lost no more than par_damage of max health (1).   0-1 PASS, 2-3 MERIT, 4 DISTINCTION.
@@ -18,6 +19,12 @@ extends Resource
 @export var required_condition: String = ""
 @export var required_condition_label: String = "enemies_nearby()"
 @export var required_fires: int = 3
+## Instead of a condition: the script needs a loop that can stop itself (a while, or a for with
+## break), and each of its repeats counts as a fire.
+@export var required_stop_loop := false
+## Perks the sandbox lends during this exam (Ranks.PERKS flag keys), so an exam can ask for what
+## its own rank unlocks: the Architect exam lends "loops".
+@export var lends: PackedStringArray = []
 
 @export_group("Run")
 @export var time_limit: float = 75.0

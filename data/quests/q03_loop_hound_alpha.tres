@@ -27,7 +27,7 @@ BOSS TRAIT: charges along the same path again and again. Learn the loop, break i
 SCRIPT TASK: give a skill a repeating cycle with every_nth_cast()."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true
-prerequisite_quest_ids = Array[String](["q02_corrupted_gate_guard"])
+prerequisite_quest_ids = Array[String](["q02_corrupted_gate_guard", "exam_architect"])
 reward_credits = 100
 metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "Brack"

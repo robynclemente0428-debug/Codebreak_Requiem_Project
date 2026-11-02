@@ -22,6 +22,12 @@ extends DungeonMarker
 @export var sealed_by_key: String = ""
 ## Also open once this quest is done, for saves from before the seal existed.
 @export var open_after_quest: String = ""
+## Story routing, see Portal: hidden until this quest starts...
+@export var shown_after_quest: String = ""
+## ...or, once this quest starts, leads to routed_area / routed_spawn instead.
+@export var route_after_quest: String = ""
+@export_file("*.tscn") var routed_area: String = ""
+@export var routed_spawn: StringName = &"default"
 @export var arrival_spawn_id: StringName = &"exit"        # players arriving here with this id step out of this portal
 ## How far in front of the portal arriving players appear, in metres.
 @export_range(0.5, 6.0, 0.1) var exit_distance: float = 1.6:
