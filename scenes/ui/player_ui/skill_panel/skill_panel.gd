@@ -1163,5 +1163,8 @@ class ScanOverlay extends Control:
 		while y < size.y - 2.0:
 			draw_line(Vector2(inset, y), Vector2(size.x - inset, y), Color(0, 0, 0, 0.13), 1.0)
 			y += 3.0
-		var sweep_y := fposmod(t * 90.0, size.y + 160.0) - 80.0
+		# The sweep stays inside the scanlines' band, so it never shows past the panel's edges
+		var top := 2.0 + 4.0                          # half the sweep's 8 px thickness
+		var band := maxf(size.y - 4.0 - 8.0, 1.0)
+		var sweep_y := top + fposmod(t * 90.0, band)
 		draw_line(Vector2(inset, sweep_y), Vector2(size.x - inset, sweep_y), Color(1, 1, 1, 0.05), 8.0)

@@ -20,6 +20,7 @@ const COL_DIM := Color(0.55, 0.78, 0.85)
 const COL_READY := Color(1.0, 0.82, 0.30)
 const COL_ACTIVE := Color(0.45, 0.75, 1.0)
 const COL_NEW := Color(0.25, 1.0, 0.55)
+const COL_EXAM := Color(0.80, 0.50, 1.0)     # rank exams (Ranks.is_exam), whatever their state
 const CARD_WIDTH := 420.0
 const CHAMFER := 18.0
 const CLOSE_DISTANCE := 25.0        # walking this far from the NPC closes the card
@@ -170,6 +171,10 @@ func _input(event: InputEvent) -> void:
 	if npc == null:
 		return
 	get_viewport().set_input_as_handled()            # no skill cast for this click
+	if npc is RouteTerminal:                         # no card: straight to the route map
+		close()
+		npc.interact(_player())
+		return
 	if npc == _npc and is_open():
 		close()
 	else:
@@ -355,12 +360,16 @@ class _Card extends PanelContainer:
 			if def == null:
 				continue
 			var title := def.title.capitalize() if def.title != "" else id
+			var exam := Ranks.is_exam(id)
 			if ready_ids.has(id):
-				ready.append(["!  " + title + "  -  ready to turn in", NpcInfoPanel.COL_READY, id, "ready"])
+				ready.append(["!  " + title + "  -  ready to turn in",
+					NpcInfoPanel.COL_EXAM if exam else NpcInfoPanel.COL_READY, id, "ready"])
 			elif qm.is_active(id):
-				active.append([">  " + title + "  -  in progress", NpcInfoPanel.COL_ACTIVE, id, "active"])
+				active.append([">  " + title + "  -  in progress",
+					NpcInfoPanel.COL_EXAM if exam else NpcInfoPanel.COL_ACTIVE, id, "active"])
 			elif qm.can_start(def):
-				fresh.append(["+  " + title + "  -  available", NpcInfoPanel.COL_NEW, id, "new"])
+				fresh.append(["+  " + title + "  -  available",
+					NpcInfoPanel.COL_EXAM if exam else NpcInfoPanel.COL_NEW, id, "new"])
 		return ready + active + fresh
 
 	## TALK / TRADE.

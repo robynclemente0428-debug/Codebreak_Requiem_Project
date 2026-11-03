@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://dphsiomklvcyf"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://assets/models/enemy/quad_shell/quad_shell_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_7wext"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_gem"]
+[ext_resource type="Resource" uid="uid://dg2sp662md7hi" path="res://data/skill_gems/shoot.tres" id="5_shoot"]
+
+[resource]
+script = ExtResource("1_def")
+id = "quad_shell"
+display_name = "Shell Crawler"
+allowed_modifier_tags = Array[int]([1, 3, 4])
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+capsule_radius = 0.45
+capsule_height = 0.9
+max_health = 35.0
+armour = 25.0
+move_speed = 5.0
+preferred_distance = 3.5
+flee_distance = 1.5
+kite_delay_min = 0.2
+kite_delay_max = 0.6
+min_attack_damage = 5.0
+max_attack_damage = 20.0
+attack_speed = 1.4
+skills = Array[ExtResource("4_gem")]([ExtResource("5_shoot")])
+skill_flag_overrides = {
+"shoot": {
+"max_projectiles": 2.0,
+"range": 11.0,
+"speed": 18.0,
+"spread_angle": 10.0
+}
+}
+basic_attack_enabled = false
+skill_cooldown = 0.0
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

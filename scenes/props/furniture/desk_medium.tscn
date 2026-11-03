@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/Sci-Fi Essentials Kit[Standard]/additional_asset/glTF/Prop_Desk_Medium.gltf" id="1_vfbdc"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_as3fk"]
+size = Vector3(2.8431187, 0.9396037, 1.0288802)
+
+[node name="Desk_Medium" type="StaticBody3D" unique_id=1954192650]
+collision_mask = 0
+
+[node name="Model" type="Node3D" parent="." unique_id=1276829304 instance=ExtResource("1_vfbdc")]
+
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1683589418]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.46980175, -0.014440298)
+shape = SubResource("BoxShape3D_as3fk")

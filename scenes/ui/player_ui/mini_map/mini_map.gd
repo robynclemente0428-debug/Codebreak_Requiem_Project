@@ -82,6 +82,7 @@ const COL_ENEMY := Color(1.0, 0.30, 0.37)
 const COL_PORTAL := Color(0.30, 1.0, 0.60)
 const COL_NPC := Color(1.0, 0.82, 0.30)
 const COL_QUEST := Color(1.0, 0.82, 0.30)    # quest targets: the quest tracker's gold
+const COL_ROUTE := Color(0.0, 0.90, 1.0)     # the convoy's route terminal
 const COL_BG := Color(0.02, 0.05, 0.09)
 ## [neighbour direction, edge start, edge end] in cell units
 const EDGES := [
@@ -99,8 +100,10 @@ var _player: Node3D
 
 var _explored := {}                    # Vector2i -> true
 var _town := false                     # a town: everything revealed, no hostiles
+var _alert := false                    # a town under attack (set_alert): hostiles after all
 var _dungeon_overlay_px := -1.0        # the player's full-map zoom for dungeons, kept while in town
 var _npcs: Array = []                  # Node3D (DialogueNPC) shown as gold markers
+var _terminals: Array = []             # RouteTerminal: an "R" badge
 var _last_cell := Vector2i(-99999, -99999)
 var _center := Vector2.ZERO            # player position in (float) cell coordinates
 var _facing := Vector2.UP
@@ -231,15 +234,19 @@ func _build_ui() -> void:
 # ---------- PUBLIC ----------
 ## Call from dungeon.gd once generation is done. Also resets the explored area.
 ## options: "town" (bool) = no fog of war and a SAFE ZONE label; "npcs" (Array of Node3D) =
-## people to mark on the map (names show on the full-screen map).
+## people to mark on the map (names show on the full-screen map); "terminals" (Array of
+## RouteTerminal) = the convoy's route terminal, an "R" badge; "explored" (Dictionary) =
+## the cells already revealed, kept and added to (without it the fog starts fresh).
 func bind_dungeon(director: DungeonDirector, grid_map: GridMap, enemies_root: Node3D = null,
 		options: Dictionary = {}) -> void:
 	_director = director
 	_grid_map = grid_map
 	_enemies_root = enemies_root
+	_alert = false                         # a new area: no attack carried over
 	var was_town := _town
 	_town = bool(options.get("town", false))
 	_npcs = options.get("npcs", [])
+	_terminals = options.get("terminals", [])
 	# Towns are small: their full-screen map zooms in to fit the screen. Dungeons get back the
 	# zoom the player had there.
 	if _town:
@@ -248,7 +255,10 @@ func bind_dungeon(director: DungeonDirector, grid_map: GridMap, enemies_root: No
 		overlay_cell_px = _town_fit_px()
 	elif was_town and _dungeon_overlay_px > 0.0:
 		overlay_cell_px = _dungeon_overlay_px
-	_explored.clear()
+	# A dungeon instance keeps its own explored cells, so rejoining it keeps the fog where it
+	# was. Revealing writes straight into the instance's dictionary.
+	var kept = options.get("explored")
+	_explored = kept if kept is Dictionary else {}
 	_last_cell = Vector2i(-99999, -99999)
 	_player = null
 	_hostiles = -1
@@ -378,8 +388,16 @@ func _on_slide_out_finished() -> void:
 		visible = false
 
 
+## A town under attack (Hardfault's dock, DockDefense): shows `enemies` on the map and
+## ATTACK (and the count) instead of SAFE ZONE. null ends it.
+func set_alert(enemies: Node3D) -> void:
+	_alert = enemies != null
+	_enemies_root = enemies
+	_hostiles = -1
+
+
 func _update_hostiles() -> void:
-	if _town:
+	if _town and not _alert:
 		if _hostiles != -2:
 			_hostiles = -2
 			_hostile_label.text = "SAFE ZONE"
@@ -395,7 +413,7 @@ func _update_hostiles() -> void:
 	if n == _hostiles:
 		return
 	_hostiles = n
-	_hostile_label.text = "HOSTILE %02d" % n
+	_hostile_label.text = ("ATTACK %02d" if _alert else "HOSTILE %02d") % n
 	_hostile_label.add_theme_color_override("font_color", COL_ENEMY if n > 0 else COL_DIM)
 
 
@@ -535,6 +553,7 @@ func _paint(c: Control, full := false) -> void:
 	_paint_enemies(c, rot, full)
 	_paint_quest_spots(c, rot, full)
 	_paint_npcs(c, rot, full)
+	_paint_terminals(c, rot, full)
 	_paint_player(c)
 	_paint_rim_arrows(c, rot)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -639,8 +658,8 @@ func _paint_npcs(c: Control, rot: float, full: bool) -> void:
 	var taken: Array[Rect2] = []              # name tags already drawn (so they don't pile up)
 	for n in _npcs:
 		var npc := n as Node3D
-		if npc == null or not is_instance_valid(npc) or not npc.is_inside_tree():
-			continue
+		if npc == null or not is_instance_valid(npc) or not npc.is_inside_tree() or not npc.is_visible_in_tree():
+			continue                              # hidden: fled through the portal (DockDefense)
 		var pos := (_to_cell_f(npc.global_position) - _center) * _px
 		var screen := pos.rotated(rot)
 		if _wants["talk"].has(str(npc.get("npc_id"))):
@@ -675,6 +694,24 @@ func _paint_npcs(c: Control, rot: float, full: bool) -> void:
 			c.draw_string(f, at, who, HORIZONTAL_ALIGNMENT_LEFT, -1, fs,
 				Color(COL_NPC, _map_alpha))
 			c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
+
+
+## The convoy's route terminal: an "R" badge, an arrow on the rim while it's off the map, and
+## its name on the full-screen map.
+func _paint_terminals(c: Control, rot: float, full: bool) -> void:
+	var half := c.size * 0.5 - Vector2(16.0, 16.0)
+	for t in _terminals:
+		var term := t as Node3D
+		if term == null or not is_instance_valid(term) or not term.is_inside_tree():
+			continue
+		var pos := (_to_cell_f(term.global_position) - _center) * _px
+		var screen := pos.rotated(rot)
+		if absf(screen.x) > half.x or absf(screen.y) > half.y:
+			_rim.append([screen, COL_ROUTE])
+			continue
+		_glyph_badge(c, pos, rot, "R", COL_ROUTE)
+		if full:
+			_upright_tag(c, screen + Vector2(0.0, -14.0), "ROUTE TERMINAL", COL_ROUTE, rot)
 
 
 # ---------- QUESTS ----------
@@ -895,5 +932,8 @@ class Scan extends Control:
 		while y < size.y - 26.0:
 			draw_line(Vector2(inset, y), Vector2(size.x - inset, y), Color(0, 0, 0, 0.13), 1.0)
 			y += 3.0
-		var sweep_y := fposmod(t * 70.0, size.y + 120.0) - 60.0
+		# The sweep stays inside the scanlines' band (30 .. size.y - 26), never past the frame
+		var top := 30.0 + 3.0                         # half the sweep's 6 px thickness
+		var band := maxf(size.y - 26.0 - 3.0 - top, 1.0)
+		var sweep_y := top + fposmod(t * 70.0, band)
 		draw_line(Vector2(inset, sweep_y), Vector2(size.x - inset, sweep_y), Color(1, 1, 1, 0.05), 6.0)

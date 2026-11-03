@@ -3,6 +3,7 @@ extends CanvasLayer
 ## over their head. A quest marker sits above the name when they have something for you:
 ##   !  gold   a quest ready to turn in
 ##   +  green  a new quest available
+##   >  purple a rank exam waiting to be sat (exams show ! and + in purple too)
 ## Same symbols and colours as the NPC info card. Names fade out with distance.
 ##
 ## Hovering a portal shows a card over it with where it leads (the waypoint's name, whether
@@ -108,6 +109,8 @@ func _rescan() -> void:
 		if n is DialogueNPC or n is QuestGiverNPC:
 			_npcs.append(n)
 			_quest_ids[n] = NpcInfoPanel.quests_of(n)
+		elif n is RouteTerminal:                   # a plate, no quests
+			_npcs.append(n)
 		elif n is Portal and n.visible:            # hidden story portals (Portal.shown_after_quest)
 			_portals.append(n)
 
@@ -265,25 +268,42 @@ func _portal_lines(portal: Portal) -> Array:
 	if portal.instance_id == -1:
 		parts.append("NEW INSTANCE")
 	if portal.is_sealed():
-		return ["SEALED: " + title.to_upper(), "NEEDS THE " + QuestItems.name_of(portal.sealed_by_key)]
+		return ["SEALED: " + title.to_upper(), QuestItems.sealed_text(portal.sealed_by_key)]
 	return ["-> " + title.to_upper(), "  ·  ".join(parts)]
 
 
 ## ["!", gold] when a quest is ready to turn in here, ["+", green] when one can be started.
-## The minimap shows the same marks.
+## Rank exams (Ranks.is_exam) stand out in purple, and also show [">", purple] while taken but
+## not yet passed, so the examiner stays marked until the exam is sat. An exam's mark wins over
+## another quest's of the same kind. The minimap shows the same marks.
 func quest_mark(npc: Interactable, qm: QuestManager) -> Array:
 	if qm == null:
 		return []
+	var ready := false
 	var fresh := false
+	var exam_ready := false
+	var exam_fresh := false
+	var exam_waiting := false
 	for id in _quest_ids.get(npc, PackedStringArray()):
 		var def := qm.get_def(id)
 		if def == null:
 			continue
+		var exam := Ranks.is_exam(id)
 		var st := qm.get_state(id)
 		if st != null and st.status == QuestState.Status.READY_TO_TURN_IN:
-			return ["!", NpcInfoPanel.COL_READY]
-		if st == null and qm.can_start(def):
+			ready = true
+			exam_ready = exam_ready or exam
+		elif st == null and qm.can_start(def):
 			fresh = true
+			exam_fresh = exam_fresh or exam
+		elif st != null and exam:
+			exam_waiting = true
+	if ready:
+		return ["!", NpcInfoPanel.COL_EXAM if exam_ready else NpcInfoPanel.COL_READY]
+	if exam_fresh:
+		return ["+", NpcInfoPanel.COL_EXAM]
+	if exam_waiting:
+		return [">", NpcInfoPanel.COL_EXAM]
 	return ["+", NpcInfoPanel.COL_NEW] if fresh else []
 
 

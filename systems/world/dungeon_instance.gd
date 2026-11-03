@@ -13,7 +13,12 @@ var occupants := 0                      # players inside right now
 var empty_since_msec := 0               # when the last player left (only meaningful at 0 occupants)
 var killed: Dictionary = {}             # enemy index -> true, so dead enemies stay dead
 var opened: Dictionary = {}             # prop index -> true, so looted barrels stay looted
+var explored: Dictionary = {}           # minimap cell -> true, so the fog stays lifted where you went
 var threats := PackedStringArray()      # DungeonThreats ids, rolled when the instance opens
+## Where the player stood when they left by the waypoint map (to town, say). Rejoining puts
+## them back there instead of at the entrance, once. has_return_spot false = the entrance.
+var return_spot := Vector3.ZERO
+var has_return_spot := false
 
 
 ## Seconds the instance has been empty (0 while anyone is inside).

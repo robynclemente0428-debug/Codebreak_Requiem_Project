@@ -20,7 +20,8 @@ extends RefCounted
 ##   combo_grace    extra seconds before an animation combo restarts from the first clip
 ## Defensive flags (the DEFENSE knobs in skill scripts, data/skill_programs/defense_knobs.tres):
 ##   leech          share of the damage each hit deals that heals the caster (0.04 = 4%)
-##   barrier        a shield of this much life on every cast, for BARRIER_SECONDS
+##   barrier        a shield worth this share of the caster's max life on every cast (0.03 = 3%),
+##                  for BARRIER_SECONDS
 ##   guard          share of damage taken removed for the length of the cast (0.1 = 10%)
 
 const BARRIER_SECONDS := 4.0
@@ -56,8 +57,8 @@ func _apply_defense(cast: SkillCast) -> void:
 	if hp == null:
 		return
 	var barrier := cast.flag("barrier")
-	if barrier > 0.0:
-		hp.add_barrier(barrier, BARRIER_SECONDS)
+	if barrier > 0.0 and hp.stats != null:
+		hp.add_barrier(barrier * hp.stats.get_stat(StatTypes.Stat.MAX_HEALTH), BARRIER_SECONDS)
 	var guard := cast.flag("guard")
 	if guard > 0.0:
 		hp.add_guard(guard, clampf(recovery_time(cast), GUARD_MIN_SECONDS, GUARD_MAX_SECONDS))

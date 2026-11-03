@@ -27,6 +27,7 @@ var current_area: GameArea
 var _current_path := ""     # <- add this
 var _busy := false
 var _ignore_until_ms := 0
+var _remember_spot := false   # set by travel(): the dungeon we leave keeps the player's spot
 
 
 ## The waypoint map (U). Created here so every game scene with an AreaManager has one.
@@ -62,8 +63,10 @@ func current_scene_path() -> String:
 ## new_instance: open a fresh instance instead of rejoining (Ctrl + click on the waypoint map).
 func travel(scene_path: String, spawn_id: StringName, dungeon_level: int = 0, new_instance := false) -> void:
 	_ignore_until_ms = 0
+	_remember_spot = true                 # leaving a dungeon this way keeps your place in it
 	await go_to(scene_path, spawn_id, dungeon_level,
 			WorldState.ALWAYS_NEW if new_instance else WorldState.REJOIN_OR_NEW)
+	_remember_spot = false
 
 
 func _add_waypoint_panel() -> void:
@@ -118,6 +121,13 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 	if use_fade:
 		await _fade_to(1.0)
 	get_tree().call_group("blast_swarms", "clear")    # <- add here
+	# Left a dungeon by the waypoint map: coming back puts you where you were. Walking out
+	# through a portal doesn't (you'd arrive standing in it), nor does dying.
+	var leaving = current_area.get("instance") if current_area else null
+	if leaving is DungeonInstance:
+		leaving.has_return_spot = _remember_spot and not revive
+		if leaving.has_return_spot:
+			leaving.return_spot = player.global_position
 	# Remove the old area completely before building the new one.
 	if current_area:
 		current_area.queue_free()
@@ -141,7 +151,12 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 	await get_tree().physics_frame
 	await get_tree().physics_frame
 
-	player.global_position = area.get_spawn_position(spawn_id) + Vector3.UP * 0.05
+	var spot := area.get_spawn_position(spawn_id)
+	var inst = area.get("instance")
+	if inst is DungeonInstance and inst.has_return_spot and not revive:
+		spot = inst.return_spot                       # back where you left it
+		inst.has_return_spot = false
+	player.global_position = spot + Vector3.UP * 0.05
 	player.velocity = Vector3.ZERO
 	player.reset_physics_interpolation()
 	if revive:

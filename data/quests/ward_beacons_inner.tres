@@ -33,7 +33,7 @@ script = ExtResource("2_quest")
 id = "ward_beacons_inner"
 title = "WARD BEACONS: INNER DISTRICTS"
 description = "The inner beacons guarded the road to the Gate. Light them and the Null loses its grip on the ward.
-Reach each beacon and bring it back online. Any order.
+Reboot each beacon: stand in its ring while it boots, and fight off the Null that come for it. Any order.
 REWARD: credits and a support gem of your choice."
 objectives = Array[ExtResource("1_obj")]([SubResource("Beacon_0"), SubResource("Beacon_1"), SubResource("Beacon_2"), SubResource("Beacon_3")])
 prerequisite_quest_ids = Array[String](["ward_beacons_outer"])

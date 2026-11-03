@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/enemy/enemy_model.gd" id="1_model"]
+[ext_resource type="PackedScene" path="res://assets/models/enemy/eye_drone/Enemy_EyeDrone.gltf" id="2_mesh"]
+
+[node name="EyeDroneModel" type="Node3D"]
+script = ExtResource("1_model")
+debug_attack_timer = false
+idle_anim = &"Idle"
+move_anim = &"Idle"
+attack_anim = &"Attack"
+death_anim = &"BackFlip"
+
+[node name="Mesh" parent="." instance=ExtResource("2_mesh")]
+transform = Transform3D(0.9, 0, 0, 0, 0.9, 0, 0, 0, 0.9, 0, 1.25, 0)

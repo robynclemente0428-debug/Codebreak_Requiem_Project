@@ -6,6 +6,10 @@ extends Resource
 @export var title: String = "ACT I"
 @export var subtitle: String = ""
 @export var waypoints: Array[Waypoint] = []
+## A convoy act (Act II): its dungeons are stops reached from the convoy's route terminal
+## (RouteTerminal), not from the waypoint map, and their portals lead back to the convoy.
+## Stops open in order (Waypoint.route_after) as their exits are reached.
+@export var convoy_route := false
 
 
 func find(id: String) -> Waypoint:

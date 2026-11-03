@@ -13,7 +13,12 @@ signal hit_world(position: Vector3)
 @export var hit_radius: float = 0.15
 @export var enemy_group: StringName = &"enemies"
 
+## Players' bullets are gold, everyone else's red (ShootBehavior sets it).
+const TINT_PLAYER := Color(1.0, 0.85, 0.4)
+const TINT_ENEMY := Color(1.0, 0.2, 0.35)
+
 var direction := Vector3.FORWARD
+var tint := TINT_PLAYER
 var speed := 60.0
 var max_distance := 30.0
 ## Extra enemies it can pass through. 0 = stops at the first enemy it hits.
@@ -40,6 +45,9 @@ func _ready() -> void:
 	_shape.radius = hit_radius
 	_column.radius = hit_radius
 	look_at(global_position + direction, Vector3.UP)     # point the tracer along its flight
+	var mesh := get_node_or_null("MeshInstance3D") as GeometryInstance3D
+	if mesh != null:
+		mesh.set_instance_shader_parameter(&"tint", tint)
 
 
 func _physics_process(delta: float) -> void:

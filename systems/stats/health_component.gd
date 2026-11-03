@@ -16,6 +16,7 @@ var current_health: float = 0.0
 var barrier: float = 0.0
 var guard: float = 0.0
 var _barrier_until := 0
+var _barrier_seconds := 0.0      # how long the current barrier was given for
 var _guard_until := 0
 ## When damage last got through (ms), for the hit_recently() script condition.
 var last_damaged_msec := -1000000
@@ -84,7 +85,15 @@ func add_barrier(amount: float, seconds: float) -> void:
 		return
 	barrier = maxf(barrier if Time.get_ticks_msec() < _barrier_until else 0.0, amount)
 	_barrier_until = Time.get_ticks_msec() + int(seconds * 1000.0)
+	_barrier_seconds = seconds
 	barrier_changed.emit(barrier)
+
+
+## How much of the current barrier's time is left, 1 = just given, 0 = gone.
+func barrier_time_left() -> float:
+	if barrier <= 0.0 or _barrier_seconds <= 0.0:
+		return 0.0
+	return clampf((_barrier_until - Time.get_ticks_msec()) / (_barrier_seconds * 1000.0), 0.0, 1.0)
 
 
 ## Takes `fraction` less damage for `seconds` (the stronger guard wins while both last).

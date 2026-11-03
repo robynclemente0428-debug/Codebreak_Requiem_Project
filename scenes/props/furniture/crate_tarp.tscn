@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/Sci-Fi Essentials Kit[Standard]/additional_asset/glTF/Prop_Crate_Tarp.gltf" id="1_x4nov"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1vnuk"]
+size = Vector3(1.71679, 1.5675699, 1.7149025)
+
+[node name="Crate_Tarp" type="StaticBody3D" unique_id=1673475697]
+collision_mask = 0
+
+[node name="Model" type="Node3D" parent="." unique_id=1613025735 instance=ExtResource("1_x4nov")]
+
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=728166750]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.9604645e-08, 0.778437, -1.7881393e-07)
+shape = SubResource("BoxShape3D_1vnuk")

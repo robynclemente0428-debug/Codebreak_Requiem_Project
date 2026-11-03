@@ -28,6 +28,9 @@ extends DungeonMarker
 @export var route_after_quest: String = ""
 @export_file("*.tscn") var routed_area: String = ""
 @export var routed_spawn: StringName = &"default"
+## Convoy stops: the waypoint id this portal marks cleared when used (its exit), which opens the
+## next stop on the route terminal (Waypoints.clear_stop). Empty = none.
+@export var clears_stop: String = ""
 @export var arrival_spawn_id: StringName = &"exit"        # players arriving here with this id step out of this portal
 ## How far in front of the portal arriving players appear, in metres.
 @export_range(0.5, 6.0, 0.1) var exit_distance: float = 1.6:

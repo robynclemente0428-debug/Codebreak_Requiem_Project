@@ -5,6 +5,12 @@ extends CanvasLayer
 ## Plus short lessons outside the quests:
 ##   SUPPORT GEMS   after picking the training reward: socket it next to the skill, see what it does
 ##   WAYPOINTS      the first time the player is in a dungeon: open the map, see how travel works
+##   QUESTS         as soon as a new character has their first quest, before anything else:
+##                  the tracker under the minimap, and the quest log it opens
+##   ROUTE TERMINAL the first time on a convoy (an act with a route): use the terminal to pick
+##                  a stop, then what the route map shows. Ends when the route map is closed.
+##   RANK EXAMS     once the first exam (Operator) opens up: what exams are, what a rank gives,
+##                  then sitting it in Sudo's sandbox and handing it in. Ends when it's passed.
 ## Shows a banner with the next thing to do and a second line saying why, outlines the UI to
 ## click, and points an arrow at things in the world (Warden Brack, a dungeon portal).
 ## The step shown is the quest's first objective that isn't done yet, and the scripting steps
@@ -21,6 +27,11 @@ const GUIDE_NPC_ID := "brack"
 const SAVE_KEY_DONE := "tutorials_done"
 const LESSON_WAYPOINTS := "waypoints"
 const LESSON_SUPPORTS := "support_gems"
+const LESSON_QUESTS := "quest_tracker"
+const LESSON_EXAMS := "rank_exams"
+const LESSON_ROUTE := "route_terminal"
+const FIRST_EXAM := "exam_operator"
+const EXAMINER_NPC_ID := "sudo"
 const FONT_PATH := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_SUB := Color(0.62, 0.80, 0.86)
@@ -36,6 +47,10 @@ var enabled := true
 var _player: Node
 var _guide: Node3D
 var _guide_search_wait := 0.0
+var _examiner: Node3D
+var _terminal: Node3D
+var _terminal_search_wait := 0.0
+var _examiner_search_wait := 0.0
 var _banner: PanelContainer
 var _label: Label
 var _sub: Label
@@ -55,6 +70,8 @@ var _points_when_lowered := 0.0           # buff points spent when the trade-off
 var _lesson_start_params: Array = []      # the condition's values when the rule was made
 var _waypoint_map_seen := false           # the map was opened during the waypoint lesson
 var _support_lesson_shown := false        # the "socket your support gem" steps were shown
+var _quest_log_seen := false               # the quest lesson's log step was reached
+var _route_map_seen := false               # the route lesson's map step was reached
 
 
 func _ready() -> void:
@@ -152,10 +169,20 @@ func _current_hint() -> Dictionary:
 	if qm == null:
 		return {}
 
+	# The very first lesson: where quests live, before training's own steps
+	var quests_hint := _quests_hint(qm)
+	if not quests_hint.is_empty():
+		return quests_hint
+
 	# Short and only in a dungeon, so it goes before a quest step that may be waiting there
 	var waypoint_hint := _waypoint_hint()
 	if not waypoint_hint.is_empty():
 		return waypoint_hint
+
+	# The first time on the convoy: how its dungeons are reached
+	var route_hint := _route_hint()
+	if not route_hint.is_empty():
+		return route_hint
 
 	# Right after the training reward, before the nudge towards the scripting lesson
 	var support_hint := _support_hint(qm)
@@ -184,7 +211,90 @@ func _current_hint() -> Dictionary:
 					"world": _get_guide()}
 			return {}
 		return _quest_hint(s, "Lesson complete. Return to Warden Brack")
-	return {}
+	return _exam_hint(qm)
+
+
+# ---------- THE ROUTE TERMINAL LESSON ----------
+## Starts the first time the player stands on a convoy (a town in an act with a route,
+## WaypointAct.convoy_route): points at the route terminal, then explains the route map once
+## it's open. Ends when they close the route map after opening it once.
+func _route_hint() -> Dictionary:
+	if _lesson_seen(LESSON_ROUTE):
+		return {}
+	var panel := get_tree().get_first_node_in_group("waypoint_panel") as WaypointPanel
+	if panel == null:
+		return {}
+	if panel.is_route_open():
+		_route_map_seen = true
+		return {"text": "Pick a stop: the convoy drops you at its entrance",
+			"sub": "Both portals in a stop lead back to the convoy. Reach a stop's exit to open the next one on the route.",
+			"targets": panel.tutorial_target("map")}
+	if _route_map_seen:
+		_mark_lesson_seen(LESSON_ROUTE)
+		return {}
+	if not _in_town():
+		return {}
+	var act := Waypoints.act_of_scene(_current_scene_path())
+	if act == null or not act.convoy_route:
+		return {}
+	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
+	if dialogue != null and dialogue.is_open():
+		return {}
+	var term := _get_terminal()
+	if term == null:
+		return {}
+	return {"text": "The convoy travels by route: use the ROUTE TERMINAL",
+		"sub": "This act's dungeons are stops on the convoy's route. Walk up and press [%s], or click it. It's the R on your map."
+			% Interactable.key_name(),
+		"world": term}
+
+
+func _get_terminal() -> Node3D:
+	if _terminal != null and is_instance_valid(_terminal) and _terminal.is_inside_tree():
+		return _terminal
+	_terminal = null
+	if _time < _terminal_search_wait:
+		return null
+	_terminal_search_wait = _time + 1.0
+	var found := get_tree().root.find_children("*", "RouteTerminal", true, false)
+	if not found.is_empty():
+		_terminal = found[0] as Node3D
+	return _terminal
+
+
+# ---------- THE RANK EXAM LESSON ----------
+## The first rank exam is a big step (it's how scripting grows), so it gets its own lesson: from
+## the moment Sudo can give it, through sitting it, to handing it in. Only in town, where Sudo
+## is (the sandbox shows its own spec card), and never over a conversation.
+func _exam_hint(qm: QuestManager) -> Dictionary:
+	if _lesson_seen(LESSON_EXAMS):
+		return {}
+	if qm.is_completed(FIRST_EXAM):
+		_mark_lesson_seen(LESSON_EXAMS)
+		return {}
+	var def := qm.get_def(FIRST_EXAM)
+	if def == null or not _in_town():
+		return {}
+	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
+	if dialogue != null and dialogue.is_open():
+		return {}
+	var rank := Ranks.LADDER[1]["name"]
+	var s: QuestState = qm.get_state(FIRST_EXAM)
+	if s == null:
+		if not qm.can_start(def):
+			return {}
+		return {"text": "RANK EXAM UNLOCKED: talk to Examiner Sudo",
+			"sub": "Exams test your scripts, not your gear. Pass one to rank up to %s and unlock: %s. Exams have a purple marker."
+				% [rank, ", ".join(Ranks.unlock_lines(1))],
+			"world": _get_examiner()}
+	if s.status == QuestState.Status.READY_TO_TURN_IN:
+		return {"text": "Exam passed. Report to Examiner Sudo for your rank",
+			"sub": "Your grade is kept. You can retake the exam later for a better one.",
+			"world": _get_examiner()}
+	return {"text": "Sit the %s exam: ask Sudo to open the sandbox" % rank,
+		"sub": "Inside, a spec card says what your script must do. Edit it with [K], then press [%s] at the terminal to start. Graded PASS, MERIT or DISTINCTION."
+			% Interactable.key_name(),
+		"world": _get_examiner()}
 
 
 func _quest_hint(s: QuestState, done_text: String) -> Dictionary:
@@ -407,10 +517,40 @@ func _script_hint(obj: Objective, sp: SkillPanel, sp_open: bool, sp_key: String,
 	return {"text": "Press  apply()  to run your script", "targets": sp.tutorial_target("script:apply")}
 
 
+# ---------- THE QUEST LESSON ----------
+## Once a new character has their first quest (training, from Brack): the tracker, then the
+## quest log it opens. Closing the log ends it. Characters that already finished a quest skip it.
+func _quests_hint(qm: QuestManager) -> Dictionary:
+	if _lesson_seen(LESSON_QUESTS) or qm.active.is_empty():
+		return {}
+	if not qm.completed_ids.is_empty():
+		_mark_lesson_seen(LESSON_QUESTS)          # an older save: they know the tracker already
+		return {}
+	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
+	if dialogue != null and dialogue.is_open():
+		return {}                                 # wait until Brack has finished talking
+	var tracker := get_tree().get_first_node_in_group("quest_tracker") as QuestTracker
+	var log_panel := get_tree().get_first_node_in_group("quest_log") as QuestLogPanel
+	if tracker == null or log_panel == null:
+		return {}
+	if log_panel.is_open():
+		_quest_log_seen = true
+		return {"text": "The quest log: every quest you have, and what's left to do",
+			"sub": "Pick a quest on the left to read it in full. Press [J] or [ESC] to close it.",
+			"targets": [log_panel]}
+	if _quest_log_seen:
+		_mark_lesson_seen(LESSON_QUESTS)
+		return {}
+	return {"text": "This is your quest tracker",
+		"sub": "It shows your quests and what each one needs next. Click it, or press [J], to open the quest log.",
+		"targets": tracker.tutorial_target()}
+
+
 # ---------- THE SUPPORT GEM LESSON ----------
 ## Starts once training is turned in and its support gem is picked (it lands in the backpack).
-## Walks the player through socketing it next to their skill, then shows what it changed
-## until they close the skill menu.
+## Walks the player through socketing it next to their skill, then shows what it changed and
+## points at the SCRIPTING tab: opening it starts Brack's scripting lesson on the spot
+## (_start_script_lesson). Closing the menu instead ends it; Brack offers the lesson as usual.
 func _support_hint(qm: QuestManager) -> Dictionary:
 	if _lesson_seen(LESSON_SUPPORTS) or not qm.is_completed(QUEST_BASICS) or not qm.pending_choices.is_empty():
 		return {}
@@ -445,9 +585,14 @@ func _support_hint(qm: QuestManager) -> Dictionary:
 		if not sp_open:
 			_mark_lesson_seen(LESSON_SUPPORTS)
 			return {}
+		if sp_state.get("tab") == "scripting":
+			# Straight on to the scripting lesson, without closing the menu to fetch it from Brack
+			_mark_lesson_seen(LESSON_SUPPORTS)
+			_start_script_lesson(qm)
+			return {}
 		return {"text": "%s now changes your skill" % socketed.definition.support_gem.display_name,
-			"sub": "Hover it to read what it does. Right-click it to take it out again. Supports also get their own file in the SCRIPTING tab. Close the menu when you're done.",
-			"targets": sp.tutorial_target("filled_support")}
+			"sub": "Hover it to read what it does. Right-click it to take it out again. Next, your first script: open the SCRIPTING tab.",
+			"targets": sp.tutorial_target("filled_support") + sp.tutorial_target("tab_script")}
 
 	if not in_backpack:
 		return {}                                # sold or not picked: nothing to teach with
@@ -470,6 +615,16 @@ func _support_hint(qm: QuestManager) -> Dictionary:
 			return {"text": "Right-click the support gem to socket it",
 				"sub": "It goes next to the first skill it works with.", "targets": gem}
 	return {"text": "You got a support gem: press [%s] to socket it" % sp_key, "sub": why}
+
+
+## Starts PROXIMITY TRIGGER (Brack's scripting lesson) from the skill menu, with Brack's
+## opening line as a toast. Turned in to Brack as usual once it's done.
+func _start_script_lesson(qm: QuestManager) -> void:
+	var lesson := qm.get_def(QUEST_SCRIPT)
+	if lesson == null or not qm.can_start(lesson):
+		return
+	qm.start(lesson)
+	QuestItems.toast(get_tree(), "WARDEN BRACK: Before you face anything real, teach your skill to think.\nYour first script: make it fire when enemies close in.")
 
 
 # ---------- THE WAYPOINT LESSON ----------
@@ -667,6 +822,21 @@ func _get_guide() -> Node3D:
 			_guide = n as Node3D
 			break
 	return _guide
+
+
+## Examiner Sudo's NPC node, found the same way as Brack's.
+func _get_examiner() -> Node3D:
+	if _examiner != null and is_instance_valid(_examiner) and _examiner.is_inside_tree():
+		return _examiner
+	_examiner = null
+	if _time < _examiner_search_wait:
+		return null
+	_examiner_search_wait = _time + 1.0
+	for n in get_tree().root.find_children("*", "Area3D", true, false):
+		if n.get("npc_id") == EXAMINER_NPC_ID:
+			_examiner = n as Node3D
+			break
+	return _examiner
 
 
 # ---------- DRAWING ----------

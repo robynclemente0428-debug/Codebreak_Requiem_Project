@@ -7,6 +7,8 @@ extends Node3D
 ##                  the stars flow; they stretch out during a warp
 ##   running lights a red and a green light blinking at the bow corners
 ## The stern and bow are the deck's two ends along ConvoyMotion.heading.
+## Docked (the convoy moored at Hardfault's dock, act_1_dock.tscn): point `hull` at the convoy's
+## GridMap and tick `docked`. The engines idle low and nothing streams past.
 
 @export var engine_count := 3
 @export var engine_color := Color(0.35, 0.85, 1.0)
@@ -15,6 +17,13 @@ extends Node3D
 @export var streak_texture: Texture2D = preload("res://assets/textures/convoy/convoy_streak.png")
 @export var streak_length := 1.2         # metres while cruising
 @export var warp_streak_length := 5.0    # metres at full warp
+
+## The deck to dress. Empty = the area's own (its DungeonDirector's GridMap).
+@export var hull: GridMap
+## The hull's tiles, to tell its walls from its deck. Empty = the director's theme.
+@export var hull_theme: DungeonTheme
+## Moored, not under way: idling engines, no streaks.
+@export var docked := false
 
 const FLOOR_LAYER := 0
 
@@ -36,9 +45,10 @@ func _ready() -> void:
 			director = c
 		elif c is ConvoyMotion:
 			motion = c
-	if director == null or director.grid_map == null:
+	var gm: GridMap = hull if hull != null else (director.grid_map if director != null else null)
+	var theme: DungeonTheme = hull_theme if hull_theme != null else (director.dungeon_theme if director != null else null)
+	if gm == null or theme == null:
 		return
-	var gm := director.grid_map
 	_motion = motion
 	var heading := (motion.heading if motion != null else Vector3.RIGHT).normalized()
 	var side := heading.cross(Vector3.UP).normalized()
@@ -49,7 +59,7 @@ func _ready() -> void:
 	var right := -INF
 	var y := 0.0
 	# Deck cells only: the walls are on the same layer
-	var wall_id := gm.mesh_library.find_item_by_name(director.dungeon_theme.wall_name)
+	var wall_id := gm.mesh_library.find_item_by_name(theme.wall_name)
 	var cells: Array[Vector3i] = []
 	for c in gm.get_used_cells():
 		if c.y == FLOOR_LAYER and gm.get_cell_item(c) != wall_id:
@@ -70,7 +80,8 @@ func _ready() -> void:
 	var bow_row := _row_span(gm, cells, heading, side, hi, cell)
 	# The stern wall stands one cell behind the last floor row: its outer face is 1.5 cells back
 	_build_engines(heading, side, lo - cell * 1.5, stern.x, stern.y, y)
-	_build_dust(heading, side, lo, hi, left, right, y)
+	if not docked:
+		_build_dust(heading, side, lo, hi, left, right, y)
 	var bow := hi + cell * 0.5
 	_blinker(heading * bow + side * (bow_row.y + cell * 0.5) + Vector3.UP * (y + 2.2), Color(0.2, 1.0, 0.4))
 	_blinker(heading * bow + side * (bow_row.x - cell * 0.5) + Vector3.UP * (y + 2.2), Color(1.0, 0.2, 0.25))
@@ -215,7 +226,9 @@ func _process(delta: float) -> void:
 	for i in _plumes.size():
 		# Each engine flickers on its own
 		var f := 0.9 + 0.1 * sin(_t * 23.0 + i * 1.7) + 0.05 * sin(_t * 41.0 + i)
-		_plumes[i].scale = Vector3(f, 0.85 + 0.15 * f, f)
+		if docked:
+			f = 0.45 + 0.08 * sin(_t * 9.0 + i * 1.7)     # idling at the dock: short, dim, slow
+		_plumes[i].scale = Vector3(f, 0.85 + 0.15 * f, f) if not docked else Vector3(f, f * 0.6, f)
 		_lights[i].light_energy = 1.6 + 0.6 * f
 	# Streaks stretch and speed up with the convoy (a warp jump)
 	if _motion != null and _streak != null:

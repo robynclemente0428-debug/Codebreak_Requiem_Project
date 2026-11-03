@@ -18,6 +18,21 @@
 [ext_resource type="PackedScene" uid="uid://cenh85fsfixuv" path="res://scenes/loot/shop_npc/weapon_vendor.tscn" id="14_iaabq"]
 [ext_resource type="Resource" uid="uid://wdprfnpkerqq" path="res://data/shops/armour_vendor.tres" id="14_wgwnr"]
 [ext_resource type="PackedScene" uid="uid://dmy5yaa517ms6" path="res://scenes/loot/shop_npc/armour_vendor.tscn" id="15_iaabq"]
+[ext_resource type="Script" path="res://scenes/map/town/dock_defense.gd" id="16_dock"]
+
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/ammo_closed.tscn" id="furn_ammo_closed"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/ammo_small.tscn" id="furn_ammo_small"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/crate.tscn" id="furn_crate"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/crate_tarp.tscn" id="furn_crate_tarp"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/crate_tarp_large.tscn" id="furn_crate_tarp_large"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/desk_medium.tscn" id="furn_desk_medium"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/desk_small.tscn" id="furn_desk_small"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/health_pack.tscn" id="furn_health_pack"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/locker.tscn" id="furn_locker"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/mug.tscn" id="furn_mug"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_thin_tall.tscn" id="furn_shelves_thin_tall"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_short.tscn" id="furn_shelves_wide_short"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_tall.tscn" id="furn_shelves_wide_tall"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_o8aln"]
 
@@ -68,16 +83,17 @@ dungeon_level = 1
 arrival_spawn_id = &"act_1_town"
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
-[node name="PortalToConvoy" type="Marker3D" parent="Layout" unique_id=148915472]
+[node name="PortalToDock" type="Marker3D" parent="Layout" unique_id=148915472]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 0, 13)
 script = ExtResource("7_0spvh")
-target_area = "res://scenes/map/town/act_2_convoy.tscn"
-target_spawn = &"act_2_convoy"
+target_area = "res://scenes/map/town/act_1_dock.tscn"
+target_spawn = &"from_hardfault"
 arrival_spawn_id = &"from_convoy"
 room_size = Vector2i(3, 3)
+sealed_by_key = "outpost_evacuated"
 shown_after_quest = "q02b_the_road_out"
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
-metadata/_note = "The way onto the convoy: appears once THE ROAD OUT starts (Brack, after the Gate Guard)."
+metadata/_note = "The way out to the dock past the Gate. Appears once THE ROAD OUT starts, sealed until Hardfault is evacuated (DockDefense)."
 
 [node name="from_act_1_map_1" type="Marker3D" parent="Layout" unique_id=2016438431]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 17.773003, 0, 23.949562)
@@ -112,6 +128,7 @@ info_title = "Trader"
 transform = Transform3D(-0.7442046, 0, 0.66795176, 0, 1, 0, -0.66795176, 0, -0.7442046, 23.925287, 1.1000004, 24.469622)
 shop = ExtResource("10_85p20")
 stock_level = 20
+follow_act_level = false
 model_scene = ExtResource("9_rkjhf")
 npc_id = "cache"
 npc_name = "Cache"
@@ -143,3 +160,84 @@ npc_id = "armoursmith"
 npc_name = "Armoursmith"
 dialogue = null
 info_title = "Armour Vendor"
+
+[node name="DockDefense" type="Node3D" parent="." unique_id=730114531]
+script = ExtResource("16_dock")
+held_key = "outpost_evacuated"
+dock_target = "res://scenes/map/town/act_1_dock.tscn"
+load_time = 30.0
+wave_sizes = PackedInt32Array(10, 15, 20, 25)
+start_anywhere = true
+evacuate_npcs = true
+title_text = "// COVER THE EVACUATION //"
+start_toast = "THE NULL ARE IN THE OUTPOST
+Hold the portal until everyone is through."
+progress_text = "EVACUATING HARDFAULT  %d%%"
+away_text = "RETURN TO THE PORTAL: THE EVACUATION STALLED (%d%%)"
+clear_text = "EVERYONE IS THROUGH. CLEAR THE OUTPOST."
+count_text = "NULL IN THE OUTPOST: %d"
+done_toast = "HARDFAULT EVACUATED
+The portal to the dock is open."
+
+[node name="Furniture" type="Node3D" parent="NavigationRegion3D"]
+metadata/_note = "Sci-Fi Essentials Kit props (scenes/props/furniture/). Solid ones block the player and the navmesh bakes round them."
+
+[node name="SupplyStack" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_crate_tarp_large")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 18.3, 1.1, 11)
+
+[node name="SupplyCrate" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 16.95, 1.1, 12.9)
+
+[node name="AmmoCase" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_ammo_closed")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 20.6, 1.1, 10.5)
+
+[node name="LockerA" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_locker")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 14.3, 1.1, 15)
+
+[node name="LockerB" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_locker")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 14.3, 1.1, 16.05)
+
+[node name="Shelves" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_shelves_wide_tall")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 14.3, 1.1, 17.7)
+
+[node name="BrackDesk" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_desk_medium")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 14.55, 1.1, 21)
+
+[node name="BrackMug" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_mug")]
+transform = Transform3D(0.866025, 0, 0.5, 0, 1, 0, -0.5, 0, 0.866025, 14.5, 2.04, 20.3)
+
+[node name="BrackAmmo" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_ammo_small")]
+transform = Transform3D(0.173648, 0, 0.984808, 0, 1, 0, -0.984808, 0, 0.173648, 14.55, 2.04, 21.6)
+
+[node name="WeaponShelves" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_shelves_wide_short")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 12.3, 1.1, 25)
+
+[node name="WeaponAmmoA" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_ammo_small")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 12.3, 2.31, 24.6)
+
+[node name="WeaponAmmoB" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_ammo_small")]
+transform = Transform3D(0.258819, 0, 0.965926, 0, 1, 0, -0.965926, 0, 0.258819, 12.3, 2.31, 25.45)
+
+[node name="ArmourLockerA" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_locker")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 12.3, 1.1, 30)
+
+[node name="ArmourLockerB" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_locker")]
+transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 12.3, 1.1, 31.05)
+
+[node name="CornerCrate" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 13, 1.1, 33)
+
+[node name="TradeDesk" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_desk_small")]
+transform = Transform3D(6.12323e-17, 0, -1, 0, 1, 0, 1, 0, 6.12323e-17, 25.45, 1.1, 23)
+
+[node name="TradeMug" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_mug")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 25.4, 2.04, 22.4)
+
+[node name="TradeMedkit" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_health_pack")]
+transform = Transform3D(6.12323e-17, 0, -1, 0, 1, 0, 1, 0, 6.12323e-17, 25.5, 2.3, 23.5)
+
+[node name="TradeShelves" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_shelves_thin_tall")]
+transform = Transform3D(6.12323e-17, 0, -1, 0, 1, 0, 1, 0, 6.12323e-17, 25.7, 1.1, 16)
+
+[node name="TarpCrate" parent="NavigationRegion3D/Furniture" instance=ExtResource("furn_crate_tarp")]
+transform = Transform3D(0.939693, 0, 0.34202, 0, 1, 0, -0.34202, 0, 0.939693, 20.9, 1.1, 32.9)

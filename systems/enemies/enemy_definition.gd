@@ -43,3 +43,21 @@ extends Resource
 @export var skill_cooldown: float = 6.0
 @export var cooldown_jitter: float = 2.0
 @export var cast_lock_fraction: float = 1.0 
+
+@export_group("Pool")
+## Rarities this enemy can spawn as when a dungeon picks it from its theme's enemy_pool, e.g.
+## ["rare", "champion"] for an elite that never shows up as a plain mob. Empty = any rarity.
+## Hand-placed EnemyMarkers ignore this.
+@export var pool_rarities: PackedStringArray = []
+
+
+func allows_rarity(rarity: String) -> bool:
+	return pool_rarities.is_empty() or rarity in pool_rarities
+
+
+## A random enemy from `pool` that can spawn at `rarity` (null if none can).
+static func pick(pool: Array, rarity: String, rng: RandomNumberGenerator = null) -> EnemyDefinition:
+	var fits := pool.filter(func(d: EnemyDefinition) -> bool: return d != null and d.allows_rarity(rarity))
+	if fits.is_empty():
+		return null
+	return fits[rng.randi() % fits.size() if rng != null else randi() % fits.size()]

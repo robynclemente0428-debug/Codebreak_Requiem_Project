@@ -49,7 +49,7 @@ func _bind_minimap() -> void:
 	if mm == null:
 		push_warning("Dungeon: no Minimap in the scene tree")
 		return
-	mm.bind_dungeon(director, grid_map, $Enemies)
+	mm.bind_dungeon(director, grid_map, $Enemies, {"explored": instance.explored})
 
 func _spawn_enemies() -> void:
 	var skip: Array = []

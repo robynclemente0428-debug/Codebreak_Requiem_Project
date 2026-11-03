@@ -6,6 +6,13 @@ extends Control
 ##
 ## Built entirely in code (like CharacterPanel). AreaManager adds it, so there is nothing to
 ## place in main.tscn. The places come from data/waypoints/act_*.tres (see Waypoints).
+##
+## The convoy's route terminal (RouteTerminal) opens the same map in route mode (open_route):
+## only that act, its stops lit once the route has reached them (Waypoints.route_open), and a
+## click sails the party to the stop's entrance. On the U map a convoy act shows only the
+## convoy itself: its stops are reached from the terminal, not travelled to.
+##
+## The act tabs under the title (or the < > buttons) switch between acts.
 
 const ACTION := &"waypoints"                    # Input Map action, created with U if missing
 const DEFAULT_KEY := KEY_U
@@ -35,6 +42,9 @@ var _info_status: Label
 var _info_ctrl: Label                 # second line under the status: the Ctrl + click hint
 var _prev: Button
 var _next: Button
+var _hint: Label
+var _tabs: HBoxContainer              # one button per act
+var _route_act: WaypointAct           # set while open as the convoy's route terminal
 
 
 func _enter_tree() -> void:
@@ -76,11 +86,24 @@ func is_open() -> bool:
 	return _open
 
 
+## Open as the convoy's route terminal (open_route).
+func is_route_open() -> bool:
+	return _open and _route_act != null
+
+
 func toggle() -> void:
 	if _open:
 		close()
 	else:
 		open()
+
+
+## The route terminal's map: only `act`, and clicking a stop sails there.
+func open_route(act: WaypointAct) -> void:
+	if act == null:
+		return
+	_route_act = act
+	open()
 
 
 func open() -> void:
@@ -102,35 +125,43 @@ func close() -> void:
 	_open = false
 	visible = false
 	_map.hovered = null
+	_route_act = null
 
 
 func _show_act() -> void:
 	var acts := Waypoints.acts()
-	var act := acts[_act_index]
-	_title.text = "WAYPOINTS  //  %s" % act.title
-	_subtitle.text = act.subtitle
-	_prev.visible = acts.size() > 1
-	_next.visible = acts.size() > 1
+	var act := _route_act if _route_act != null else acts[_act_index]
+	var route := _route_act != null
+	_title.text = ("CONVOY ROUTE  //  %s" if route else "WAYPOINTS  //  %s") % act.title
+	_subtitle.text = "Pick a stop. The convoy drops you at its entrance." if route else act.subtitle
+	_prev.visible = acts.size() > 1 and not route
+	_next.visible = acts.size() > 1 and not route
 	_prev.disabled = _act_index == 0
 	_next.disabled = _act_index == acts.size() - 1
+	_hint.text = "ESC  CLOSE" if route else "U / ESC  CLOSE"
+	_tabs.visible = acts.size() > 1 and not route
+	_refresh_tabs()
+	_map.route = route
 	var am := get_tree().get_first_node_in_group("area_manager") as AreaManager
 	_map.show_act(act, am.current_scene_path() if am else "")
 	_on_hover(null)
 
 
 func _on_hover(w: Waypoint) -> void:
+	var route := _route_act != null
 	if w == null:
-		_info_name.text = "SELECT A DESTINATION"
+		_info_name.text = "SELECT A STOP" if route else "SELECT A DESTINATION"
 		_info_name.add_theme_color_override("font_color", COL_DIM)
-		_info_line.text = "Areas you have visited are unlocked. Click one to travel there."
+		_info_line.text = "Reach a stop's exit to open the next one on the route." if route 				else "Areas you have visited are unlocked. Click one to travel there."
 		_info_status.text = ""
 		_info_ctrl.text = ""
 		return
-	if not Waypoints.is_discovered(w):
+	if not _map.known(w):
 		_info_name.text = "???"
 		_info_name.add_theme_color_override("font_color", COL_LOCKED)
-		_info_line.text = "Undiscovered. Reach it on foot to unlock it."
-		_info_status.text = ""
+		_info_line.text = "Not on the route yet." if route else "Undiscovered. Reach it on foot to unlock it."
+		_info_status.text = Waypoints.route_blocked_reason(w, get_tree()) 				if route and Waypoints.is_convoy_stop(w) else ""
+		_info_status.add_theme_color_override("font_color", COL_WARN)
 		_info_ctrl.text = ""
 		return
 	_info_name.text = w.display_name.to_upper()
@@ -143,6 +174,14 @@ func _on_hover(w: Waypoint) -> void:
 		for id in threats:
 			tags.append(DungeonThreats.label(id))
 		_info_line.text += "   [%s]" % "  ·  ".join(tags)
+	if route:
+		if Waypoints.is_cleared(w):
+			_info_line.text += "   CLEARED"
+		var reason := "YOU ARE HERE" if w.kind == Waypoint.Kind.TOWN 				else Waypoints.route_blocked_reason(w, get_tree())
+		_info_status.text = "CLICK TO SET COURSE" if reason == "" else reason
+		_info_status.add_theme_color_override("font_color", ACCENT if reason == "" else COL_WARN)
+		_info_ctrl.text = ""
+		return
 	var why := Waypoints.blocked_reason(w, get_tree())
 	_info_status.text = "CLICK TO TRAVEL" if why == "" else why
 	_info_status.add_theme_color_override("font_color", ACCENT if why == "" else COL_WARN)
@@ -152,7 +191,12 @@ func _on_hover(w: Waypoint) -> void:
 
 
 func _on_pick(w: Waypoint, new_instance := false) -> void:
-	if Waypoints.travel(w, get_tree(), new_instance):
+	var went := false
+	if _route_act != null:
+		went = Waypoints.is_convoy_stop(w) and Waypoints.sail(w, get_tree())
+	else:
+		went = Waypoints.travel(w, get_tree(), new_instance)
+	if went:
 		close()
 	else:
 		_on_hover(w)                                  # shows why not
@@ -170,8 +214,26 @@ func tutorial_target(id: String) -> Array[Control]:
 
 
 func _change_act(step: int) -> void:
-	_act_index = clampi(_act_index + step, 0, Waypoints.acts().size() - 1)
+	_pick_act(_act_index + step)
+
+
+func _pick_act(index: int) -> void:
+	_act_index = clampi(index, 0, Waypoints.acts().size() - 1)
 	_show_act()
+
+
+## One tab per act, the shown one lit. Built again only when the number of acts changes.
+func _refresh_tabs() -> void:
+	var acts := Waypoints.acts()
+	if _tabs.get_child_count() != acts.size():
+		for c in _tabs.get_children():
+			c.queue_free()
+		for i in acts.size():
+			var b := _tab_button(acts[i].title)
+			b.pressed.connect(_pick_act.bind(i))
+			_tabs.add_child(b)
+	for i in _tabs.get_child_count():
+		(_tabs.get_child(i) as Button).set_pressed_no_signal(i == _act_index)
 
 
 # ---------- BUILDING THE UI ----------
@@ -228,6 +290,10 @@ func _build_ui() -> void:
 	close_btn.pressed.connect(close)
 	head.add_child(close_btn)
 
+	_tabs = HBoxContainer.new()
+	_tabs.add_theme_constant_override("separation", 8)
+	col.add_child(_tabs)
+
 	var line := ColorRect.new()
 	line.color = Color(ACCENT, 0.35)
 	line.custom_minimum_size = Vector2(0, 2)
@@ -262,9 +328,9 @@ func _build_ui() -> void:
 	_info_ctrl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	actions.add_child(_info_ctrl)
 
-	var hint := _label("U / ESC  CLOSE", 15, Color(COL_DIM, 0.7))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	col.add_child(hint)
+	_hint = _label("U / ESC  CLOSE", 15, Color(COL_DIM, 0.7))
+	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	col.add_child(_hint)
 
 
 func _label(text: String, fsize: int, col: Color) -> Label:
@@ -298,6 +364,30 @@ func _button(text: String) -> Button:
 	return b
 
 
+## An act tab: dim, lit while its act is shown.
+func _tab_button(text: String) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.toggle_mode = true
+	b.focus_mode = Control.FOCUS_NONE
+	b.custom_minimum_size = Vector2(130, 38)
+	if _font:
+		b.add_theme_font_override("font", _font)
+	b.add_theme_font_size_override("font_size", 20)
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
+		var lit: bool = state.contains("pressed")
+		var sb := StyleBoxFlat.new()
+		sb.bg_color = Color(ACCENT, 0.22) if lit else (Color(0.0, 0.25, 0.32, 0.95) if state == "hover" 				else Color(0.02, 0.08, 0.12, 0.9))
+		sb.border_color = Color(ACCENT, 0.9 if lit else 0.35)
+		sb.set_border_width_all(2)
+		b.add_theme_stylebox_override(state, sb)
+	b.add_theme_color_override("font_color", Color(ACCENT, 0.6))
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_color_override("font_pressed_color", Color.WHITE)
+	b.add_theme_color_override("font_hover_pressed_color", Color.WHITE)
+	return b
+
+
 ## The chamfered frame, same look as the other panels.
 class _Frame extends Control:
 	func _draw() -> void:
@@ -322,6 +412,7 @@ class _MapView extends Control:
 	const NODE_R := 30.0
 	var font: Font
 	var hovered: Waypoint
+	var route := false                  # the route terminal's map: stops light up as the route opens
 	var _act: WaypointAct
 	var _here := ""
 	var _t := 0.0
@@ -336,6 +427,25 @@ class _MapView extends Control:
 		hovered = null
 		queue_redraw()
 
+	## Lit and clickable: discovered on the waypoint map; on the route map, open on the route
+	## (the convoy itself once visited).
+	## The U map leaves out a convoy act's stops (the route terminal lists them).
+	func shown(w: Waypoint) -> bool:
+		return route or not Waypoints.is_convoy_stop(w)
+
+	func _shown_list() -> Array[Waypoint]:
+		var out: Array[Waypoint] = []
+		if _act != null:
+			for w in _act.waypoints:
+				if shown(w):
+					out.append(w)
+		return out
+
+	func known(w: Waypoint) -> bool:
+		if route and Waypoints.is_convoy_stop(w):
+			return Waypoints.route_open(w)
+		return Waypoints.is_discovered(w)
+
 	static func kind_color(w: Waypoint) -> Color:
 		match w.kind:
 			Waypoint.Kind.TOWN: return WaypointPanel.COL_TOWN
@@ -348,13 +458,15 @@ class _MapView extends Control:
 			queue_redraw()                                  # pulsing "you are here" ring
 
 	func _pos(w: Waypoint) -> Vector2:
+		if _shown_list().size() == 1:
+			return size * 0.5                          # alone (a convoy act): in the middle
 		var pad := Vector2(90, 70)
 		return pad + w.map_position * (size - pad * 2.0)
 
 	func _at(p: Vector2) -> Waypoint:
 		if _act == null:
 			return null
-		for w in _act.waypoints:
+		for w in _shown_list():
 			if _pos(w).distance_to(p) <= NODE_R + 8.0:
 				return w
 		return null
@@ -366,7 +478,7 @@ class _MapView extends Control:
 				hovered = w
 				hover_changed.emit(w)
 				mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND \
-						if w != null and Waypoints.is_discovered(w) else Control.CURSOR_ARROW
+						if w != null and known(w) else Control.CURSOR_ARROW
 		elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			var w := _at(event.position)
 			if w != null:
@@ -385,21 +497,21 @@ class _MapView extends Control:
 			return
 		# links (each pair once)
 		var drawn := {}
-		for w in _act.waypoints:
+		for w in _shown_list():
 			for other_id in w.links:
 				var o := _act.find(other_id)
-				if o == null:
+				if o == null or not shown(o):
 					continue
 				var key := [w.id, o.id]
 				key.sort()
 				if drawn.has(str(key)):
 					continue
 				drawn[str(key)] = true
-				var both := Waypoints.is_discovered(w) and Waypoints.is_discovered(o)
+				var both := known(w) and known(o)
 				_link(_pos(w), _pos(o), both)
 		# nodes, with their name below (or above, when that would overlap another name)
 		var sides := _label_sides()
-		for w in _act.waypoints:
+		for w in _shown_list():
 			_node(w, sides.get(w, 0))
 
 	func _link(a: Vector2, b: Vector2, lit: bool) -> void:
@@ -433,10 +545,10 @@ class _MapView extends Control:
 		if font == null:
 			return out
 		var placed: Array[Rect2] = []
-		for w in _act.waypoints:                      # "YOU ARE HERE" tags take their space first
-			if Waypoints.is_discovered(w) and Waypoints.normalize(w.scene) == _here:
+		for w in _shown_list():                      # "YOU ARE HERE" tags take their space first
+			if known(w) and Waypoints.normalize(w.scene) == _here:
 				placed.append(_text_rect(_pos(w), "YOU ARE HERE", HERE_SIZE, -NODE_R - 16))
-		for w in _act.waypoints:
+		for w in _shown_list():
 			var p := _pos(w)
 			var name := _name_of(w)
 			var below := _text_rect(p, name, NAME_SIZE, NODE_R + 30)
@@ -464,26 +576,26 @@ class _MapView extends Control:
 		return false
 
 	func _name_of(w: Waypoint) -> String:
-		return w.display_name.to_upper() if Waypoints.is_discovered(w) else "???"
+		return w.display_name.to_upper() if known(w) else "???"
 
 	func _is_here(w: Waypoint) -> bool:
-		return Waypoints.is_discovered(w) and Waypoints.normalize(w.scene) == _here
+		return known(w) and Waypoints.normalize(w.scene) == _here
 
 	func _node(w: Waypoint, side := 0) -> void:
 		var p := _pos(w)
-		var known := Waypoints.is_discovered(w)
-		var col := kind_color(w) if known else WaypointPanel.COL_LOCKED
-		var hot := w == hovered and known
+		var lit := known(w)
+		var col := kind_color(w) if lit else WaypointPanel.COL_LOCKED
+		var hot := w == hovered and lit
 		var r := NODE_R * (1.12 if hot else 1.0)
 		var shape := _shape(w.kind, p, r)
-		draw_colored_polygon(shape, Color(col, 0.22 if known else 0.10))
+		draw_colored_polygon(shape, Color(col, 0.22 if lit else 0.10))
 		var outline := PackedVector2Array(shape)
 		outline.append(shape[0])
-		if known:
+		if lit:
 			draw_polyline(outline, Color(col, 0.25), 9.0 if hot else 6.0, true)
 		draw_polyline(outline, col, 2.5, true)
 
-		var here := known and Waypoints.normalize(w.scene) == _here
+		var here := lit and Waypoints.normalize(w.scene) == _here
 		if here:
 			var pulse := 0.5 + 0.5 * sin(_t * 4.0)
 			draw_arc(p, r + 10.0 + pulse * 6.0, 0.0, TAU, 48, Color(Color.WHITE, 0.35 + 0.4 * pulse), 2.0, true)
@@ -491,10 +603,10 @@ class _MapView extends Control:
 		if font == null:
 			return
 		var icon := "?"
-		if known:
+		if lit:
 			icon = "H" if w.kind == Waypoint.Kind.TOWN else ("!" if w.kind == Waypoint.Kind.BOSS else str(w.dungeon_level))
 		draw_string(font, p + Vector2(-40, 9), icon, HORIZONTAL_ALIGNMENT_CENTER, 80, 26,
-				Color.WHITE if known else col)
+				Color.WHITE if lit else col)
 		var name := _name_of(w)
 		var name_y := r + 30.0
 		if side == ABOVE:
@@ -502,7 +614,7 @@ class _MapView extends Control:
 		elif side == LOWER:
 			name_y += LINE_DROP
 		draw_string(font, p + Vector2(-110, name_y), name, HORIZONTAL_ALIGNMENT_CENTER, 220, NAME_SIZE,
-				WaypointPanel.COL_TEXT if known else col)
+				WaypointPanel.COL_TEXT if lit else col)
 		if here:
 			draw_string(font, p + Vector2(-110, -r - 16), "YOU ARE HERE", HORIZONTAL_ALIGNMENT_CENTER,
 					220, HERE_SIZE, Color.WHITE)

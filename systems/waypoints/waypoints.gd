@@ -11,9 +11,12 @@ extends RefCounted
 
 const ACT_FOLDER := "res://data/waypoints/"
 const SAVE_KEY := "waypoints"
+## Convoy stops whose exit portal has been reached (Portal.clears_stop), saved like the waypoints.
+const SAVE_KEY_CLEARED := "route_cleared"
 
 static var _acts: Array[WaypointAct] = []
 static var _visited: Dictionary = {}          # waypoint id -> true
+static var _cleared: Dictionary = {}          # convoy stop id -> true
 static var _loaded_for := -2                  # save slot _visited was read from (-1 = no save)
 
 
@@ -43,6 +46,15 @@ static func for_scene(scene_path: String) -> Waypoint:
 		if w != null:
 			return w
 	return null
+
+
+## The highest dungeon level on an act's map (Act I: 10, Act II: 20). Town shops stock at it.
+static func top_level(act: WaypointAct) -> int:
+	var best := 0
+	if act != null:
+		for w in act.waypoints:
+			best = maxi(best, w.dungeon_level)
+	return best
 
 
 static func act_of_scene(scene_path: String) -> WaypointAct:
@@ -77,16 +89,86 @@ static func _ensure_loaded() -> void:
 		return
 	_loaded_for = slot
 	_visited.clear()
+	_cleared.clear()
 	if slot < 0:
 		return                                    # no character loaded (running a scene with F6)
 	for id in SaveManager.get_data(slot).get(SAVE_KEY, []):
 		_visited[str(id)] = true
+	for id in SaveManager.get_data(slot).get(SAVE_KEY_CLEARED, []):
+		_cleared[str(id)] = true
 
 
 static func _write_to_saves() -> void:
 	var ids: Array = _visited.keys()
+	var cleared: Array = _cleared.keys()
 	for slot in SaveManager.party:
 		SaveManager.get_data(slot)[SAVE_KEY] = ids.duplicate()
+		SaveManager.get_data(slot)[SAVE_KEY_CLEARED] = cleared.duplicate()
+
+
+# ---------- THE CONVOY ROUTE ----------
+## A dungeon on a convoy act: reached from the route terminal, not the waypoint map.
+static func is_convoy_stop(w: Waypoint) -> bool:
+	if w == null or w.kind == Waypoint.Kind.TOWN:
+		return false
+	var act := act_of_scene(w.scene)
+	return act != null and act.convoy_route
+
+
+static func is_cleared(w: Waypoint) -> bool:
+	_ensure_loaded()
+	return w != null and _cleared.has(w.id)
+
+
+## True when the route terminal can send the party to this stop: the first stop always, the
+## others once the stop before them (route_after) is cleared.
+static func route_open(w: Waypoint) -> bool:
+	if not is_convoy_stop(w):
+		return false
+	if w.route_after == "":
+		return true
+	var act := act_of_scene(w.scene)
+	return is_cleared(act.find(w.route_after))
+
+
+## Marks a convoy stop cleared (its exit portal was reached). Returns the stops this opened, so
+## the portal can say so; empty when it was already cleared.
+static func clear_stop(id: String) -> Array[Waypoint]:
+	_ensure_loaded()
+	var opened: Array[Waypoint] = []
+	if id == "" or _cleared.has(id):
+		return opened
+	_cleared[id] = true
+	_write_to_saves()
+	for act in acts():
+		for w in act.waypoints:
+			if w.route_after == id:
+				opened.append(w)
+	return opened
+
+
+## Why the route terminal can't send the party to `w` now, or "" if it can.
+static func route_blocked_reason(w: Waypoint, tree: SceneTree) -> String:
+	if not route_open(w):
+		var act := act_of_scene(w.scene)
+		var before := act.find(w.route_after) if act != null else null
+		return "LOCKED: CLEAR %s FIRST" % (before.display_name.to_upper() if before else "THE STOP BEFORE")
+	var am := tree.get_first_node_in_group("area_manager") as AreaManager
+	if am == null:
+		return "NO AREA MANAGER"
+	if am.is_busy():
+		return "TRAVELLING..."
+	return ""
+
+
+## Sends the party from the route terminal to a stop's entrance. Rejoins its open instance like
+## walking in through a portal, but always at the entrance, not where they last stood.
+static func sail(w: Waypoint, tree: SceneTree) -> bool:
+	if route_blocked_reason(w, tree) != "":
+		return false
+	var am := tree.get_first_node_in_group("area_manager") as AreaManager
+	am.go_to(w.scene, w.spawn_id, w.dungeon_level)
+	return true
 
 
 # ---------- TRAVEL ----------
@@ -95,6 +177,8 @@ static func _write_to_saves() -> void:
 static func blocked_reason(w: Waypoint, tree: SceneTree, new_instance := false) -> String:
 	if not is_discovered(w):
 		return "UNDISCOVERED"
+	if is_convoy_stop(w):
+		return "BOARD THE CONVOY: USE ITS ROUTE TERMINAL"
 	var am := tree.get_first_node_in_group("area_manager") as AreaManager
 	if am == null:
 		return "NO AREA MANAGER"

@@ -161,6 +161,17 @@ static func waiting(qm: QuestManager) -> PackedStringArray:
 	return out
 
 
+## True for a rank exam quest (one of the LADDER exams). Exams get their own colour on quest
+## markers, the NPC card and the tracker (NpcInfoPanel.COL_EXAM).
+static func is_exam(quest_id: String) -> bool:
+	if quest_id == "":
+		return false
+	for r in LADDER:
+		if r["exam"] == quest_id:
+			return true
+	return false
+
+
 static func current(qm: QuestManager) -> String:
 	return LADDER[index_of(qm)]["name"]
 

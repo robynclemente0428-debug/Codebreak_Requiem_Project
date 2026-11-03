@@ -21,11 +21,10 @@ id = &"barrier"
 display_name = "Barrier"
 kind = 1
 flag_key = "barrier"
-step = 4.0
+step = 0.03
 min_steps = 0
 max_steps = 5
 cost_per_step = 1.5
-unit = ""
 defensive = true
 
 [sub_resource type="Resource" id="Knob_guard"]

@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://6u4xrmsv0ii1"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://assets/models/enemy/loop_hound/loop_hound_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_ieh4a"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="5_3yl43"]
+
+[resource]
+script = ExtResource("1_def")
+id = "loop_hound"
+display_name = "Loop Hound"
+allowed_modifier_tags = Array[int]([0, 3, 4, 5])
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+capsule_radius = 0.45
+capsule_height = 1.0
+max_health = 45.0
+armour = 22.0
+move_speed = 6.0
+attack_range = 1.4
+min_attack_damage = 5.0
+max_attack_damage = 20.0
+attack_speed = 1.2
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

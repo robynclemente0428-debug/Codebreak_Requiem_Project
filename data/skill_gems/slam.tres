@@ -11,14 +11,14 @@
 script = ExtResource("5_jeq0f")
 stat = 10
 op = 2
-value = 1.5
+value = 1.0
 metadata/_custom_type_script = "uid://c4ewwdjeurelq"
 
 [sub_resource type="Resource" id="Resource_m3hrv"]
 script = ExtResource("5_jeq0f")
 stat = 5
 op = 1
-value = -0.35
+value = -0.2
 metadata/_custom_type_script = "uid://c4ewwdjeurelq"
 
 [resource]

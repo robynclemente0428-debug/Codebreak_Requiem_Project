@@ -118,9 +118,11 @@ func populate(level: int, skip_rooms: Array, is_floor: Callable, to_world: Calla
 			if used.has(cell) or not _is_floor.call(Vector3i(cell.x, 0, cell.y)):
 				continue
 			used[cell] = true
-			var def: EnemyDefinition = dungeon_theme.enemy_pool[
-				rng.randi() % dungeon_theme.enemy_pool.size()]
-			_spawn_threat(def, _roll_rarity(weights, rng), cell)
+			var rarity := _roll_rarity(weights, rng)
+			var def := EnemyDefinition.pick(dungeon_theme.enemy_pool, rarity, rng)
+			if def == null:
+				continue
+			_spawn_threat(def, rarity, cell)
 			placed += 1
 			spawned += 1
 
@@ -162,7 +164,10 @@ func _populate_corridors(rng: RandomNumberGenerator, used: Dictionary) -> int:
 		var size := rng.randi_range(corridor_group_min, corridor_group_max)
 		if "swarm" in threats:
 			size *= DungeonThreats.SWARM_COUNT
-		var def: EnemyDefinition = pool[rng.randi() % pool.size()]   # one kind per group
+		# One kind per group, and only ones that can roll normal (elites don't come in packs)
+		var def := EnemyDefinition.pick(pool, "normal", rng)
+		if def == null:
+			break
 		for i in size:
 			# members stand on free floor next to the anchor
 			var spot := anchor

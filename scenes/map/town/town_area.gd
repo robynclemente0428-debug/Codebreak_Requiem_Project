@@ -65,7 +65,8 @@ func _bind_minimap() -> void:
 				g.set_tile(Vector2i(cell.x, cell.z), GridData.Tile.FLOOR)
 		_director.grid = g
 	var npcs: Array = find_children("*", "DialogueNPC", true, false)
-	mm.bind_dungeon(_director, _director.grid_map, null, {"town": true, "npcs": npcs})
+	var terminals: Array = find_children("*", "RouteTerminal", true, false)
+	mm.bind_dungeon(_director, _director.grid_map, null, {"town": true, "npcs": npcs, "terminals": terminals})
 
 
 ## Seeded by the scene's name, so the stains are in the same places every visit.
@@ -115,6 +116,8 @@ func _read_layout() -> void:
 		portal.target_area = p.target_area
 		portal.target_spawn = p.target_spawn
 		portal.dungeon_level = int(p.get("dungeon_level", 0))
+		portal.sealed_by_key = str(p.get("sealed_by_key", ""))       # the dock: sealed until it's held
+		portal.open_after_quest = str(p.get("open_after_quest", ""))
 		portal.set_routing(p)
 		add_child(portal)
 		portal.global_position = _cell_to_world(p.cell)

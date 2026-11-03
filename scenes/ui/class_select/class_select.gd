@@ -174,15 +174,31 @@ func _show_model(c: ClassData) -> void:
 		model.scale = Vector3.ONE * c.model_scale
 		model.position = c.model_offset
 
-	# Play an "idle" animation if the model has one
+	# Stand in the idle pose, looping. Class models carry the shared player_anims library,
+	# where it is "player_anims/Idle" (see model.gd); a model of its own may call it "idle".
 	var players := model.find_children("*", "AnimationPlayer", true, false)
-	if not players.is_empty() and players[0].has_animation("idle"):
-		players[0].play("idle")
+	if not players.is_empty():
+		var ap := players[0] as AnimationPlayer
+		var idle := _idle_clip(ap)
+		if idle != "":
+			ap.get_animation(idle).loop_mode = Animation.LOOP_LINEAR    # model.gd loops it too
+			ap.play(idle)
 
 	# Small pop-in (scales the pivot, so it doesn't fight model_scale)
 	model_pivot.scale = Vector3.ONE * 0.85
 	create_tween().tween_property(model_pivot, "scale", Vector3.ONE, 0.35) \
 		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+## The model's idle clip: "player_anims/Idle", "idle", or any clip named like an idle.
+static func _idle_clip(ap: AnimationPlayer) -> String:
+	for clip in ["player_anims/Idle", "idle", "Idle"]:
+		if ap.has_animation(clip):
+			return clip
+	for clip in ap.get_animation_list():
+		if String(clip).get_file().to_lower().begins_with("idle"):
+			return clip
+	return ""
+
 
 func _play_swap_animation() -> void:
 	if _swap_tween:

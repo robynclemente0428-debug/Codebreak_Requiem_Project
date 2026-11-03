@@ -47,6 +47,8 @@ var _ghost_delay := 0.0
 var _flash := 0.0
 var _shake := 0.0
 var _time := 0.0
+var _barrier_flash := 0.0  # bright pulse when a barrier goes up
+var _last_barrier := 0.0
 
 
 func _init() -> void:
@@ -141,6 +143,11 @@ func _process(delta: float) -> void:
 		_ghost = move_toward(_ghost, _target, delta * 0.8)
 	_flash = move_toward(_flash, 0.0, delta * 4.0)
 	_shake = move_toward(_shake, 0.0, delta * 5.0)
+	var b := _health.barrier if _health != null else 0.0
+	if b > _last_barrier + 0.5:
+		_barrier_flash = 1.0
+	_last_barrier = b
+	_barrier_flash = move_toward(_barrier_flash, 0.0, delta * 3.0)
 	queue_redraw()
 
 
@@ -169,7 +176,14 @@ func _draw() -> void:
 	var low := alive and _target <= 0.5
 	var pulse := 0.5 + 0.5 * sin(_time * 8.0)
 	var accent := _bar_color(_shown)
+	var shield := _health.barrier if _health != null else 0.0
+	var shielded := shield >= 1.0 and _max > 0.0
+	var shield_left := _health.barrier_time_left() if shielded else 0.0
+	# Fades in and out in its last second, so you can see it's about to drop
+	var shield_alpha := 1.0 if shield_left * SkillBehavior.BARRIER_SECONDS > 1.0 		else 0.45 + 0.55 * (0.5 + 0.5 * sin(_time * 16.0))
 	var frame_col := accent.lerp(Color.WHITE, _flash)
+	if shielded:
+		frame_col = frame_col.lerp(COL_BARRIER, 0.75).lerp(Color.WHITE, _barrier_flash * 0.6)
 
 	# Hit shake
 	if _shake > 0.0:
@@ -196,11 +210,15 @@ func _draw() -> void:
 	_text(fnt, Vector2(pad, base_y), label_text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, fs, accent)
 	var max_shown := roundi(_max)
 	var readout := "%03d / %03d" % [mini(ceili(_shown * _max), max_shown), max_shown]
-	var shield := _health.barrier if _health != null else 0.0
-	if shield >= 1.0:
-		readout = "+%d  %s" % [roundi(shield), readout]       # barrier from skill scripts
 	_text(fnt, Vector2(pad, base_y), readout, HORIZONTAL_ALIGNMENT_RIGHT, w - pad * 2.0, fs,
 		accent.lerp(Color.WHITE, 0.6))
+	if shielded:
+		# Barrier from skill scripts, in cyan, just left of the life readout
+		var rw := fnt.get_string_size(readout, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		var tag := "BARRIER %d" % roundi(shield)
+		_text(fnt, Vector2(pad, base_y), tag, HORIZONTAL_ALIGNMENT_RIGHT,
+			w - pad * 2.0 - rw - 18.0 * s, fs,
+			Color(COL_BARRIER.lerp(Color.WHITE, 0.3 + 0.5 * _barrier_flash), shield_alpha))
 	if low:
 		_text(fnt, Vector2(pad, base_y), "! LOW VITALS !", HORIZONTAL_ALIGNMENT_CENTER,
 			w - pad * 2.0, fs - roundi(6.0 * s), Color(col_crit, 0.4 + 0.6 * pulse))
@@ -222,11 +240,23 @@ func _draw() -> void:
 		if f > 0.0:
 			_seg(x, bar_y, sw, f, fill_col, true)                          # health
 
-	# Barrier: a cyan strip along the top of the bar, as long as the shield is big
-	if shield >= 1.0 and _max > 0.0:
-		var bw := (bar_w + slant) * clampf(shield / _max, 0.0, 1.0)
-		draw_line(Vector2(bar_x, bar_y - 3.0 * s), Vector2(bar_x + bw, bar_y - 3.0 * s),
-			COL_BARRIER, 3.0 * s)
+	# Barrier: cyan segments laid over the life bar, as many as the shield is big
+	# (a 15% barrier covers 15% of the bar), plus a strip above that drains with its time.
+	if shielded:
+		var frac := clampf(shield / _max, 0.0, 1.0)
+		var fill := Color(COL_BARRIER.lerp(Color.WHITE, 0.4 * _barrier_flash), 0.92 * shield_alpha)
+		for i in n:
+			var f := clampf(frac * n - i, 0.0, 1.0)
+			if f <= 0.0:
+				break
+			_seg(bar_x + i * (sw + seg_gap), bar_y, sw, f, fill, true)
+		var edge := COL_BARRIER.lerp(Color.WHITE, 0.5)
+		edge.a = shield_alpha
+		var tx := bar_x + (bar_w + slant) * shield_left
+		draw_line(Vector2(bar_x + slant, bar_y - 5.0 * s), Vector2(tx + slant, bar_y - 5.0 * s),
+			Color(COL_BARRIER, 0.3 * shield_alpha), 9.0 * s)                # glow
+		draw_line(Vector2(bar_x + slant, bar_y - 5.0 * s), Vector2(tx + slant, bar_y - 5.0 * s),
+			edge, 4.0 * s)
 
 	# Tick marks under the bar, every 5 segments
 	for i in range(0, n + 1, 5):

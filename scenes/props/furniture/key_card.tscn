@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/Sci-Fi Essentials Kit[Standard]/additional_asset/glTF/Prop_KeyCard.gltf" id="1_86bcx"]
+
+[node name="KeyCard" type="Node3D" unique_id=106649142]
+
+[node name="Model" type="Node3D" parent="." unique_id=1496174846 instance=ExtResource("1_86bcx")]

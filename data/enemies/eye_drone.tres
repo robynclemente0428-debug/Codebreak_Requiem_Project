@@ -1,0 +1,37 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://yo5adppnm8wq"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://assets/models/enemy/eye_drone/eye_drone_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_gem"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_ubwmg"]
+[ext_resource type="Resource" uid="uid://dg2sp662md7hi" path="res://data/skill_gems/shoot.tres" id="5_shoot"]
+
+[resource]
+script = ExtResource("1_def")
+id = "eye_drone"
+display_name = "Watcher Drone"
+allowed_modifier_tags = Array[int]([1, 3, 4])
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+capsule_radius = 0.35
+capsule_height = 1.7
+max_health = 32.0
+armour = 15.0
+move_speed = 3.6
+preferred_distance = 4.0
+flee_distance = 2.5
+kite_delay_min = 0.1
+min_attack_damage = 5.0
+max_attack_damage = 20.0
+attack_speed = 1.0
+skills = Array[ExtResource("4_gem")]([ExtResource("5_shoot")])
+skill_flag_overrides = {
+"shoot": {
+"range": 16.0,
+"speed": 20.0
+}
+}
+basic_attack_enabled = false
+skill_cooldown = 0.0
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

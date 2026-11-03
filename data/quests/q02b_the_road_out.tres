@@ -3,9 +3,23 @@
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
 
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("3_rec")
+description = "Cover Hardfault's evacuation"
+kind = "recover"
+target = "outpost_evacuated"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("3_rec")
+description = "Hold the dock while the convoy loads"
+kind = "recover"
+target = "dock_held"
+
 [sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
-description = "Board the convoy docked past the Gate"
+description = "Board the convoy"
 kind = "enter_area"
 target = "act_2_convoy"
 metadata/_custom_type_script = "uid://bo3sbbxgckkre"
@@ -15,8 +29,8 @@ script = ExtResource("2_quest")
 id = "q02b_the_road_out"
 title = "THE ROAD OUT"
 description = "Hardfault can't hold out here. It's leaving, and taking everyone with it.
-The convoy is docked past the Gate. Get on board and report to Brack."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
+The Null know it too. Cover the evacuation while everyone gets out to the dock, hold the dock while the convoy loads, then get on board and report to Brack."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_2"), SubResource("Objective_1")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q02_corrupted_gate_guard"])
 reward_credits = 100

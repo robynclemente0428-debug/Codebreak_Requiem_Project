@@ -218,14 +218,25 @@ func write_save() -> void:
 	if save_slot < 0:
 		return
 	var data := SaveManager.get_data(save_slot)   # the live dictionary, so edits get saved
-	data['skills'] = _collect_skills()
-	data['script_set'] = skills.script_set
-	data['script_set_names'] = skills.set_names_list()
+	if has_meta(&"exam_save"):
+		# In Sudo's sandbox: save the loadout the player walked in with, not the exam's
+		data.merge(get_meta(&"exam_save"), true)
+	else:
+		data.merge(loadout_save(), true)
 	data['script_library'] = skills.library.duplicate(true)
-	data['equipment'] = _collect_equipment()
-	data['inventory'] = _collect_inventory()
 	data['currency'] = currency.to_dict()
 	data['quests'] = quests.to_dict()   
+
+
+## Gear, backpack and skills in save form (ExamChamber keeps this while the exam loadout is on).
+func loadout_save() -> Dictionary:
+	return {
+		'skills': _collect_skills(),
+		'script_set': skills.script_set,
+		'script_set_names': skills.set_names_list(),
+		'equipment': _collect_equipment(),
+		'inventory': _collect_inventory(),
+	}
 
 
 func _collect_equipment() -> Dictionary:

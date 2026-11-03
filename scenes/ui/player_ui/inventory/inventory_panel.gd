@@ -8,6 +8,9 @@ extends Control
 ## right-click or double-click to equip / unequip. The buttons at the bottom act on the
 ## selected item. Hold CTRL to compare: the card adds how your stats would change, and the
 ## item it would replace is shown next to it. With nothing hovered, CTRL shows the selected item.
+##
+## The backpack has a second tab, QUEST ITEMS: the keys the player carries (QuestItems.carried).
+## They take no backpack space and can't be dropped or sold. Hover one for its card.
 
 @export var toggle_key: Key = KEY_I
 @export var panel_width: float = 620.0
@@ -91,9 +94,19 @@ var _suppress_refresh := false
 
 var _selected: ItemInstance
 var _hover_slot: ItemSlot                    # the slot under the mouse (its item can change)
+var _quest_row: GridContainer                 # the QUEST ITEMS tab's icons
+var _quest_none: Label
+var _bag_scroll: ScrollContainer
+var _quest_scroll: ScrollContainer
+var _tab_bag: Button
+var _tab_quest: Button
+var _sort_btn: Button
+var _quest_tab := false                       # the QUEST ITEMS tab is showing
+var _hover_quest: _QuestItemIcon              # the quest item under the mouse
+var _quests: QuestManager                     # the player's, for the pouch (found on open)
 var _tip: TipFrame                           # card for the hovered item
 var _tip_cmp: TipFrame                       # CTRL: card for the item it would replace
-var _tip_anchor: ItemSlot                    # the slot the cards sit next to
+var _tip_anchor: Control                     # the slot the cards sit next to
 
 var _eq_slots: Dictionary = {}              # slot id -> ItemSlot
 var _grid_slots: Array[ItemSlot] = []
@@ -180,7 +193,7 @@ func open() -> void:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if _inv == null or _equip == null:
 		push_warning("InventoryPanel: not bound. Is bind() being called from the player?")
-	_refresh()
+	_show_tab(false)                               # opens on the backpack (refreshes)
 	if not visible:
 		_set_offsets(false)
 		modulate.a = 0.0
@@ -275,9 +288,17 @@ func _build_ui() -> void:
 	var bag_head := HBoxContainer.new()
 	bag_head.add_theme_constant_override("separation", 12)
 	col.add_child(bag_head)
-	var bag_title := _label("BACKPACK", 17, COL_DIM)
-	bag_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bag_head.add_child(bag_title)
+	_tab_bag = _button("BACKPACK", 15)
+	_tab_bag.toggle_mode = true
+	_tab_bag.pressed.connect(_show_tab.bind(false))
+	bag_head.add_child(_tab_bag)
+	_tab_quest = _button("QUEST ITEMS", 15)
+	_tab_quest.toggle_mode = true
+	_tab_quest.pressed.connect(_show_tab.bind(true))
+	bag_head.add_child(_tab_quest)
+	var tab_spacer := Control.new()
+	tab_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bag_head.add_child(tab_spacer)
 	_count_label = _label("", 17, accent)
 	bag_head.add_child(_count_label)
 	
@@ -288,23 +309,34 @@ func _build_ui() -> void:
 	_credit_label = _label("", 17, Color(1.0, 0.82, 0.30))
 	bag_head.add_child(_credit_label)
 	
-	var sort_btn := _button("SORT", 15)
-	sort_btn.pressed.connect(_on_sort_pressed)
-	bag_head.add_child(sort_btn)
+	_sort_btn = _button("SORT", 15)
+	_sort_btn.pressed.connect(_on_sort_pressed)
+	bag_head.add_child(_sort_btn)
 
 	# Backpack grid
-	var scroll := ScrollContainer.new()
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.custom_minimum_size.y = 120.0
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_style_scrollbar(scroll.get_v_scroll_bar())
-	col.add_child(scroll)
+	_bag_scroll = _make_scroll()
+	col.add_child(_bag_scroll)
 	_grid = GridContainer.new()
 	_grid.columns = columns
 	_grid.add_theme_constant_override("h_separation", 6)
 	_grid.add_theme_constant_override("v_separation", 6)
-	scroll.add_child(_grid)
+	_bag_scroll.add_child(_grid)
 	_rebuild_grid(DEFAULT_CAPACITY)
+
+	# Quest items tab (in place of the grid while it's chosen)
+	_quest_scroll = _make_scroll()
+	col.add_child(_quest_scroll)
+	var quest_box := VBoxContainer.new()
+	quest_box.add_theme_constant_override("separation", 10)
+	_quest_scroll.add_child(quest_box)
+	_quest_row = GridContainer.new()
+	_quest_row.columns = columns
+	_quest_row.add_theme_constant_override("h_separation", 6)
+	_quest_row.add_theme_constant_override("v_separation", 6)
+	quest_box.add_child(_quest_row)
+	_quest_none = _label("NO QUEST ITEMS. KEYS YOU PICK UP ARE KEPT HERE.", 14, Color(COL_DIM, 0.7))
+	quest_box.add_child(_quest_none)
+	_show_tab(false)
 
 	# Equip / discard buttons (the item card is a floating tooltip now)
 	col.add_child(_build_actions())
@@ -389,6 +421,86 @@ func _build_stim_row() -> HBoxContainer:
 	return row
 
 
+func _make_scroll() -> ScrollContainer:
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.custom_minimum_size.y = 120.0
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_style_scrollbar(scroll.get_v_scroll_bar())
+	return scroll
+
+
+## BACKPACK (false) or QUEST ITEMS (true) under the backpack header.
+func _show_tab(quest: bool) -> void:
+	_quest_tab = quest
+	_tab_bag.set_pressed_no_signal(not quest)
+	_tab_quest.set_pressed_no_signal(quest)
+	_bag_scroll.visible = not quest
+	_quest_scroll.visible = quest
+	_sort_btn.visible = not quest
+	if quest:
+		_selected = null                          # equip / discard don't apply to quest items
+	if _built:
+		_refresh()
+
+
+## Refills the pouch from the player's QuestManager, and follows it from then on.
+func _refresh_quest_items() -> void:
+	if _quest_row == null:
+		return
+	if _quests == null or not is_instance_valid(_quests):
+		var p := get_tree().get_first_node_in_group("players")
+		_quests = p.get("quests") as QuestManager if p != null else null
+		if _quests != null:
+			_quests.item_recovered.connect(func(_id: String) -> void: _refresh_quest_items())
+			_quests.quest_completed.connect(func(_s: QuestState) -> void: _refresh_quest_items())
+	var ids := QuestItems.carried(_quests)
+	var shown := PackedStringArray()
+	for c in _quest_row.get_children():
+		shown.append((c as _QuestItemIcon).item_id)
+	if shown != ids:
+		for c in _quest_row.get_children():
+			c.queue_free()
+		_hover_quest = null
+		for id in ids:
+			var icon := _QuestItemIcon.new()
+			icon.item_id = id
+			icon.custom_minimum_size = Vector2(slot_size, slot_size)
+			icon.mouse_entered.connect(func() -> void:
+				_hover_quest = icon
+				_update_tooltip())
+			icon.mouse_exited.connect(func() -> void:
+				if _hover_quest == icon:
+					_hover_quest = null
+				_update_tooltip())
+			_quest_row.add_child(icon)
+	_quest_none.visible = ids.is_empty()
+	_tab_quest.text = "QUEST ITEMS (%d)" % ids.size() if not ids.is_empty() else "QUEST ITEMS"
+	if _quest_tab:
+		_count_label.text = "%d %s" % [ids.size(), "ITEM" if ids.size() == 1 else "ITEMS"]
+
+
+## A quest item's card: name, QUEST ITEM, what it is, what it opens, and how long it's kept.
+func _fill_quest_detail(box: VBoxContainer, id: String) -> void:
+	box.add_child(_label(QuestItems.name_of(id), 20, _QuestItemIcon.COL))
+	box.add_child(_label("QUEST ITEM", 14, COL_DIM))
+	box.add_child(_rule())
+	var desc := QuestItems.desc_of(id)
+	if desc != "":
+		var d := _label(desc, 15, COL_TEXT)
+		d.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(d)
+	var opens := QuestItems.opens_of(id)
+	if opens != "":
+		box.add_child(_label("OPENS  " + opens.to_upper(), 15, accent))
+	var users := QuestItems.quests_using(_quests, id).filter(
+			func(d: QuestDefinition) -> bool: return not _quests.is_completed(d.id))
+	if not users.is_empty():
+		var keep := _label("Kept until %s is turned in." % users[0].title.capitalize(), 13, COL_DIM)
+		keep.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(keep)
+
+
 func _build_actions() -> VBoxContainer:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 6)
@@ -463,6 +575,7 @@ func _refresh() -> void:
 		_grid_slots[i].item = items[i] if i < items.size() else null
 	_count_label.text = "%d / %d" % [items.size(), _grid_slots.size()]
 
+	_refresh_quest_items()
 	_sync_selection()
 	_update_tooltip()
 	_update_buttons()
@@ -488,6 +601,14 @@ func _update_buttons() -> void:
 ## one). Holding CTRL adds how your stats would change and shows the item it would replace.
 func _update_tooltip() -> void:
 	if _tip == null:
+		return
+	if _open and _hover_quest != null and is_instance_valid(_hover_quest):
+		_tip_anchor = _hover_quest
+		_tip.clear()
+		_fill_quest_detail(_tip.box, _hover_quest.item_id)
+		_tip.visible = true
+		_tip_cmp.visible = false
+		_place_tips()
 		return
 	var ctrl := Input.is_key_pressed(KEY_CTRL)
 	var slot: ItemSlot = null
@@ -896,7 +1017,7 @@ func _equip_selected() -> void:
 			_inv.add_item(previous)
 	else:
 		_inv.add_item(item)
-		_notify("CANNOT EQUIP THIS ITEM")
+		_notify(_equip.last_block_reason.to_upper() if _equip.last_block_reason != "" else "CANNOT EQUIP THIS ITEM")
 	_suppress_refresh = false
 	_refresh()
 
@@ -910,8 +1031,11 @@ func _unequip_selected() -> void:
 	if slot < 0:
 		return
 	_suppress_refresh = true
-	_equip.unequip(slot)
-	_inv.add_item(item)
+	# Only into the backpack if it really came off (the exam sandbox locks the loadout)
+	if _equip.unequip(slot):
+		_inv.add_item(item)
+	else:
+		_notify(_equip.last_block_reason.to_upper() if _equip.last_block_reason != "" else "CANNOT UNEQUIP THIS ITEM")
 	_suppress_refresh = false
 	_refresh()
 
@@ -1199,5 +1323,30 @@ class ScanOverlay extends Control:
 		while y < size.y - 2.0:
 			draw_line(Vector2(inset, y), Vector2(size.x - inset, y), Color(0, 0, 0, 0.13), 1.0)
 			y += 3.0
-		var sweep_y := fposmod(t * 90.0, size.y + 160.0) - 80.0
+		# The sweep stays inside the scanlines' band, so it never shows past the panel's edges
+		var top := 2.0 + 4.0                          # half the sweep's 8 px thickness
+		var band := maxf(size.y - 4.0 - 8.0, 1.0)
+		var sweep_y := top + fposmod(t * 90.0, band)
 		draw_line(Vector2(inset, sweep_y), Vector2(size.x - inset, sweep_y), Color(1, 1, 1, 0.05), 8.0)
+
+
+## A quest item in the pouch: a gold frame with a key drawn in it.
+class _QuestItemIcon extends Control:
+	const COL := Color(1.0, 0.82, 0.30)            # QuestKeyPickup's gold
+	var item_id := ""
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		draw_rect(r, Color(0.06, 0.05, 0.02, 0.9), true)
+		draw_rect(r.grow(-1.0), Color(COL, 0.85), false, 2.0)
+		var c := size * 0.5
+		var s := minf(size.x, size.y) / 56.0          # drawn for a 56 px slot
+		var ring := c + Vector2(-9, -9) * s
+		draw_arc(ring, 8.0 * s, 0.0, TAU, 24, COL, 3.0 * s, true)
+		var shaft_end := c + Vector2(12, 12) * s
+		draw_line(ring + Vector2(5.5, 5.5) * s, shaft_end, COL, 3.5 * s, true)
+		draw_line(c + Vector2(5, 5) * s, c + Vector2(10, 0) * s, COL, 3.0 * s, true)    # teeth
+		draw_line(c + Vector2(10, 10) * s, c + Vector2(15, 5) * s, COL, 3.0 * s, true)

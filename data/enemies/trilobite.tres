@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3 uid="uid://depmvkkww0w1u"]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://assets/models/enemy/trilobite/trilobite_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_gem"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_stff7"]
+[ext_resource type="Resource" uid="uid://dg2sp662md7hi" path="res://data/skill_gems/shoot.tres" id="5_shoot"]
+
+[resource]
+script = ExtResource("1_def")
+id = "trilobite"
+display_name = "Null Trilobite"
+allowed_modifier_tags = Array[int]([1, 2, 6])
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+capsule_radius = 0.7
+capsule_height = 1.5
+max_health = 120.0
+armour = 70.0
+move_speed = 2.2
+preferred_distance = 6.0
+flee_distance = 2.0
+kite_delay_min = 0.6
+kite_delay_max = 1.4
+min_attack_damage = 5.0
+max_attack_damage = 20.0
+attack_speed = 0.6
+skills = Array[ExtResource("4_gem")]([ExtResource("5_shoot")])
+skill_flag_overrides = {
+"shoot": {
+"max_projectiles": 3.0,
+"range": 18.0,
+"speed": 15.0,
+"spread_angle": 12.0
+}
+}
+basic_attack_enabled = false
+skill_cooldown = 0.0
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

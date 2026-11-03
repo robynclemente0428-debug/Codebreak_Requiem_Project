@@ -32,6 +32,8 @@ var _minimized := false
 var _minimap: Control
 var _toast: Label
 var _toast_tween: Tween
+var _scan: Scan                   # CRT scanlines and a sweep over the panel, like the minimap's
+var _style: StyleBoxFlat          # the panel's, brightened while hovered
 
 
 func _enter_tree() -> void:
@@ -89,7 +91,13 @@ func _on_completed(s: QuestState) -> void:
 # ---------- BUILDING ----------
 func _build_ui() -> void:
 	_panel = PanelContainer.new()
-	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Clicking the tracker opens the quest log (its - / + button still minimizes)
+	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_panel.tooltip_text = "Open the quest log  [ J ]"
+	_panel.gui_input.connect(_on_panel_input)
+	_panel.mouse_entered.connect(_set_hover.bind(true))
+	_panel.mouse_exited.connect(_set_hover.bind(false))
 	_panel.anchor_left = 1.0
 	_panel.anchor_right = 1.0
 	_panel.anchor_top = 0.0
@@ -108,7 +116,10 @@ func _build_ui() -> void:
 	style.content_margin_top = 10
 	style.content_margin_bottom = 10
 	_panel.add_theme_stylebox_override("panel", style)
+	_style = style
 	add_child(_panel)
+	_scan = Scan.new()
+	add_child(_scan)                              # over the panel; _process keeps it on it
 
 	var outer := VBoxContainer.new()
 	outer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -174,6 +185,31 @@ func _make_min_button() -> Button:
 	return b
 
 
+# ---------- OPENING THE QUEST LOG ----------
+func _on_panel_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.button_index == MOUSE_BUTTON_LEFT and not mb.pressed:
+		var log_panel := get_tree().get_first_node_in_group("quest_log") as QuestLogPanel
+		if log_panel != null:
+			log_panel.open()
+		accept_event()
+
+
+func _set_hover(on: bool) -> void:
+	if _style == null:
+		return
+	_style.border_color = Color(accent, 1.0 if on else 0.6)
+	_style.bg_color = Color(0.02, 0.06, 0.09, minf(bg_opacity + (0.15 if on else 0.0), 1.0))
+
+
+## The tracker panel, for TutorialHints to outline.
+func tutorial_target() -> Array[Control]:
+	var out: Array[Control] = []
+	if _panel != null and _panel.is_visible_in_tree():
+		out.append(_panel)
+	return out
+
+
 # ---------- MINIMIZE ----------
 func set_minimized(on: bool) -> void:
 	_minimized = on
@@ -209,7 +245,10 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # ---------- FOLLOWING THE MINIMAP ----------
 ## Stays right under the minimap, and glides up into its place when the minimap is hidden.
+## Fades with the minimap's opacity ([ and ], see Minimap.opacity), so the two read as one.
 func _process(_delta: float) -> void:
+	if _scan != null:
+		_scan.visible = _panel != null and _panel.visible
 	if _panel == null or not _panel.visible:
 		return
 	if _minimap == null or not is_instance_valid(_minimap):
@@ -221,6 +260,39 @@ func _process(_delta: float) -> void:
 	if not is_equal_approx(_panel.offset_top, top):
 		_panel.offset_top = top
 		_panel.offset_bottom = top
+	var alpha: float = _minimap.get("opacity") if _minimap != null and _minimap.get("opacity") != null else 1.0
+	_panel.modulate.a = alpha
+	_scan.modulate.a = alpha
+	_scan.scanlines = _minimap == null or _minimap.get("scanlines") != false
+	_scan.position = _panel.position
+	_scan.size = _panel.size
+
+
+## CRT scanlines and a slow sweep, like the minimap's. The sweep stays inside the panel.
+class Scan extends Control:
+	var t := 0.0
+	var scanlines := true
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(delta: float) -> void:
+		if scanlines and is_visible_in_tree():
+			t += delta
+			queue_redraw()
+
+	func _draw() -> void:
+		if not scanlines:
+			return
+		var inset := 4.0                          # just inside the 2 px border on the left
+		var y := 2.0
+		while y < size.y - 2.0:
+			draw_line(Vector2(inset, y), Vector2(size.x - 2.0, y), Color(0, 0, 0, 0.13), 1.0)
+			y += 3.0
+		var top := 2.0 + 3.0                      # half the sweep's 6 px thickness
+		var band := maxf(size.y - 4.0 - 6.0, 1.0)
+		var sweep_y := top + fposmod(t * 70.0, band)
+		draw_line(Vector2(inset, sweep_y), Vector2(size.x - 2.0, sweep_y), Color(1, 1, 1, 0.05), 6.0)
 
 
 # ---------- REFRESH ----------
@@ -257,7 +329,8 @@ func _refresh() -> void:
 
 func _add_quest(s: QuestState) -> void:
 	var ready := s.status == QuestState.Status.READY_TO_TURN_IN
-	_box.add_child(_wrapped(s.def.title.to_upper(), base_font_size + 2, COL_READY if ready else accent))
+	var title_col := NpcInfoPanel.COL_EXAM if Ranks.is_exam(s.def.id) else accent   # exams stand out
+	_box.add_child(_wrapped(s.def.title.to_upper(), base_font_size + 2, COL_READY if ready else title_col))
 	if ready:
 		_box.add_child(_wrapped("RETURN TO THE QUEST GIVER", base_font_size - 2, COL_READY))
 		return

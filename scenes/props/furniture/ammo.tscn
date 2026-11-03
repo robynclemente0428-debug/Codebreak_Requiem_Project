@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/Sci-Fi Essentials Kit[Standard]/additional_asset/glTF/Prop_Ammo.gltf" id="1_jtqog"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ujcqc"]
+size = Vector3(0.5706621, 0.2819177, 0.72287023)
+
+[node name="Ammo" type="StaticBody3D" unique_id=820486898]
+collision_mask = 0
+
+[node name="Model" type="Node3D" parent="." unique_id=240620028 instance=ExtResource("1_jtqog")]
+
+[node name="Collision" type="CollisionShape3D" parent="." unique_id=1539682738]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.149453, -2.9802322e-08)
+shape = SubResource("BoxShape3D_ujcqc")

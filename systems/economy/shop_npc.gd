@@ -6,6 +6,9 @@ signal stock_changed
 @export var shop: ShopDefinition
 @export var stock_level: int = 1 
 	    # item level used when rolling stock
+## In a town, stock at the act's level instead (Waypoints.top_level: Act I 10, Act II 20), so a
+## shop moved to a later act sells that act's gear. Off = stock_level as set (the gem vendor).
+@export var follow_act_level := true
 @export_group("Appearance")
 @export var model_scene: PackedScene
 @export var model_scale: Vector3 = Vector3.ONE
@@ -20,7 +23,21 @@ var _stock_rank := 0                  # the player rank the stock was filtered f
 func _ready() -> void:
 	super._ready()
 	_apply_model()
+	_use_act_level()
 	restock()
+
+
+func _use_act_level() -> void:
+	if not follow_act_level:
+		return
+	var n := get_parent()
+	while n != null and not (n is TownArea):
+		n = n.get_parent()
+	if n == null or n.scene_file_path == "":
+		return
+	var level := Waypoints.top_level(Waypoints.act_of_scene(n.scene_file_path))
+	if level > 0:
+		stock_level = level
 
 func _apply_model() -> void:
 	if model_scene == null:

@@ -9,6 +9,10 @@ var equipped: Dictionary = {}   # EquipmentSlots.Slot (int) -> ItemInstance
 ## Fired after anything is equipped or unequipped, so UI can refresh.
 signal equipment_changed
 
+## Sudo's sandbox (ExamChamber) wears an exam loadout: nothing can be equipped or taken off
+## while this is on. swap_to() still works (it's how the loadouts are swapped).
+var sandbox_locked := false
+
 
 ## Returns false if the item has no valid slot, or if the two-handed rule blocks it
 ## (see can_equip()). Whatever was in that slot is removed (its stat modifiers are
@@ -53,6 +57,9 @@ var last_block_reason: String = ""
 ## in the off-hand while a two-handed weapon is equipped.
 func can_equip(item: ItemInstance) -> bool:
 	last_block_reason = ""
+	if sandbox_locked:
+		last_block_reason = "The exam uses its own loadout."
+		return false
 	var slot: int = slot_for(item)
 	if slot == EquipmentSlots.Slot.OFF_HAND \
 			and _is_two_handed(get_equipped(EquipmentSlots.Slot.WEAPON)):
@@ -70,14 +77,33 @@ func _is_two_handed(item: ItemInstance) -> bool:
 		and item.definition.weapon_type.two_handed
 
 
-func unequip(slot: int) -> void:
+## True when the item came off. False when the slot was empty or the sandbox's exam loadout is
+## locked (last_block_reason says why): callers must only take the item if this is true.
+func unequip(slot: int) -> bool:
+	last_block_reason = ""
+	if sandbox_locked:
+		last_block_reason = "The exam uses its own loadout."
+		return false
 	if not equipped.has(slot):
-		return
+		return false
 	var item: ItemInstance = equipped[slot]
 	stat_component.remove_by_source_prefix("item_%s_" % item.definition.id)
 	equipped.erase(slot)
 	equipment_changed.emit()
+	return true
 
 
 func get_equipped(slot: int) -> ItemInstance:
 	return equipped.get(slot)
+
+
+## Takes everything off and wears `items` (slot -> ItemInstance) instead. Nothing goes to the
+## backpack: the caller keeps what was worn (equipped.duplicate() first). The exam sandbox.
+func swap_to(items: Dictionary) -> void:
+	var locked := sandbox_locked
+	sandbox_locked = false
+	for slot in equipped.keys():
+		unequip(slot)
+	for slot in items:
+		equip(items[slot], slot)
+	sandbox_locked = locked

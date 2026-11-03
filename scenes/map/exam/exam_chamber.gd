@@ -16,6 +16,10 @@ extends GameArea
 ## Enter with ExamChamber.enter(tree, "operator") (Sudo's dialogue: > exam operator).
 ## While inside, the sandbox lends the perks the exam asks for (ExamSpec.lends, Ranks.lent):
 ## the Architect exam lends loops to players who don't hold the rank yet.
+## Everyone sits it with the same exam loadout: the class's starting weapon and nothing else
+## worn, the same skill gems on the same keys without supports, and no scripts. The real
+## gear, backpack and skills are set aside on arrival and put back exactly on leaving; a save
+## made in here stores the real ones (Player exam_save).
 
 const SCENE := "res://scenes/map/exam/exam_chamber.tscn"
 const RADIUS := 11.0                     # metres: the arena floor
@@ -47,6 +51,7 @@ var _fires := 0
 var _casts := 0
 var _rule_fires := {}                    # "gem#index" -> times
 var _ended := false
+var _real_loadout := {}                  # what the player walked in with (_enter_sandbox)
 
 
 static func enter(tree: SceneTree, rank: String) -> void:
@@ -74,6 +79,7 @@ func _ready() -> void:
 func _exit_tree() -> void:
 	if is_instance_valid(_hud):
 		_hud.queue_free()
+	_leave_sandbox()
 	if not Ranks.lent.is_empty():
 		Ranks.lent = PackedStringArray()          # leaving: the lent perks go back
 		_refresh_skills()
@@ -93,10 +99,52 @@ func get_spawn_position(_spawn_id: StringName = DEFAULT_SPAWN) -> Vector3:
 
 func on_player_arrived(player: Node3D) -> void:
 	_player = player
+	_enter_sandbox()
 	if spec != null and not spec.lends.is_empty():
 		Ranks.lent = spec.lends
 		_refresh_skills()
 	_hud.show_brief()
+
+
+# ---------- THE EXAM LOADOUT ----------
+## Sets the player's gear, backpack and skills aside and puts on the exam loadout.
+func _enter_sandbox() -> void:
+	var p := _player as Player
+	if p == null or not _real_loadout.is_empty():
+		return
+	_real_loadout = {"equipment": p.equipment.equipped.duplicate(),
+			"inventory": p.inventory.items.duplicate(), "skills": p.skills.snapshot()}
+	p.set_meta(&"exam_save", p.loadout_save())
+	var worn := {}
+	var def: ItemDefinition = p.class_data.starting_weapon if p.class_data != null else null
+	if def != null:
+		var weapon := ItemInstance.new()
+		weapon.definition = def
+		worn[p.equipment.slot_for(weapon)] = weapon
+	GameEvents.muted = true                       # not a real "equip" for quests
+	p.equipment.swap_to(worn)
+	p.skills.strip_for_exam()
+	GameEvents.muted = false
+	p.equipment.sandbox_locked = true
+	p.skills.sandbox_locked = true
+	p.health.heal(p.stats.get_stat(StatTypes.Stat.MAX_HEALTH))
+
+
+## Puts back exactly what the player walked in with.
+func _leave_sandbox() -> void:
+	var p := _player as Player
+	if p == null or not is_instance_valid(p) or _real_loadout.is_empty():
+		return
+	p.equipment.sandbox_locked = false
+	p.skills.sandbox_locked = false
+	GameEvents.muted = true
+	p.equipment.swap_to(_real_loadout["equipment"])
+	p.inventory.items.assign(_real_loadout["inventory"])
+	p.inventory.changed.emit()
+	p.skills.restore(_real_loadout["skills"])
+	GameEvents.muted = false
+	p.remove_meta(&"exam_save")
+	_real_loadout = {}
 
 
 # ---------- THE RUN ----------

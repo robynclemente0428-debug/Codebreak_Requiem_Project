@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="DialogueData" format=3]
+[gd_resource type="Resource" script_class="DialogueData" format=3 uid="uid://bwqx0at43je0w"]
 
 [ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
 
@@ -55,7 +55,7 @@ Brack: Spillway, Cache Warrens, Dead Sector. Each one sits deep in its district.
 
 ~ accept_beacons_outer
 > start_quest ward_beacons_outer
-Brack: Walk up to a beacon and it wakes. Your map marks them.
+Brack: Touch a beacon and it starts to reboot. Hold the ring round it until it boots: the Null will come for it. Your map marks them.
 -> end
 
 ~ remind_beacons_outer
@@ -145,6 +145,9 @@ Brack: Done?
 ~ turnin_q01_glitchling_queen
 > turn_in q01_glitchling_queen
 Brack: Wall’s holding. You’re useful. I’ll admit it.
+# NEW lines below: points the player at the Operator exam
+Brack: Useful isn't ranked, though. Examiner Sudo wants to see your script.
+Brack: Pass the Operator exam in Sudo's sandbox. Nobody goes near the Gate without it.
 -> start
 
 ~ offer_q01b_clear_the_ward
@@ -204,18 +207,19 @@ Brack: The gate is open. Time to move.
 # NEW: the Act I to Act II transition
 Brack: We're not holding Hardfault. Not out here, not with the Null this close.
 Brack: So we're taking it with us. Every crate, every cell, everyone who can walk.
-Brack: A convoy is docked past the Gate. Get on board.
+Brack: A convoy is docked past the Gate. The Null can smell it.
 * ACCEPT -> accept_q02b_the_road_out
 * NOT YET -> end
 
 ~ accept_q02b_the_road_out
 > start_quest q02b_the_road_out
-Brack: The way through is open now. Step through and you're on the deck.
-Brack: Finish what you need here first. Hex and Sudo are already loading up.
+Brack: The moment we move, the Null hit the outpost. Hold the portal while everyone gets out to the dock.
+Brack: Then hold the dock while we load. Every crate we lose stays here.
+Brack: Once it's loaded, you're the last one on board.
 -> end
 
 ~ remind_q02b_the_road_out
-Brack: The convoy won't wait forever. The way's open, through the Gate.
+Brack: Hold the portal till everyone's through, then hold the dock till the convoy's loaded. Then get on board.
 
 ~ ready_q02b_the_road_out
 Brack: You made it aboard.
@@ -240,7 +244,7 @@ Brack: Give your skill a stop condition, or you’ll chase it forever.
 
 ~ remind_q03_loop_hound_alpha
 # NEW line below
-Brack: The road's still blocked.
+Brack: The road's still blocked. The Alpha holds Scrapline Crossing. Set course from the route terminal.
 
 ~ ready_q03_loop_hound_alpha
 Brack: Done?

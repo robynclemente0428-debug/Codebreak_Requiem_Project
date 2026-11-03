@@ -9,7 +9,7 @@ signal quest_ready(state: QuestState)        # all objectives done, waiting for 
 signal quest_completed(state: QuestState)
 ## A "pick a support gem" reward is waiting, or was just claimed (see pending_choices).
 signal reward_choice_changed
-## A quest item was picked up or a ward beacon reached for the first time (see recover()).
+## A quest item was picked up or a ward beacon rebooted for the first time (see recover()).
 signal item_recovered(id: String)
 
 ## Every quest in the game is found in this folder, so you never fill an array by hand.
@@ -28,6 +28,12 @@ var recovered: Array[String] = []
 ## Best grade on each rank exam (ExamSpec): rank id -> 0 PASS, 1 MERIT, 2 DISTINCTION. Saved.
 ## Retaking an exam only ever raises it.
 var exam_grades: Dictionary = {}
+## Named kills and areas reached, counted whether or not a quest asked for them: "kind:target"
+## -> count. A quest taken later credits them (Objective.already_met), so killing the gate
+## guard on the way through, before Brack asks, still counts. Saved.
+var deeds: Dictionary = {}
+## Which events go in deeds. Objectives of these kinds with a target count deeds from before.
+const DEED_KINDS: Array[String] = ["kill", "kill_at", "enter_area"]
 
 var _player: Node
 
@@ -117,6 +123,11 @@ func recover(id: String) -> void:
 	GameEvents.report("recover", id)
 
 
+## How many times this has happened, quest or no quest (see deeds).
+func deed_count(kind: String, target: String) -> int:
+	return int(deeds.get("%s:%s" % [kind, target], 0))
+
+
 ## Records an exam result. Returns true if it's a new best.
 func record_exam(rank: String, grade: int) -> bool:
 	if exam_grades.has(rank) and int(exam_grades[rank]) >= grade:
@@ -151,6 +162,9 @@ func start(q: QuestDefinition) -> bool:
 
 # ---------- PROGRESS ----------
 func _on_event(kind: String, target: String, amount: int) -> void:
+	if kind in DEED_KINDS and target != "":
+		var key := "%s:%s" % [kind, target]
+		deeds[key] = int(deeds.get(key, 0)) + amount
 	# copy the values: completing a quest can start the next one while we loop
 	for s: QuestState in active.values().duplicate():
 		if s.status != QuestState.Status.ACTIVE:
@@ -231,7 +245,8 @@ func to_dict() -> Dictionary:
 	for s: QuestState in active.values():
 		list.append(s.to_dict())
 	return {"active": list, "completed": completed_ids, "pending_choices": pending_choices,
-		"recovered": recovered.duplicate(), "exam_grades": exam_grades.duplicate()}
+		"recovered": recovered.duplicate(), "exam_grades": exam_grades.duplicate(),
+		"deeds": deeds.duplicate()}
 
 
 # ---------- TUTORIAL GUARD ----------
@@ -339,6 +354,13 @@ func from_dict(d: Dictionary) -> void:
 		exam_grades[str(k)] = int(grades[k])
 	for id in d.get("recovered", []):
 		recovered.append(str(id))
+	# Saves from before the evacuation step: holding the dock meant Hardfault was already out
+	if recovered.has("dock_held") and not recovered.has("outpost_evacuated"):
+		recovered.append("outpost_evacuated")
+	deeds.clear()
+	var saved_deeds: Dictionary = d.get("deeds", {})
+	for k in saved_deeds:
+		deeds[str(k)] = int(saved_deeds[k])
 	for id in d.get("completed", []):
 		completed_ids.append(str(id))
 	for id in d.get("pending_choices", []):

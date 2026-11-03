@@ -22,8 +22,9 @@ metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 script = ExtResource("2_quest")
 id = "q03_loop_hound_alpha"
 title = "LOOP HOUND ALPHA"
-description = "Alpha leads the pack that blocks our road.
+description = "Alpha leads the pack that blocks our road. He holds Scrapline Crossing, the convoy's first stop: set course from the route terminal.
 BOSS TRAIT: charges along the same path again and again. Learn the loop, break it.
+TIP: its loop is marked on the floor. Step off it before it charges, and hit it hard mid-charge to break the loop.
 SCRIPT TASK: give a skill a repeating cycle with every_nth_cast()."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true

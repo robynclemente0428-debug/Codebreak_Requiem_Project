@@ -81,8 +81,9 @@ func _on_died() -> void:
 	# Freed when the death clip ends, or after CORPSE_MAX_TIME at the latest: a corpse that
 	# never got freed kept sliding after the player (untargetable, it had 0 health)
 	get_tree().create_timer(CORPSE_MAX_TIME, false).timeout.connect(queue_free)
-	if model:
-		await model.death_finished
+	# The death clip starts, then the body glitches and pixelates out (GlitchDeath)
+	var shape := collision.shape as CylinderShape3D
+	await GlitchDeath.play(self, model_mount, shape.radius if shape else 0.5, shape.height if shape else 1.8)
 	queue_free()
 
 func _on_health_changed(current: float, max: float) -> void:

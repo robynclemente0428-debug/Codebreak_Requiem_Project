@@ -19,6 +19,9 @@ extends Area3D
 @export var sealed_by_key: String = ""
 ## Also open once this quest is done (saves from before the seal existed).
 @export var open_after_quest: String = ""
+## While sealed, it's also a wall: for a portal standing in a doorway (the convoy's gangway on
+## the dock), so nobody walks round it to what's behind.
+@export var solid_while_sealed := false
 ## Story routing (quests count once started: active or done):
 ##   shown_after_quest  the portal doesn't exist for the player until then (hidden and inert):
 ##                      Hardfault's way onto the convoy waits for THE ROAD OUT
@@ -28,6 +31,9 @@ extends Area3D
 @export var route_after_quest: String = ""
 @export_file("*.tscn") var routed_area: String = ""
 @export var routed_spawn: StringName = &"default"
+## A convoy stop's exit: walking through marks this waypoint id cleared, which opens the next
+## stop on the convoy's route terminal (Waypoints.clear_stop).
+@export var clears_stop: String = ""
 
 const SEALED_A := Color(1.0, 0.12, 0.15)
 const SEALED_B := Color(1.0, 0.55, 0.45)
@@ -38,6 +44,7 @@ var _turned_back := 0.0          # seconds until the "sealed" message may show a
 var _quest_check := 0.0
 var _home_area := ""             # target_area / target_spawn before routing
 var _home_spawn: StringName = &""
+var _barrier: StaticBody3D       # solid_while_sealed
 
 
 ## True while the player doesn't have this portal's key.
@@ -64,6 +71,7 @@ func set_routing(d: Dictionary) -> void:
 	route_after_quest = str(d.get("route_after_quest", ""))
 	routed_area = str(d.get("routed_area", ""))
 	routed_spawn = StringName(str(d.get("routed_spawn", "default")))
+	clears_stop = str(d.get("clears_stop", ""))
 	if is_inside_tree():
 		_update_routing()
 
@@ -100,6 +108,8 @@ func _process(delta: float) -> void:
 	if sealed != _was_sealed:
 		_was_sealed = sealed
 		_show_seal(sealed)
+		if _barrier != null:
+			_barrier.process_mode = Node.PROCESS_MODE_INHERIT if sealed else Node.PROCESS_MODE_DISABLED
 
 
 ## Red while sealed, the scene's own blue when open (the material is made unique first).
@@ -124,6 +134,24 @@ func _ready() -> void:
 	monitoring = true
 	body_entered.connect(_on_body_entered)
 	_update_routing()
+	if solid_while_sealed:
+		_build_barrier()
+
+
+## A wall across the doorway, as wide as the door and a little deeper than the trigger, so the
+## player bumps into it (and sees the sealed message) instead of slipping by. Off until sealed.
+func _build_barrier() -> void:
+	_barrier = StaticBody3D.new()
+	_barrier.collision_layer = 1                   # what walls are on: stops players and enemies
+	_barrier.collision_mask = 0
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(0.3, 2.3, 2.0)              # thin like the frame, as wide as a doorway
+	shape.shape = box
+	shape.position.y = 0.67                        # level with the trigger (portal.tscn)
+	_barrier.add_child(shape)
+	_barrier.process_mode = Node.PROCESS_MODE_DISABLED
+	add_child(_barrier)
 
 
 func _on_body_entered(body: Node3D) -> void:
@@ -132,13 +160,17 @@ func _on_body_entered(body: Node3D) -> void:
 	if is_sealed():
 		if _turned_back <= 0.0:
 			_turned_back = 2.5
-			QuestItems.toast(get_tree(), "SEALED: NEEDS THE %s\n%s" % [QuestItems.name_of(sealed_by_key),
+			QuestItems.toast(get_tree(), "SEALED: %s\n%s" % [QuestItems.sealed_text(sealed_by_key),
 					QuestItems.hint_of(sealed_by_key)], SEALED_A)
 		return
 	var manager := get_tree().get_first_node_in_group("area_manager") as AreaManager
 	if manager == null:
 		push_error("Portal: no AreaManager found in the scene")
 		return
+	if clears_stop != "" and not manager.is_busy():
+		for w in Waypoints.clear_stop(clears_stop):
+			QuestItems.toast(get_tree(), "ROUTE UNLOCKED: %s" % w.display_name.to_upper(),
+					Color(0.25, 1.0, 0.55))
 	# Deferred: we are inside a physics callback, and the manager is about to
 	# free the area that contains this very Area3D.
 	manager.go_to.call_deferred(target_area, target_spawn, dungeon_level, instance_id)

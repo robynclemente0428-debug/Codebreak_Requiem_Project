@@ -21,6 +21,7 @@
 [ext_resource type="Script" uid="uid://bk24qx5e1ywyl" path="res://systems/dialogue/dialogue_panel.gd" id="16_fec4r"]
 [ext_resource type="Script" uid="uid://1kxsrjsipw7i" path="res://scenes/ui/player_ui/pause/death_menu.gd" id="17_78a88"]
 [ext_resource type="Script" uid="uid://c534ulgsd4gmi" path="res://systems/skills/scenes/projectile_swarm/blast_swarm.gd" id="19_808uu"]
+[ext_resource type="Script" uid="uid://t0thxo572do0" path="res://scenes/ui/player_ui/menu_tray/menu_tray.gd" id="40_tray"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_4bbo7"]
 sky_horizon_color = Color(0.66224277, 0.6717428, 0.6867428, 1)
@@ -103,7 +104,7 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("15_jdjfk")
-bg_opacity = 0.92
+bg_opacity = 0.65
 
 [node name="CharacterPanel" type="Control" parent="Hud" unique_id=1670020900]
 layout_mode = 3
@@ -129,6 +130,16 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("7_sqayf")
+
+[node name="MenuTray" type="Control" parent="Hud" unique_id=730114541]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("40_tray")
 
 [node name="SkillBar" type="Control" parent="Hud" unique_id=1738502442]
 layout_mode = 3

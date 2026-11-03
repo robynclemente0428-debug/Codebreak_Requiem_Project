@@ -63,6 +63,7 @@ func _spawn_projectile(cast: SkillCast, origin: Vector3, direction: Vector3,
 	var caster := cast.caster
 	var projectile := PROJECTILE_SCENE.instantiate() as ShootProjectile
 	projectile.direction = direction
+	projectile.tint = ShootProjectile.TINT_PLAYER if caster.is_in_group("players") 			else ShootProjectile.TINT_ENEMY
 	projectile.speed = cast.flag("speed")
 	projectile.max_distance = cast.flag("range") if max_distance < 0.0 else max_distance
 	projectile.pierce = maxi(int(cast.flag("pierce")), 0)
@@ -95,7 +96,7 @@ func _on_hit_enemy(target: Node, position: Vector3, pierced_so_far: int,
 		return
 	# Each enemy already pierced makes the bullet weaker: 20% falloff -> 100%, 80%, 64%, ...
 	var keep := maxf(1.0 - cast.flag("pierce_falloff"), 0.0)
-	ImpactEffect.spawn(cast.effect_parent(), position, 0.3, Color(1.0, 0.85, 0.4))
+	ImpactEffect.spawn(cast.effect_parent(), position, 0.3, projectile.tint if is_instance_valid(projectile) 			else Color(1.0, 0.85, 0.4))
 	cast.hit(target, pow(keep, pierced_so_far))
 	# A per-hit rule may just have raised pierce for this cast (Assassin: WHEN target life < X ->
 	# pierce +1). The bullet only decides whether to stop after this returns, so it can still

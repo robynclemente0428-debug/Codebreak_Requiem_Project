@@ -47,6 +47,10 @@ const LIBRARY_SIZE := 12
 const LIBRARY_NAME_MAX := 14
 var library: Array = []
 
+## Sudo's sandbox (ExamChamber): the exam's skills are fixed, so no gem or support can be
+## socketed or taken out while this is on. See snapshot() / restore() / strip_for_exam().
+var sandbox_locked := false
+
 ## Fired after any socketing, unsocketing or rebinding, so UI can refresh.
 signal changed
 ## Fired after the script set changes (`changed` fires too).
@@ -127,7 +131,8 @@ func socket_skill(index: int, item: ItemInstance, inventory: InventoryComponent 
 	if index < 0 or index >= sockets.size():
 		return false
 	var s := sockets[index]
-	if s.gem != null or item == null or item.definition == null or item.definition.skill_gem == null:
+	if s.gem != null or item == null or item.definition == null or item.definition.skill_gem == null \
+			or sandbox_locked:
 		return false
 	if inventory != null and not inventory.remove_item(item):
 		return false
@@ -142,7 +147,7 @@ func socket_skill(index: int, item: ItemInstance, inventory: InventoryComponent 
 
 ## Returns the skill gem AND all its supports to the backpack. Fails if there isn't room for all of them.
 func unsocket_skill(index: int, inventory: InventoryComponent) -> bool:
-	if index < 0 or index >= sockets.size():
+	if index < 0 or index >= sockets.size() or sandbox_locked:
 		return false
 	var s := sockets[index]
 	if s.gem == null:
@@ -169,7 +174,7 @@ func unsocket_skill(index: int, inventory: InventoryComponent) -> bool:
 # ---------- SUPPORT GEMS ----------
 ## True if this support gem item can go into the skill in that socket right now.
 func can_socket_support(index: int, item: ItemInstance) -> bool:
-	if index < 0 or index >= sockets.size():
+	if index < 0 or index >= sockets.size() or sandbox_locked:
 		return false
 	var s := sockets[index]
 	if s.gem == null or item == null or item.definition.support_gem == null:
@@ -201,7 +206,7 @@ func socket_support(index: int, item: ItemInstance, inventory: InventoryComponen
 
 
 func unsocket_support(index: int, support_index: int, inventory: InventoryComponent) -> bool:
-	if index < 0 or index >= sockets.size() or inventory.is_full():
+	if index < 0 or index >= sockets.size() or inventory.is_full() or sandbox_locked:
 		return false
 	var s := sockets[index]
 	if support_index < 0 or support_index >= s.supports.size():
@@ -383,6 +388,53 @@ func restore_set_names(saved: Array) -> void:
 	for i in mini(saved.size(), SCRIPT_SETS):
 		if saved[i] is String:
 			set_names[i] = (saved[i] as String).to_upper().left(SET_NAME_MAX)
+
+
+# ---------- EXAM SANDBOX ----------
+## Everything about the skills, by reference, to put back exactly with restore().
+func snapshot() -> Dictionary:
+	var socks: Array = []
+	for s in sockets:
+		socks.append({"gem": s.gem, "supports": s.supports.duplicate(), "sets": s.sets.duplicate(),
+				"program": s.program})
+	return {"sockets": socks, "bindings": bindings.duplicate(), "script_set": script_set,
+			"set_names": set_names.duplicate()}
+
+
+func restore(snap: Dictionary) -> void:
+	var socks: Array = snap.get("sockets", [])
+	for i in mini(socks.size(), sockets.size()):
+		var s := sockets[i]
+		var saved: Dictionary = socks[i]
+		s.gem = saved["gem"]
+		s.supports.assign(saved["supports"])
+		s.sets = (saved["sets"] as Array).duplicate()
+		s.program = null
+		if s.gem != null:
+			_rebuild(s)                         # the skill first: _apply_set checks programs against it
+		else:
+			s.skill = null
+	bindings = (snap.get("bindings", {}) as Dictionary).duplicate()
+	script_set = int(snap.get("script_set", 0))
+	set_names = PackedStringArray(snap.get("set_names", SET_NAMES))
+	_apply_set()                                # each skill runs its program in the restored set
+	RollbackWatch.sync(self)
+	script_set_changed.emit(script_set)
+	changed.emit()
+
+
+## The exam loadout: the same skill gems on the same keys, without supports or scripts.
+func strip_for_exam() -> void:
+	for s in sockets:
+		if s.gem == null:
+			continue
+		s.supports.clear()
+		s.sets.fill(null)
+		s.program = null
+		_rebuild(s)
+	script_set = 0
+	script_set_changed.emit(0)
+	changed.emit()
 
 
 # ---------- SCRIPT LIBRARY ----------

@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="WaypointAct" format=3]
+
+[ext_resource type="Script" uid="uid://e2ln6b6b1sre" path="res://systems/waypoints/waypoint_act.gd" id="1_act"]
+[ext_resource type="Script" uid="uid://cpivoq1jwxma1" path="res://systems/waypoints/waypoint.gd" id="2_wp"]
+
+[sub_resource type="Resource" id="Waypoint_act2_convoy"]
+script = ExtResource("2_wp")
+id = "act2_convoy"
+display_name = "The Convoy"
+scene = "res://scenes/map/town/act_2_convoy.tscn"
+kind = 0
+map_position = Vector2(0.1, 0.5)
+links = PackedStringArray("act2_scrapline")
+note = "Brack, Sudo, Quartermaster, Hex"
+
+[sub_resource type="Resource" id="Waypoint_act2_scrapline"]
+script = ExtResource("2_wp")
+id = "act2_scrapline"
+display_name = "Scrapline Crossing"
+scene = "res://scenes/map/dungeon/act_2_scrapline_crossing.tscn"
+spawn_id = &"scrapline_in"
+dungeon_level = 11
+kind = 2
+map_position = Vector2(0.34, 0.3)
+links = PackedStringArray("act2_convoy", "act2_signal")
+note = "Level 11  -  Loop Hound Alpha"
+random_threats = Vector2i(1, 1)
+
+[sub_resource type="Resource" id="Waypoint_act2_signal"]
+script = ExtResource("2_wp")
+id = "act2_signal"
+display_name = "Signal Wastes"
+scene = "res://scenes/map/dungeon/act_2_signal_wastes.tscn"
+spawn_id = &"signal_in"
+dungeon_level = 15
+map_position = Vector2(0.6, 0.62)
+links = PackedStringArray("act2_scrapline", "act2_relay")
+note = "Level 15  -  Corrupted Enchanter"
+random_threats = Vector2i(1, 1)
+route_after = "act2_scrapline"
+
+[sub_resource type="Resource" id="Waypoint_act2_relay"]
+script = ExtResource("2_wp")
+id = "act2_relay"
+display_name = "Hollow Relay"
+scene = "res://scenes/map/dungeon/act_2_hollow_relay.tscn"
+spawn_id = &"relay_in"
+dungeon_level = 20
+map_position = Vector2(0.86, 0.36)
+links = PackedStringArray("act2_signal")
+note = "Level 20  -  Corrupted Raider"
+random_threats = Vector2i(1, 2)
+route_after = "act2_signal"
+
+[resource]
+script = ExtResource("1_act")
+act_number = 2
+title = "ACT II"
+subtitle = "THE CONVOY  -  Stops along the route, levels 11 to 20"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act2_convoy"), SubResource("Waypoint_act2_scrapline"), SubResource("Waypoint_act2_signal"), SubResource("Waypoint_act2_relay")])
+convoy_route = true
