@@ -40,6 +40,7 @@ func attach_model(model_scene: PackedScene) -> void:
 	model = model_scene.instantiate() as EnemyModel
 	model_mount.add_child(model)
 	model.bind(ai, health, self)
+	EnemySilhouette.cover(model)                  # red through walls
 
 func apply_size(radius: float, height: float) -> void:
 	var shape := (collision.shape as CylinderShape3D).duplicate() as CylinderShape3D  # never edit the shared shape
@@ -78,6 +79,8 @@ func _on_died() -> void:
 	ai.halt()                               # no more steering, including avoidance callbacks
 	velocity = Vector3.ZERO
 	collision.set_deferred("disabled", true)
+	if model != null:
+		EnemySilhouette.uncover(model)            # the dead don't show through walls
 	# Freed when the death clip ends, or after CORPSE_MAX_TIME at the latest: a corpse that
 	# never got freed kept sliding after the player (untargetable, it had 0 health)
 	get_tree().create_timer(CORPSE_MAX_TIME, false).timeout.connect(queue_free)

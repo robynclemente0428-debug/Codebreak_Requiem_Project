@@ -11,6 +11,8 @@ signal quest_completed(state: QuestState)
 signal reward_choice_changed
 ## A quest item was picked up or a ward beacon rebooted for the first time (see recover()).
 signal item_recovered(id: String)
+## A new exam best, a newly cleared area or a first act boss kill: ScriptBudget changed.
+signal budget_changed
 
 ## Every quest in the game is found in this folder, so you never fill an array by hand.
 @export_dir var quest_folder: String = "res://data/quests/"
@@ -33,7 +35,8 @@ var exam_grades: Dictionary = {}
 ## guard on the way through, before Brack asks, still counts. Saved.
 var deeds: Dictionary = {}
 ## Which events go in deeds. Objectives of these kinds with a target count deeds from before.
-const DEED_KINDS: Array[String] = ["kill", "kill_at", "enter_area"]
+const DEED_KINDS: Array[String] = ["kill", "kill_at", "enter_area", "clear_area", "act_boss",
+		"hull_breach", "salvage"]
 
 var _player: Node
 
@@ -133,6 +136,7 @@ func record_exam(rank: String, grade: int) -> bool:
 	if exam_grades.has(rank) and int(exam_grades[rank]) >= grade:
 		return false
 	exam_grades[rank] = grade
+	budget_changed.emit()
 	return true
 
 
@@ -164,7 +168,10 @@ func start(q: QuestDefinition) -> bool:
 func _on_event(kind: String, target: String, amount: int) -> void:
 	if kind in DEED_KINDS and target != "":
 		var key := "%s:%s" % [kind, target]
+		var first := not deeds.has(key)
 		deeds[key] = int(deeds.get(key, 0)) + amount
+		if first and (kind == ScriptBudget.CLEAR_DEED or kind == ScriptBudget.BOSS_DEED):
+			budget_changed.emit()
 	# copy the values: completing a quest can start the next one while we loop
 	for s: QuestState in active.values().duplicate():
 		if s.status != QuestState.Status.ACTIVE:

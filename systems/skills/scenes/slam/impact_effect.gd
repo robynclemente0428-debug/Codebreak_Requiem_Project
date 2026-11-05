@@ -1,12 +1,15 @@
 class_name ImpactEffect
 extends Node3D
-## A ground impact built entirely in code: an expanding shockwave ring, a burst of dust,
-## and a short light flash. No scene to set up. Use it from any skill:
+## A ground impact built entirely in code: an expanding shockwave ring, a burst of dust
+## (ImpactDust, shared by every impact) and a short light flash. No scene to set up. Use it from any skill:
 ##     ImpactEffect.spawn(caster.get_parent(), center, radius, Color(1.0, 0.8, 0.5))
 ## It frees itself when it is done.
 
 const LIFETIME := 1.2                 # seconds before the effect node removes itself
 const RING_TIME := 0.35               # how long the shockwave takes to expand and fade
+## The ring is drawn this much brighter than its colour, past full white, so the world's glow
+## (WorldEnvironment, threshold 1.0) picks it up: a slight glow, at no extra cost.
+const RING_GLOW := 1.8
 
 static func spawn(parent: Node, pos: Vector3, radius: float,
 		color: Color = Color(1.0, 0.8, 0.5), accent: Color = Color(0, 0, 0, 0)) -> void:
@@ -28,7 +31,7 @@ func _add_ring(radius: float, color: Color) -> void:
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.albedo_color = color
+	mat.albedo_color = Color(color.r * RING_GLOW, color.g * RING_GLOW, color.b * RING_GLOW, color.a)
 
 	var torus := TorusMesh.new()          # lies flat on the ground
 	torus.inner_radius = 0.9
@@ -48,39 +51,7 @@ func _add_ring(radius: float, color: Color) -> void:
 
 
 func _add_dust(radius: float, color: Color) -> void:
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.vertex_color_use_as_albedo = true     # lets the gradient below fade the puffs out
-	mat.albedo_color = color.lerp(Color(0.55, 0.5, 0.45), 0.6)
-
-	var puff := SphereMesh.new()
-	puff.radius = 0.12
-	puff.height = 0.24
-	puff.material = mat
-
-	var fade := Gradient.new()
-	fade.set_color(0, Color(1, 1, 1, 0.9))
-	fade.set_color(1, Color(1, 1, 1, 0.0))
-
-	var p := CPUParticles3D.new()
-	p.mesh = puff
-	p.one_shot = true
-	p.explosiveness = 1.0
-	p.amount = int(12 + radius * 6.0)
-	p.lifetime = 0.7
-	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_SPHERE
-	p.emission_sphere_radius = radius * 0.6
-	p.direction = Vector3.UP
-	p.spread = 70.0
-	p.initial_velocity_min = 1.5
-	p.initial_velocity_max = 3.5
-	p.gravity = Vector3(0, -6, 0)
-	p.scale_amount_min = 0.6
-	p.scale_amount_max = 1.4
-	p.color_ramp = fade
-	add_child(p)
-	p.emitting = true
+	ImpactDust.burst(get_parent(), global_position, radius, color)   # one shared GPU system for every impact
 
 
 func _add_flash(radius: float, color: Color) -> void:

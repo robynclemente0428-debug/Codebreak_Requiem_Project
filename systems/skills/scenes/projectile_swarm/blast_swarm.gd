@@ -16,7 +16,10 @@ const HIT_RADIUS := 0.35        # same as BlastProjectile.hit_radius
 @export var group_name: StringName = &"player_blast_swarm"
 ## true = wear the orb's ShaderMaterial from the style (player). false = plain tinted ball.
 @export var use_style_material := true
-@export var emission_energy := 3.0
+@export var emission_energy := 4.0
+## The player swarm: how much brighter than the orb's own look (an additive pass on top of
+## whatever shader the orb has, in each projectile's colour; 0 = none).
+@export var orb_boost := 0.6
 
 # One entry per live projectile (parallel arrays, swap-remove keeps them dense).
 var _pos := PackedVector3Array()
@@ -33,9 +36,21 @@ var _one_exclude: Array[RID] = [RID()]
 var _fallback_mat: ShaderMaterial
 var _style_source: Material          # the orb material currently being worn (identity check)
 
+# Drawn over the orb's own shader (next_pass): adds each projectile's colour, strongest in the
+# middle of the ball, so it reads brighter and the world's glow picks it up.
+const _BOOST_SHADER := """
+shader_type spatial;
+render_mode blend_add, unshaded, depth_draw_never, shadows_disabled, fog_disabled;
+uniform float boost = 0.6;
+void fragment() {
+	float core = pow(clamp(dot(NORMAL, VIEW), 0.0, 1.0), 1.5);
+	ALBEDO = COLOR.rgb * boost * (0.4 + core);
+}
+"""
+
 const _SHADER := """
 shader_type spatial;
-uniform float energy = 3.0;
+uniform float energy = 4.0;
 void fragment() {
 	// COLOR is the per-instance color set in spawn()
 	ALBEDO = COLOR.rgb;
@@ -87,7 +102,19 @@ func set_style(style: Dictionary) -> void:
 	if src == _style_source:
 		return                            # same orb as last time, nothing to do
 	_style_source = src
-	material_override = (src as ShaderMaterial).duplicate()
+	var worn := (src as ShaderMaterial).duplicate() as ShaderMaterial
+	if orb_boost > 0.0 and worn.next_pass == null:
+		worn.next_pass = _boost_material()
+	material_override = worn
+
+
+func _boost_material() -> ShaderMaterial:
+	var shader := Shader.new()
+	shader.code = _BOOST_SHADER
+	var m := ShaderMaterial.new()
+	m.shader = shader
+	m.set_shader_parameter("boost", orb_boost)
+	return m
 
 
 ## Fire one projectile. `on_impact` is called with the impact position (Vector3).

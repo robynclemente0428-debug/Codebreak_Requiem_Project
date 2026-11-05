@@ -34,5 +34,5 @@ func _echoes(cast: SkillCast, center: Vector3, count: int) -> void:
 		var r := radius * (1.0 + cast.flag("aftershock_growth") * float(i + 1))
 		ImpactEffect.spawn(cast.effect_parent(), center, r, Color(1.0, 0.65, 0.3))
 		SoundManager.play_skill("slam", cast.caster, 0.0)      # another thud
-		for target in SkillDeliveries.hits_in_circle(sub, center, r, int(cast.flag("max_targets"))):
+		for target in SkillDeliveries.hits_in_circle(sub, center, r):
 			sub.hit(target, cast.flag("aftershock_damage"))

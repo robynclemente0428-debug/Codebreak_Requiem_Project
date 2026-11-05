@@ -132,6 +132,10 @@ var _overlay_wait := 0.0                # the full-screen map redraws at most 30
 var _wants := {"kill": {}, "rarity": {}, "talk": {}, "recover": {}}
 var _wants_wait := 0.0
 var _rim: Array = []                    # [screen pos, colour] of quest targets off the map edge
+# Enemy dots as textures (made once): every dot is the same texture, so a crowd draws in a
+# couple of batched calls instead of three anti-aliased shapes per enemy.
+static var _dot_tex: ImageTexture
+static var _ring_tex: ImageTexture
 
 
 func _enter_tree() -> void:
@@ -632,21 +636,53 @@ func _paint_enemies(c: Control, rot: float, full: bool) -> void:
 		return
 	var limit := enemy_detect_radius * enemy_detect_radius
 	var pulse := 0.5 + 0.5 * sin(_t * 5.0)
+	if _dot_tex == null:
+		_make_dot_textures()
+	var to_local := _grid_map.global_transform.affine_inverse()   # _to_cell_f, once for all
+	var cell := _grid_map.cell_size
+	var dots := PackedVector2Array()
 	for e in _enemies_root.get_children():
 		var n := e as Node3D
 		if n == null or not is_instance_valid(n):
 			continue
-		var rel := _to_cell_f(n.global_position) - _center
+		var l := to_local * n.global_position
+		var rel := Vector2(l.x / cell.x, l.z / cell.z) - _center
 		if _is_quest_enemy(n):
 			_quest_marker(c, rel * _px, rot, str(n.get_meta(&"base_name", "")) if full else "")
 			continue
 		if rel.length_squared() > limit:
 			continue
-		var pos := rel * _px
-		c.draw_arc(pos, 5.5 + pulse * 3.0, 0.0, TAU, 20,
-			Color(COL_ENEMY, (0.5 - pulse * 0.35) * _map_alpha), 1.0, true)
-		c.draw_circle(pos, 4.5, Color(COL_ENEMY, 0.25 * _map_alpha))
-		c.draw_circle(pos, 2.5, Color(COL_ENEMY, _map_alpha))
+		dots.append(rel * _px)
+	# All the rings, then all the dots: same texture back to back, so they batch
+	var ring_r := 5.5 + pulse * 3.0 + 0.5
+	var ring_col := Color(COL_ENEMY, (0.5 - pulse * 0.35) * _map_alpha)
+	for pos in dots:
+		c.draw_texture_rect(_ring_tex, Rect2(pos - Vector2(ring_r, ring_r), Vector2(ring_r, ring_r) * 2.0),
+			false, ring_col)
+	var dot_col := Color(COL_ENEMY, _map_alpha)
+	for pos in dots:
+		c.draw_texture_rect(_dot_tex, Rect2(pos - Vector2(4.5, 4.5), Vector2(9.0, 9.0)), false, dot_col)
+
+
+## The enemy dot (a solid core in a faint disc, like the old 2.5 / 4.5 px circles) and the
+## pulse ring, white so draw_texture_rect's modulate colours them.
+static func _make_dot_textures() -> void:
+	var size := 36
+	var dot := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var ring := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var mid := (size - 1) * 0.5
+	for y in size:
+		for x in size:
+			var d := Vector2(x - mid, y - mid).length() / (size * 0.5)   # 0 centre, 1 edge
+			# dot: core to 2.5/4.5 of the radius at full alpha, the rest at 0.25
+			var core := clampf((2.5 / 4.5 - d) * size * 0.5, 0.0, 1.0)
+			var disc := clampf((1.0 - d) * size * 0.5, 0.0, 1.0) * 0.25
+			dot.set_pixel(x, y, Color(1, 1, 1, maxf(core, disc)))
+			# ring: a thin anti-aliased circle at the edge
+			var edge := clampf(1.0 - absf(d - 0.93) * size * 0.5 / 1.2, 0.0, 1.0)
+			ring.set_pixel(x, y, Color(1, 1, 1, edge))
+	_dot_tex = ImageTexture.create_from_image(dot)
+	_ring_tex = ImageTexture.create_from_image(ring)
 
 
 ## Gold markers for the people in town. On the full-screen map their names show above them.

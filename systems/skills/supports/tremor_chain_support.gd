@@ -27,5 +27,5 @@ func _tremor(cast: SkillCast, dead: Node, at: Vector3, radius: float, link: int)
 	var sub := cast.spawn_child()
 	sub.extra["tremor"] = link
 	ImpactEffect.spawn(cast.effect_parent(), at, radius, Color(1.0, 0.45, 0.2), Color(1.0, 0.75, 0.35))
-	for other in SkillDeliveries.hits_in_circle(sub, at, radius, int(cast.flag("max_targets")), [dead]):
+	for other in SkillDeliveries.hits_in_circle(sub, at, radius, SkillDeliveries.NO_CAP, [dead]):
 		sub.hit(other, cast.flag("tremor_damage"))

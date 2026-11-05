@@ -19,6 +19,15 @@ var _arrival_points: Dictionary = {}    # arrival_spawn_id -> world point in fro
 ## This visit's instance record, from WorldState: its level, its seed and its dead enemies.
 var instance: DungeonInstance
 
+## Dungeons are dark (GameArea.light_scale), lit mostly by the player's own light, their
+## skills and the tiles' glowing trims; a scene can still set its own.
+const DUNGEON_LIGHT := 0.08
+
+
+func _init() -> void:
+	light_scale = DUNGEON_LIGHT
+
+
 func _ready() -> void:
 	instance = WorldState.begin_visit(scene_file_path, dungeon_level)
 	dungeon_level = instance.level
@@ -59,6 +68,7 @@ func _spawn_enemies() -> void:
 	populator.populate(dungeon_level, skip, _is_floor, _grid_to_world)
 	populator.spawn_marked(director.layout.enemies, dungeon_level, _is_floor, _grid_to_world)
 	populator.place_ward_beacon(_is_floor, _grid_to_world)   # before the props, so none land on it
+	populator.place_salvage(scene_file_path, _is_floor, _grid_to_world)   # convoy stops only
 	populator.place_props(_is_floor, _grid_to_world)    # breakable barrels and supply caches
 
 ## Null corruption stains on the floor, more of them the deeper the dungeon (see NullDecals).

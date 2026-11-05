@@ -191,3 +191,10 @@ script_set={
 [rendering]
 
 rendering_device/driver.windows="d3d12"
+
+[shader_globals]
+
+player_world_pos={
+"type": "vec3",
+"value": Vector3(0, -1000, 0)
+}

@@ -177,7 +177,7 @@ shader_parameter/deck = Color(0.3, 0.27, 0.23, 1)
 shader_parameter/safe = Color(0.25, 1, 0.55, 1)
 shader_parameter/cyan = Color(0, 0.85, 1, 1)
 shader_parameter/warm = Color(1, 0.72, 0.38, 1)
-shader_parameter/glow = 2.2
+shader_parameter/glow = 1.1
 
 [sub_resource type="BoxMesh" id="BoxMesh_j0m78"]
 material = SubResource("ShaderMaterial_q36qh")

@@ -28,9 +28,14 @@ static func fan_directions(fwd: Vector3, count: int, step_degrees: float) -> Arr
 	return dirs
 
 
-## Valid targets of this cast inside a flat circle, closest first.
+## max_targets for "everyone in the area" (any value of 0 or less means the same).
+const NO_CAP := 0
+
+
+## Valid targets of this cast inside a flat circle, closest first. Skills hit everyone in their
+## area, so they pass NO_CAP; a cap is for picking a few (nearest_target asks for 1).
 ## `exclude` skips targets (e.g. the enemy that just died and is exploding).
-static func hits_in_circle(cast: SkillCast, center: Vector3, radius: float, max_targets: int,
+static func hits_in_circle(cast: SkillCast, center: Vector3, radius: float, max_targets := NO_CAP,
 		exclude: Array = []) -> Array:
 	var targets := _candidates(cast, exclude)
 	var indices := resolve_circle(center, radius, max_targets, _positions(targets))
@@ -39,7 +44,7 @@ static func hits_in_circle(cast: SkillCast, center: Vector3, radius: float, max_
 
 ## Valid targets of this cast inside a cone in front of `origin`, closest first.
 static func hits_in_arc(cast: SkillCast, origin: Vector3, fwd: Vector3, arc_degrees: float,
-		reach: float, max_targets: int, exclude: Array = []) -> Array:
+		reach: float, max_targets := NO_CAP, exclude: Array = []) -> Array:
 	var targets := _candidates(cast, exclude)
 	var indices := resolve_arc(origin, fwd, arc_degrees, reach, max_targets, _positions(targets))
 	return _pick(targets, indices)
@@ -109,7 +114,7 @@ static func _closest(found: Array, max_targets: int) -> Array[int]:
 	found.sort_custom(func(a, b): return a[0] < b[0])
 	var hits: Array[int] = []
 	for entry in found:
-		if hits.size() >= max_targets:
+		if max_targets > 0 and hits.size() >= max_targets:
 			break
 		hits.append(entry[1])
 	return hits

@@ -48,12 +48,17 @@ Hex: A big crawler is sitting on all my power cells. Kill it and I’ll pay well
 
 ~ accept_q04_the_overflow
 > start_quest q04_the_overflow
-Hex: Don’t let it stack up. Clear the small ones first.
+Hex: It's out in the Signal Wastes. And it's a buffer, not a bug: it holds against anyone who's comfortable.
+# NEW: the Overflow's lock (OverflowLock)
+Hex: Full life, you bounce off. Get down to half and it overflows. That's when your hits land.
+Hex: So don't heal up. Script something that keeps you alive down there. Leech, a barrier, whatever keeps you standing.
 -> end
 
 ~ remind_q04_the_overflow
 # NEW line below
 Hex: My cells are still under that thing.
+# NEW line below
+Hex: Half life or lower, or it doesn't feel a thing.
 
 ~ ready_q04_the_overflow
 Hex: Done?

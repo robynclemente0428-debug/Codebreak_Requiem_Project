@@ -12,6 +12,7 @@ const MAIN_MENU_SCENE := "res://scenes/ui/main_menu.tscn"
 @onready var delete_dialog: ConfirmationDialog = %DeleteDialog
 
 var _pending_delete := -1
+var _moving := -1                   # slot whose MOVE was pressed: the next card clicked swaps with it
 
 
 func _ready() -> void:
@@ -39,6 +40,7 @@ func _build_slots() -> void:
 		card.setup(i, SaveManager.load_slot(i))
 		card.slot_chosen.connect(_on_slot_chosen)
 		card.delete_requested.connect(_on_delete_requested)
+		card.move_requested.connect(_on_move_requested)
 
 
 func _focus_slot(index: int) -> void:
@@ -51,6 +53,9 @@ func _focus_slot(index: int) -> void:
 
 
 func _on_slot_chosen(index: int) -> void:
+	if _moving >= 0:
+		_finish_move(index)
+		return
 	if SaveManager.slot_exists(index):
 		if SaveManager.add_to_party(index) and SaveManager.party_full():
 			SaveManager.start_game()                    # existing character: play
@@ -75,7 +80,50 @@ func _confirm_delete() -> void:
 	scroll.scroll_horizontal = keep
 	_focus_slot(_pending_delete)
 
+# ---------- MOVE ----------
+## MOVE on a card: every other card shows SWAP HERE / MOVE HERE; the next card clicked takes
+## this character (and the one there, if any, takes its place). The same card, Esc or BACK cancels.
+func _on_move_requested(index: int) -> void:
+	if index in SaveManager.party:
+		return                                  # already seated: it can't move now
+	_moving = index
+	_show_move_state()
+
+
+func _finish_move(target: int) -> void:
+	var from := _moving
+	_moving = -1
+	if target != from and not SaveManager.swap_slots(from, target):
+		push_warning("Could not move slot %d to %d" % [from, target])
+	var keep := scroll.scroll_horizontal
+	_build_slots()
+	await get_tree().process_frame
+	scroll.scroll_horizontal = keep
+	_focus_slot(target)
+
+
+func _cancel_move() -> void:
+	_moving = -1
+	_show_move_state()
+
+
+func _show_move_state() -> void:
+	for card in slots_box.get_children():
+		var c := card as SlotButton
+		if c != null:
+			c.set_move_state("" if _moving < 0 else ("source" if c.slot_index == _moving else "target"))
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _moving >= 0 and event.is_action_pressed("ui_cancel"):
+		_cancel_move()
+		get_viewport().set_input_as_handled()
+
+
 func _on_back() -> void:
+	if _moving >= 0:
+		_cancel_move()                          # BACK first just cancels a move
+		return
 	SaveManager.end_session()
 	get_tree().change_scene_to_file(MAIN_MENU_SCENE)
 

@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" path="res://scenes/enemy/enemy_model.gd" id="1_model"]
 [ext_resource type="PackedScene" path="res://assets/models/enemy/loop_hound/hound_model.tscn" id="2_mesh"]
-[ext_resource type="Script" path="res://systems/enemies/boss/loop_charger.gd" id="3_loop"]
 
 [node name="LoopHoundAlphaModel" type="Node3D"]
 script = ExtResource("1_model")
@@ -11,9 +10,10 @@ idle_anim = &"idle"
 move_anim = &"run"
 attack_anim = &"bite"
 death_anim = &""
+skill_anims = Dictionary[String, String]({
+"slash_l": "bite",
+"slash_r": "bite"
+})
 
 [node name="Mesh" parent="." instance=ExtResource("2_mesh")]
 transform = Transform3D(1.05, 0, 0, 0, 1.05, 0, 0, 0, 1.05, 0, 0.0, 0)
-
-[node name="LoopCharger" type="Node" parent="."]
-script = ExtResource("3_loop")

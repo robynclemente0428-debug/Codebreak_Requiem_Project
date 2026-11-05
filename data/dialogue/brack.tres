@@ -15,6 +15,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ can_start:q00_proximity_trigger -> offer_q00_proximity_trigger
 @ quest_ready:q06_the_mimic -> ready_q06_the_mimic
 @ quest_ready:q05_the_leak -> ready_q05_the_leak
+@ quest_ready:q04b_hollow_choir -> ready_q04b_hollow_choir
 @ quest_ready:q03_loop_hound_alpha -> ready_q03_loop_hound_alpha
 @ quest_ready:q02b_the_road_out -> ready_q02b_the_road_out
 @ quest_ready:q02_corrupted_gate_guard -> ready_q02_corrupted_gate_guard
@@ -30,6 +31,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 ~ main
 @ quest_active:q06_the_mimic -> remind_q06_the_mimic
 @ quest_active:q05_the_leak -> remind_q05_the_leak
+@ quest_active:q04b_hollow_choir -> remind_q04b_hollow_choir
 @ quest_active:q03_loop_hound_alpha -> remind_q03_loop_hound_alpha
 @ quest_active:q02b_the_road_out -> remind_q02b_the_road_out
 @ quest_active:q02_corrupted_gate_guard -> remind_q02_corrupted_gate_guard
@@ -40,6 +42,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ can_start:q02_corrupted_gate_guard -> offer_q02_corrupted_gate_guard
 @ can_start:q02b_the_road_out -> offer_q02b_the_road_out
 @ can_start:q03_loop_hound_alpha -> offer_q03_loop_hound_alpha
+@ can_start:q04b_hollow_choir -> offer_q04b_hollow_choir
 @ can_start:q05_the_leak -> offer_q05_the_leak
 @ can_start:q06_the_mimic -> offer_q06_the_mimic
 @ quest_active:ward_beacons_inner -> remind_beacons_inner
@@ -131,11 +134,16 @@ Brack: Her nest is sealed. The Enchanter in the Cache Warrens carries the Brood 
 ~ accept_q01_glitchling_queen
 > start_quest q01_glitchling_queen
 Brack: Your script works. Now use it on her.
+# NEW: the Queen's lock (BroodLock)
+Brack: Don't waste swings on the Queen while her brood's alive. They shield her.
+Brack: Kill every last Glitchling, then hit her. Fast. The next brood links her up again.
 -> end
 
 ~ remind_q01_glitchling_queen
 # NEW line below
 Brack: The Queen's still breeding. No Brood Key, no way in. The Enchanter in the Cache Warrens has it.
+# NEW line below
+Brack: Brood first, then the Queen. Her Glitchlings shield her.
 
 ~ ready_q01_glitchling_queen
 Brack: Done?
@@ -187,11 +195,16 @@ Brack: The Gate Guard went rogue. Nobody gets in or out until it falls.
 Brack: Sudo will test your scripts first. No test, no rank.
 # NEW line below
 Brack: Then the Gate Key. The Enchanter at the Firewall Approach carries it.
+# NEW: the Gate Guard's lock (HandshakeLock)
+Brack: One more thing. Swinging at that Guard does nothing. Its gate only opens for a handshake.
+Brack: Let it slam you with a shield up. Barrier or guard, script one into a skill. Then hit it while the gate's open.
 -> end
 
 ~ remind_q02_corrupted_gate_guard
 # NEW line below
 Brack: Talk to Sudo. Then the Gate Key at the Firewall. Then the Guard.
+# NEW line below
+Brack: Shield up and take its slam. That's what opens it.
 
 ~ ready_q02_corrupted_gate_guard
 Brack: Done?
@@ -240,11 +253,17 @@ Brack: Alpha leads the pack that blocks our road. Cut off the head.
 ~ accept_q03_loop_hound_alpha
 > start_quest q03_loop_hound_alpha
 Brack: Give your skill a stop condition, or you’ll chase it forever.
+# NEW: the Alpha's lock (ChecksumLock)
+Brack: And don't just hit him. He checks every attack and throws out the wrong ones.
+Brack: He only counts loops. Your cast has to repeat exactly twice. Not once, not three times. More bullets won't fool him. He reads one loop, then checks it. Watch the count over his head.
+Brack: Damage doesn't matter to a checksum. Trade some of it for the loop.
 -> end
 
 ~ remind_q03_loop_hound_alpha
 # NEW line below
-Brack: The road's still blocked. The Alpha holds Scrapline Crossing. Set course from the route terminal.
+Brack: The road's still blocked. The Alpha holds Scrapline Crossing, past the Road Gate. Set course from the route terminal.
+# NEW line below
+Brack: Remember: he counts the loops. A for loop, range two.
 
 ~ ready_q03_loop_hound_alpha
 Brack: Done?
@@ -254,6 +273,36 @@ Brack: Done?
 ~ turnin_q03_loop_hound_alpha
 > turn_in q03_loop_hound_alpha
 Brack: The hounds scatter without him. Road’s clear.
+-> start
+
+~ offer_q04b_hollow_choir
+# NEW: the Act II finale (EchoLock)
+Brack: The Hollow Relay. Last stop before Checkpoint, and the only way to call ahead.
+Brack: Except it's already calling. Our own evacuation order, over and over, in our own voices.
+Brack: Something's nesting in that signal. Shut it up.
+* ACCEPT -> accept_q04b_hollow_choir
+* NOT YET -> end
+
+~ accept_q04b_hollow_choir
+> start_quest q04b_hollow_choir
+Brack: Scouts say it learns. Hit it the same way twice and the second hit just echoes off.
+Brack: So don't. Swap skills, or swap script sets so the same skill runs something new. Keep it guessing.
+Brack: The wisps in the Static Mire do the same trick, smaller. Practise on them on the way.
+-> end
+
+~ remind_q04b_hollow_choir
+Brack: The Choir's still singing. Past the Static Mire, at the end of the route.
+Brack: Never the same pattern twice. Swap skills or script sets every hit that lands.
+
+~ ready_q04b_hollow_choir
+Brack: Quiet out there. Done?
+* TURN IN -> turnin_q04b_hollow_choir
+* NOT YET -> end
+
+~ turnin_q04b_hollow_choir
+> turn_in q04b_hollow_choir
+Brack: Relay's ours. Checkpoint answered. They're expecting us.
+Brack: Whatever's waiting there, we roll in loaded.
 -> start
 
 ~ offer_q05_the_leak

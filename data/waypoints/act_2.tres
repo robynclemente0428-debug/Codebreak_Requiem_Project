@@ -9,9 +9,21 @@ id = "act2_convoy"
 display_name = "The Convoy"
 scene = "res://scenes/map/town/act_2_convoy.tscn"
 kind = 0
-map_position = Vector2(0.1, 0.5)
-links = PackedStringArray("act2_scrapline")
+map_position = Vector2(0.06, 0.5)
+links = PackedStringArray("act2_gate")
 note = "Brack, Sudo, Quartermaster, Hex"
+
+[sub_resource type="Resource" id="Waypoint_act2_gate"]
+script = ExtResource("2_wp")
+id = "act2_gate"
+display_name = "The Road Gate"
+scene = "res://scenes/map/dungeon/act_2_road_gate.tscn"
+spawn_id = &"gate_in"
+dungeon_level = 10
+map_position = Vector2(0.2, 0.32)
+links = PackedStringArray("act2_convoy", "act2_scrapline")
+note = "Level 10  -  Hardfault's old checkpoint. Loop Hound packs"
+random_threats = Vector2i(0, 1)
 
 [sub_resource type="Resource" id="Waypoint_act2_scrapline"]
 script = ExtResource("2_wp")
@@ -21,10 +33,24 @@ scene = "res://scenes/map/dungeon/act_2_scrapline_crossing.tscn"
 spawn_id = &"scrapline_in"
 dungeon_level = 11
 kind = 2
-map_position = Vector2(0.34, 0.3)
-links = PackedStringArray("act2_convoy", "act2_signal")
-note = "Level 11  -  Loop Hound Alpha"
+map_position = Vector2(0.34, 0.58)
+links = PackedStringArray("act2_gate", "act2_rust")
+note = "Level 11  -  Loop Hound Alpha (CHECKSUM)"
 random_threats = Vector2i(1, 1)
+route_after = "act2_gate"
+
+[sub_resource type="Resource" id="Waypoint_act2_rust"]
+script = ExtResource("2_wp")
+id = "act2_rust"
+display_name = "Rust Choke"
+scene = "res://scenes/map/dungeon/act_2_rust_choke.tscn"
+spawn_id = &"rust_in"
+dungeon_level = 13
+map_position = Vector2(0.48, 0.3)
+links = PackedStringArray("act2_scrapline", "act2_signal")
+note = "Level 13  -  A scrapyard canyon. Raiders, heavy armour"
+random_threats = Vector2i(1, 1)
+route_after = "act2_scrapline"
 
 [sub_resource type="Resource" id="Waypoint_act2_signal"]
 script = ExtResource("2_wp")
@@ -33,11 +59,25 @@ display_name = "Signal Wastes"
 scene = "res://scenes/map/dungeon/act_2_signal_wastes.tscn"
 spawn_id = &"signal_in"
 dungeon_level = 15
-map_position = Vector2(0.6, 0.62)
-links = PackedStringArray("act2_scrapline", "act2_relay")
-note = "Level 15  -  Corrupted Enchanter"
+kind = 2
+map_position = Vector2(0.62, 0.62)
+links = PackedStringArray("act2_rust", "act2_mire")
+note = "Level 15  -  The Overflow (OVERFLOW)"
 random_threats = Vector2i(1, 1)
-route_after = "act2_scrapline"
+route_after = "act2_rust"
+
+[sub_resource type="Resource" id="Waypoint_act2_mire"]
+script = ExtResource("2_wp")
+id = "act2_mire"
+display_name = "The Static Mire"
+scene = "res://scenes/map/dungeon/act_2_static_mire.tscn"
+spawn_id = &"mire_in"
+dungeon_level = 18
+map_position = Vector2(0.76, 0.34)
+links = PackedStringArray("act2_signal", "act2_relay")
+note = "Level 18  -  Drowned cable fields. Echo Wisps"
+random_threats = Vector2i(1, 2)
+route_after = "act2_signal"
 
 [sub_resource type="Resource" id="Waypoint_act2_relay"]
 script = ExtResource("2_wp")
@@ -46,16 +86,17 @@ display_name = "Hollow Relay"
 scene = "res://scenes/map/dungeon/act_2_hollow_relay.tscn"
 spawn_id = &"relay_in"
 dungeon_level = 20
-map_position = Vector2(0.86, 0.36)
-links = PackedStringArray("act2_signal")
-note = "Level 20  -  Corrupted Raider"
+kind = 2
+map_position = Vector2(0.9, 0.6)
+links = PackedStringArray("act2_mire")
+note = "Level 20  -  The Hollow Choir (ECHO)"
 random_threats = Vector2i(1, 2)
-route_after = "act2_signal"
+route_after = "act2_mire"
 
 [resource]
 script = ExtResource("1_act")
 act_number = 2
 title = "ACT II"
-subtitle = "THE CONVOY  -  Stops along the route, levels 11 to 20"
-waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act2_convoy"), SubResource("Waypoint_act2_scrapline"), SubResource("Waypoint_act2_signal"), SubResource("Waypoint_act2_relay")])
+subtitle = "THE CONVOY  -  Stops along the route, levels 10 to 20"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act2_convoy"), SubResource("Waypoint_act2_gate"), SubResource("Waypoint_act2_scrapline"), SubResource("Waypoint_act2_rust"), SubResource("Waypoint_act2_signal"), SubResource("Waypoint_act2_mire"), SubResource("Waypoint_act2_relay")])
 convoy_route = true

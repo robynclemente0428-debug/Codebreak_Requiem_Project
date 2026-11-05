@@ -43,7 +43,40 @@ signal walking_changed(is_walking: bool)
 ## This character's class (null when the scene is run on its own). SkillComponent reads its trait.
 var class_data: ClassData
 
+## The player's light: a cool blue pool on the floor round them that goes everywhere with them,
+## so in a dark dungeon you see what's near and the rest falls into shadow.
+## How strong it is follows the area (AreaLighting): full in a dungeon, off in a town.
+const LIGHT_NAME := "PlayerLight"
+const LIGHT_COLOR := Color(0.55, 0.75, 1.0)
+const LIGHT_ENERGY := 16.0                      # at full darkness (blue reads dimmer than warm light)
+const LIGHT_RANGE := 13.0
+const LIGHT_ATTENUATION := 2.5                  # higher = brighter in the middle, softer edge
+const LIGHT_HEIGHT := 3.5
+
+
+func _add_light() -> void:
+	var light := OmniLight3D.new()
+	light.name = LIGHT_NAME
+	light.light_color = LIGHT_COLOR
+	light.omni_range = LIGHT_RANGE
+	light.omni_attenuation = LIGHT_ATTENUATION
+	light.shadow_enabled = true                  # walls and enemies throw shadows away from you
+	light.position = Vector3.UP * LIGHT_HEIGHT
+	add_child(light)
+	set_light_strength(AreaLighting.player_light)
+
+
+## 0 = off, 1 = full (AreaLighting sets it for the area that's loaded).
+func set_light_strength(t: float) -> void:
+	var light := get_node_or_null(LIGHT_NAME) as OmniLight3D
+	if light == null:
+		return
+	light.light_energy = LIGHT_ENERGY * t
+	light.visible = t > 0.0
+
+
 func _ready() -> void:
+	_add_light()
 	var c: ClassData = null
 	var data: Dictionary = {}
 	if not SaveManager.party.is_empty():
@@ -271,6 +304,12 @@ func _collect_inventory() -> Array:
 	for item in inventory.items:
 		out.append(item.to_dict())
 	return out
+
+func _process(_delta: float) -> void:
+	# Dungeon walls in front of the player dither away round them (hardfault_meshes.tres)
+	if get_tree().get_first_node_in_group("players") == self:     # the first player (seat 0)
+		RenderingServer.global_shader_parameter_set(&"player_world_pos", global_position)
+
 
 func _physics_process(delta: float) -> void:
 	if _dead:

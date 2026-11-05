@@ -145,6 +145,21 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 		t.modify_incoming(info)
 	if info.cancelled:
 		return info
+	if info.absorbed:               # a boss lock took it: it landed, for nothing
+		if target_health.current_health <= 0.0:
+			return info
+		info.landed = true
+		cast.already_hit.append(target)
+		for t: EnemyTrait in traits:
+			if is_instance_valid(t):
+				t.after_hit(info)
+		for s in cast.skill.support_behaviors:
+			s.on_hit(cast, target, info)
+		return info
+	var own: Array = cast.caster.get("traits") if "traits" in cast.caster else []   # HandshakeLock
+	for t: EnemyTrait in own:
+		if is_instance_valid(t):
+			t.on_outgoing(info)
 
 	info.dealt = target_health.take_damage(info.damage)
 	if info.dealt <= 0.0:

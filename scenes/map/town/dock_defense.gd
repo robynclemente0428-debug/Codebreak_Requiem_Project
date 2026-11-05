@@ -93,7 +93,7 @@ var _alive: Array[Node3D] = []
 var _enemies: Node3D                     # the Null of the fight, for the minimap (set_alert)
 var _poll := 0.0
 var _restart_wait := 0.0                 # start_anywhere: a breather after dying
-var _portal: Portal
+var _portal: Node3D                      # what the fight is held at (a Portal here; HullBreach: the route terminal)
 var _spawn_points: Array[Vector3] = []
 var _baked := false
 var _runners: Array[Dictionary] = []     # the fleeing NPCs, see _evacuate()
@@ -138,7 +138,7 @@ func _player() -> Node3D:
 	return get_tree().get_first_node_in_group("players") as Node3D
 
 
-func _find_portal() -> Portal:
+func _find_portal() -> Node3D:
 	if is_instance_valid(_portal):
 		return _portal
 	for p in get_parent().find_children("*", "Portal", true, false):

@@ -22,6 +22,8 @@
 [ext_resource type="PackedScene" uid="uid://cenh85fsfixuv" path="res://scenes/loot/shop_npc/weapon_vendor.tscn" id="20_wmodel"]
 [ext_resource type="Resource" uid="uid://wdprfnpkerqq" path="res://data/shops/armour_vendor.tres" id="21_ashop"]
 [ext_resource type="PackedScene" uid="uid://dmy5yaa517ms6" path="res://scenes/loot/shop_npc/armour_vendor.tscn" id="22_amodel"]
+[ext_resource type="Resource" uid="uid://c58lpqc0ep3fj" path="res://data/shops/gem_vendor.tres" id="23_gshop"]
+[ext_resource type="Resource" uid="uid://cj7ruy6fmca7e" path="res://data/dialogue/gem_vendor.tres" id="24_gdlg"]
 
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/ammo.tscn" id="furn_ammo"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/ammo_closed.tscn" id="furn_ammo_closed"]
@@ -39,6 +41,14 @@
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_thin_tall.tscn" id="furn_shelves_thin_tall"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_short.tscn" id="furn_shelves_wide_short"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_tall.tscn" id="furn_shelves_wide_tall"]
+[ext_resource type="Script" path="res://scenes/map/town/convoy/hull_breach.gd" id="hb_script"]
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="hb_def"]
+[ext_resource type="Resource" path="res://data/enemies/loop_hound.tres" id="hb_hound"]
+[ext_resource type="Resource" path="res://data/enemies/quad_shell.tres" id="hb_shell"]
+[ext_resource type="Resource" path="res://data/enemies/trilobite.tres" id="hb_trilo"]
+[ext_resource type="Resource" path="res://data/enemies/eye_drone.tres" id="hb_drone"]
+[ext_resource type="Resource" path="res://data/enemies/raider_boss.tres" id="hb_raider"]
+[ext_resource type="Resource" path="res://data/enemies/enchanter_boss.tres" id="hb_enchanter"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_f6log"]
 
@@ -121,6 +131,8 @@ script = ExtResource("12_l5764")
 shop = ExtResource("13_fnsnu")
 model_scene = ExtResource("14_tnwyf")
 npc_id = "quartermaster"
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 npc_name = "Quartermaster"
 info_title = "Convoy Supplies"
 info_description = "Keeps the outpost supplied. Buys what you drag back from the dungeons and sells what you need to go back in."
@@ -139,6 +151,17 @@ npc_id = "hex"
 npc_name = "Tinker Hex"
 dialogue = ExtResource("17_hex")
 info_title = "Trader"
+
+[node name="GemVendor" parent="." unique_id=730114526 instance=ExtResource("11_hky0x")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 44, 1.1, 32)
+shop = ExtResource("23_gshop")
+stock_level = 20
+follow_act_level = false
+model_scene = ExtResource("14_tnwyf")
+npc_id = "cache"
+npc_name = "Cache"
+dialogue = ExtResource("24_gdlg")
+info_title = "Gem Vendor"
 
 [node name="Weaponsmith" parent="." unique_id=730114524 instance=ExtResource("11_hky0x")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 47, 1.1, 32.6)
@@ -222,3 +245,63 @@ transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 26.3, 1.
 
 [node name="Dish" parent="Furniture" instance=ExtResource("furn_satellite_dish")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 57.6, 1.1, 27.7)
+
+[node name="BreachAfterScrapline" type="Node3D" parent="."]
+script = ExtResource("hb_script")
+after_stop = "act2_scrapline"
+reward_credits = 150
+quest_id = ""
+held_key = ""
+dock_target = ""
+hold_radius = 13.0
+load_time = 35.0
+wave_every = 8.0
+wave_sizes = PackedInt32Array(8, 12, 16)
+enemy_level = 12
+wave_health_flat = 60.0
+wave_armour_flat = 40.0
+mini_bosses = Array[ExtResource("hb_def")]([ExtResource("hb_raider")])
+spawn_min = 8.0
+spawn_max = 16.0
+swarm = ExtResource("hb_hound")
+brute = ExtResource("hb_shell")
+shooter = ExtResource("hb_trilo")
+title_text = "// HULL BREACH //"
+start_toast = "HULL BREACH
+Raiders and hounds are over the rails. Hold the route terminal."
+progress_text = "HOLDING THE NAVIGATION  %d%%"
+away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
+clear_text = "THEY'RE FALLING BACK. CLEAR THE DECK."
+count_text = "BOARDERS ON DECK: %d"
+done_toast = "DECK CLEAR
+The convoy rolls on."
+
+[node name="BreachAfterSignal" type="Node3D" parent="."]
+script = ExtResource("hb_script")
+after_stop = "act2_signal"
+reward_credits = 200
+quest_id = ""
+held_key = ""
+dock_target = ""
+hold_radius = 13.0
+load_time = 40.0
+wave_every = 8.0
+wave_sizes = PackedInt32Array(10, 14, 18)
+enemy_level = 16
+wave_health_flat = 80.0
+wave_armour_flat = 60.0
+mini_bosses = Array[ExtResource("hb_def")]([ExtResource("hb_enchanter")])
+spawn_min = 8.0
+spawn_max = 16.0
+swarm = ExtResource("hb_drone")
+brute = ExtResource("hb_shell")
+shooter = ExtResource("hb_trilo")
+title_text = "// HULL BREACH //"
+start_toast = "HULL BREACH
+The signal followed us. Drones on the deck: hold the route terminal."
+progress_text = "HOLDING THE NAVIGATION  %d%%"
+away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
+clear_text = "THE SIGNAL'S FADING. CLEAR THE DECK."
+count_text = "DRONES ON DECK: %d"
+done_toast = "DECK CLEAR
+The convoy rolls on."

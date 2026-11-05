@@ -167,7 +167,8 @@ func _on_hover(w: Waypoint) -> void:
 	_info_name.text = w.display_name.to_upper()
 	_info_name.add_theme_color_override("font_color", _MapView.kind_color(w))
 	var kind := "TOWN" if w.kind == Waypoint.Kind.TOWN else "DUNGEON  ·  LEVEL %d" % w.dungeon_level
-	_info_line.text = kind + ("   " + w.note if w.note != "" else "")
+	var note := _note_of(w)
+	_info_line.text = kind + ("   " + note if note != "" else "")
 	var threats := DungeonThreats.preview(w.scene, w.dungeon_level)
 	if not threats.is_empty():
 		var tags := PackedStringArray()
@@ -180,7 +181,7 @@ func _on_hover(w: Waypoint) -> void:
 		var reason := "YOU ARE HERE" if w.kind == Waypoint.Kind.TOWN 				else Waypoints.route_blocked_reason(w, get_tree())
 		_info_status.text = "CLICK TO SET COURSE" if reason == "" else reason
 		_info_status.add_theme_color_override("font_color", ACCENT if reason == "" else COL_WARN)
-		_info_ctrl.text = ""
+		_info_ctrl.text = "CTRL+CLICK: NEW INSTANCE" if reason == "" and Waypoints.is_instanced(w) else ""
 		return
 	var why := Waypoints.blocked_reason(w, get_tree())
 	_info_status.text = "CLICK TO TRAVEL" if why == "" else why
@@ -193,7 +194,7 @@ func _on_hover(w: Waypoint) -> void:
 func _on_pick(w: Waypoint, new_instance := false) -> void:
 	var went := false
 	if _route_act != null:
-		went = Waypoints.is_convoy_stop(w) and Waypoints.sail(w, get_tree())
+		went = Waypoints.is_convoy_stop(w) and Waypoints.sail(w, get_tree(), new_instance)
 	else:
 		went = Waypoints.travel(w, get_tree(), new_instance)
 	if went:
@@ -316,6 +317,10 @@ func _build_ui() -> void:
 	_info_name = _label("", 26, COL_TEXT)
 	texts.add_child(_info_name)
 	_info_line = _label("", 18, COL_DIM)
+	_info_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART   # a long note wraps instead of
+	_info_line.custom_minimum_size.x = 1.0                     # pushing past CLICK TO SET COURSE
+	_info_name.clip_text = true
+	_info_name.custom_minimum_size.x = 1.0
 	texts.add_child(_info_line)
 	var actions := VBoxContainer.new()             # what a click does, and what Ctrl + click does
 	actions.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -331,6 +336,16 @@ func _build_ui() -> void:
 	_hint = _label("U / ESC  CLOSE", 15, Color(COL_DIM, 0.7))
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	col.add_child(_hint)
+
+
+## A stop's note without the "Level 10  -  " it starts with: the line already says LEVEL 10.
+static func _note_of(w: Waypoint) -> String:
+	var note := w.note.strip_edges()
+	var prefix := "Level %d" % w.dungeon_level
+	if w.dungeon_level > 0 and note.begins_with(prefix):
+		note = note.substr(prefix.length()).strip_edges()
+		note = note.trim_prefix("-").strip_edges()
+	return note
 
 
 func _label(text: String, fsize: int, col: Color) -> Label:

@@ -26,7 +26,7 @@ void fragment() {
 	float lead = 1.0 - smoothstep(head - 0.05, head, u); // nothing ahead of the edge
 	float trail = clamp(1.0 - (head - u) / 0.6, 0.0, 1.0); // brightest at the edge, fading behind
 	float rim = smoothstep(0.7, 1.0, UV.y);              // bright outer edge
-	vec3 col = mix(color_a.rgb, color_b.rgb, UV.y) * (0.8 + rim * 1.5);
+	vec3 col = mix(color_a.rgb, color_b.rgb, UV.y) * (1.1 + rim * 1.6);   // past 1.0: the world's glow picks it up
 	ALBEDO = col;
 	ALPHA = lead * trail * (1.0 - fade) * smoothstep(0.0, 0.25, UV.y);
 }

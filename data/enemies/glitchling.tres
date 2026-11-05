@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
 [ext_resource type="PackedScene" path="res://scenes/enemy/glitchling/glitchling_model.tscn" id="3_model"]
 [ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_2aynx"]
+[ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_ifhfi"]
 
 [resource]
 script = ExtResource("1_def")
@@ -15,7 +16,6 @@ model_scene = ExtResource("3_model")
 capsule_radius = 0.12
 capsule_height = 0.9
 max_health = 8.0
-armour = 5.0
 move_speed = 4.5
 aggro_range = 20.0
 attack_range = 0.8

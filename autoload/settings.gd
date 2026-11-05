@@ -26,6 +26,7 @@ const DEFAULTS := {
 		"resolution": "1920x1080",        # window size, only used when windowed
 		"vsync": true,
 		"max_fps": 0,                     # 0 = no limit
+		"show_fps": false,                # frame counter in the top-left corner (FpsCounter)
 		"ui_scale": 1.0,
 		"cursor": "themed",               # "themed" (the game's cursors) or "system"
 		"cursor_size": 32,                # pixels
@@ -50,6 +51,9 @@ const DEFAULTS := {
 	# Not shown in the settings menu: remembered from play
 	"camera": {
 		"zoom": 0.0,                      # camera size from the mouse wheel (0 = the scene's size)
+	},
+	"layout": {
+		"script_panes": {},               # SCRIPTING tab bars: "explorer" / "snippets" / "output" -> split_offset
 	},
 }
 
@@ -90,6 +94,7 @@ func _ready() -> void:
 	KeyBindings.load_saved()
 	_apply_display(true)
 	_apply_audio()
+	add_child(preload("res://scenes/ui/fps_counter.gd").new())   # FpsCounter
 	get_tree().root.size_changed.connect(_apply_ui_scale)
 	print("[Settings] window %s, UI laid out at %s" % [get_tree().root.size, get_tree().root.get_visible_rect().size])
 

@@ -22,5 +22,4 @@ min_attack_damage = 10.0
 max_attack_damage = 15.0
 skills = Array[ExtResource("2_cmiq8")]([ExtResource("5_l181a")])
 skill_cooldown = 2.0
-pool_rarities = PackedStringArray("rare", "champion")
 metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

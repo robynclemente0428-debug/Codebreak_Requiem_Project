@@ -1,6 +1,6 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://d0uml10ovqxip"]
 
-[ext_resource type="Script" path="res://scenes/props/route_terminal/route_terminal.gd" id="1_term"]
+[ext_resource type="Script" uid="uid://jxkwlcu5p0ky" path="res://scenes/props/route_terminal/route_terminal.gd" id="1_term"]
 
 [sub_resource type="SphereShape3D" id="Shape_reach"]
 radius = 2.2
@@ -17,31 +17,31 @@ roughness = 0.45
 material = SubResource("Mat_body")
 size = Vector3(1.6, 0.9, 0.8)
 
-[sub_resource type="BoxMesh" id="Mesh_hood"]
-material = SubResource("Mat_body")
-size = Vector3(1.6, 0.1, 0.9)
-
-[sub_resource type="StandardMaterial3D" id="Mat_screen"]
-albedo_color = Color(0.0, 0.55, 0.65, 1)
-emission_enabled = true
-emission = Color(0.0, 0.9, 1.0, 1)
-emission_energy_multiplier = 2.2
-
-[sub_resource type="BoxMesh" id="Mesh_screen"]
-material = SubResource("Mat_screen")
-size = Vector3(1.3, 0.75, 0.05)
-
 [sub_resource type="StandardMaterial3D" id="Mat_trim"]
-albedo_color = Color(0.25, 1.0, 0.55, 1)
+albedo_color = Color(0.25, 1, 0.55, 1)
 emission_enabled = true
-emission = Color(0.25, 1.0, 0.55, 1)
+emission = Color(0.25, 1, 0.55, 1)
 emission_energy_multiplier = 1.6
 
 [sub_resource type="BoxMesh" id="Mesh_trim"]
 material = SubResource("Mat_trim")
 size = Vector3(1.62, 0.05, 0.05)
 
-[node name="RouteTerminal" type="Area3D"]
+[sub_resource type="StandardMaterial3D" id="Mat_screen"]
+albedo_color = Color(0, 0.55, 0.65, 1)
+emission_enabled = true
+emission = Color(0, 0.9, 1, 1)
+emission_energy_multiplier = 2.2
+
+[sub_resource type="BoxMesh" id="Mesh_screen"]
+material = SubResource("Mat_screen")
+size = Vector3(1.3, 0.75, 0.05)
+
+[sub_resource type="BoxMesh" id="Mesh_hood"]
+material = SubResource("Mat_body")
+size = Vector3(1.6, 0.1, 0.6559814)
+
+[node name="RouteTerminal" type="Area3D" unique_id=662816414]
 collision_mask = 3
 script = ExtResource("1_term")
 prompt_text = "SET COURSE"
@@ -49,34 +49,34 @@ prompt_height = 2.1
 info_title = "Convoy Navigation"
 info_description = "Plots the convoy's route. Pick a stop and the convoy drops you at its entrance."
 
-[node name="InteractionShape" type="CollisionShape3D" parent="."]
+[node name="InteractionShape" type="CollisionShape3D" parent="." unique_id=1847429771]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.6)
 shape = SubResource("Shape_reach")
 
-[node name="Body" type="StaticBody3D" parent="."]
+[node name="Body" type="StaticBody3D" parent="." unique_id=1532358488]
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Body"]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Body" unique_id=1570939882]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
 shape = SubResource("Shape_body")
 
-[node name="Base" type="MeshInstance3D" parent="."]
+[node name="Base" type="MeshInstance3D" parent="." unique_id=1583460457]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
 mesh = SubResource("Mesh_base")
 
-[node name="Trim" type="MeshInstance3D" parent="."]
+[node name="Trim" type="MeshInstance3D" parent="." unique_id=2065196868]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.88, 0.4)
 mesh = SubResource("Mesh_trim")
 
-[node name="Screen" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.866025, -0.5, 0, 0.5, 0.866025, 0, 1.25, 0.05)
+[node name="Screen" type="MeshInstance3D" parent="." unique_id=899086441]
+transform = Transform3D(1, 0, 0, 0, 0.86602503, 0.4999998, 0, -0.4999998, 0.86602503, 0, 1.25, 0.05)
 mesh = SubResource("Mesh_screen")
 
-[node name="Hood" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, -0.15)
+[node name="Hood" type="MeshInstance3D" parent="." unique_id=1840445136]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.68, -0.025720268)
 mesh = SubResource("Mesh_hood")
 
-[node name="Glow" type="OmniLight3D" parent="."]
+[node name="Glow" type="OmniLight3D" parent="." unique_id=672499711]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, 0.8)
-light_color = Color(0.0, 0.9, 1.0, 1)
+light_color = Color(0, 0.9, 1, 1)
 light_energy = 1.4
 omni_range = 4.0

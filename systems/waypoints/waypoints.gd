@@ -125,8 +125,8 @@ static func is_cleared(w: Waypoint) -> bool:
 static func route_open(w: Waypoint) -> bool:
 	if not is_convoy_stop(w):
 		return false
-	if w.route_after == "":
-		return true
+	if w.route_after == "" or is_cleared(w):
+		return true                  # cleared stops stay open (a stop added before it later)
 	var act := act_of_scene(w.scene)
 	return is_cleared(act.find(w.route_after))
 
@@ -163,11 +163,13 @@ static func route_blocked_reason(w: Waypoint, tree: SceneTree) -> String:
 
 ## Sends the party from the route terminal to a stop's entrance. Rejoins its open instance like
 ## walking in through a portal, but always at the entrance, not where they last stood.
-static func sail(w: Waypoint, tree: SceneTree) -> bool:
+## new_instance (Ctrl + click, as on the waypoint map): a fresh layout of the stop instead.
+static func sail(w: Waypoint, tree: SceneTree, new_instance := false) -> bool:
 	if route_blocked_reason(w, tree) != "":
 		return false
 	var am := tree.get_first_node_in_group("area_manager") as AreaManager
-	am.go_to(w.scene, w.spawn_id, w.dungeon_level)
+	am.go_to(w.scene, w.spawn_id, w.dungeon_level,
+			WorldState.ALWAYS_NEW if new_instance else WorldState.REJOIN_OR_NEW)
 	return true
 
 

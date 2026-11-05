@@ -5,6 +5,8 @@
 [ext_resource type="PackedScene" path="res://assets/models/enemy/loop_hound/loop_hound_alpha_model.tscn" id="3_model"]
 [ext_resource type="Script" uid="uid://nmpkxw061f5h" path="res://systems/skills/support_gem_definition.gd" id="4_d8q3t"]
 [ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="5_d4op3"]
+[ext_resource type="Script" path="res://systems/enemies/traits/checksum_lock_trait.gd" id="9_lock"]
+[ext_resource type="Resource" uid="uid://dklpmq4u6k78e" path="res://data/skill_gems/strike.tres" id="6_strike"]
 
 [resource]
 script = ExtResource("1_def")
@@ -20,7 +22,16 @@ armour = 80.0
 move_speed = 5.5
 aggro_range = 16.0
 attack_range = 1.6
-min_attack_damage = 10.0
-max_attack_damage = 18.0
+min_attack_damage = 6.0
+max_attack_damage = 11.0
 attack_speed = 1.0
+skills = Array[ExtResource("5_d4op3")]([ExtResource("6_strike")])
+skill_loops = {
+"strike": 2
+}
+basic_attack_enabled = false
+skill_cooldown = 0.6
+cooldown_jitter = 0.6
+act_boss = true
+innate_traits = Array[Script]([ExtResource("9_lock")])
 metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

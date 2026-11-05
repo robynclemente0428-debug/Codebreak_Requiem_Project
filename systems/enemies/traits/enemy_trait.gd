@@ -26,6 +26,16 @@ func after_hit(_info: HitInfo) -> void:
 	pass
 
 
+## One of this enemy's own skills is about to hit `info.target` (before the damage is applied).
+func on_outgoing(_info: HitInfo) -> void:
+	pass
+
+
+## Seconds a trait's text (a boss lock's hint) stays over the enemy: longer than a damage number,
+## so it can be read mid-fight.
+const HINT_SECONDS := 2.0
+
+
 ## Floating text over the enemy, at most once per `gap` seconds so fast attacks don't spam it.
 func pop(text: String, col: Color, gap := 0.6) -> void:
 	var now := Time.get_ticks_msec() / 1000.0
@@ -34,7 +44,16 @@ func pop(text: String, col: Color, gap := 0.6) -> void:
 	_popped_at = now
 	var numbers := get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
 	if numbers != null:
-		numbers.pop_text(enemy.global_position + Vector3.UP * 2.2, text, col, 0.8)
+		numbers.pop_text(enemy.global_position + Vector3.UP * 2.2, text, col, 0.8, HINT_SECONDS)
+
+
+## Floating text over the enemy, every time (for messages that must not be skipped).
+func say(text: String, col: Color, size_mult := 1.0) -> void:
+	if not is_instance_valid(enemy):
+		return
+	var numbers := get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
+	if numbers != null:
+		numbers.pop_text(enemy.global_position + Vector3.UP * 2.6, text, col, size_mult, HINT_SECONDS)
 
 
 func max_health() -> float:

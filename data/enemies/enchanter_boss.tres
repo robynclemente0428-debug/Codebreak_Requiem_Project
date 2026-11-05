@@ -26,5 +26,4 @@ attack_speed = 1.0
 skills = Array[ExtResource("2_aerot")]([ExtResource("3_aerot")])
 basic_attack_enabled = false
 skill_cooldown = 0.5
-pool_rarities = PackedStringArray("rare", "champion")
 metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

@@ -11,6 +11,8 @@ extends CanvasLayer
 ##                  a stop, then what the route map shows. Ends when the route map is closed.
 ##   RANK EXAMS     once the first exam (Operator) opens up: what exams are, what a rank gives,
 ##                  then sitting it in Sudo's sandbox and handing it in. Ends when it's passed.
+##   AREA CLEARS    in a dungeon, once training is done: clearing every enemy in an area gives
+##                  every skill a script point (ScriptBudget). Shown for CLEAR_HINT_TIME seconds.
 ## Shows a banner with the next thing to do and a second line saying why, outlines the UI to
 ## click, and points an arrow at things in the world (Warden Brack, a dungeon portal).
 ## The step shown is the quest's first objective that isn't done yet, and the scripting steps
@@ -30,6 +32,8 @@ const LESSON_SUPPORTS := "support_gems"
 const LESSON_QUESTS := "quest_tracker"
 const LESSON_EXAMS := "rank_exams"
 const LESSON_ROUTE := "route_terminal"
+const LESSON_CLEARS := "area_clears"
+const CLEAR_HINT_TIME := 12.0             # seconds the area-clear lesson stays up
 const FIRST_EXAM := "exam_operator"
 const EXAMINER_NPC_ID := "sudo"
 const FONT_PATH := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
@@ -72,6 +76,7 @@ var _waypoint_map_seen := false           # the map was opened during the waypoi
 var _support_lesson_shown := false        # the "socket your support gem" steps were shown
 var _quest_log_seen := false               # the quest lesson's log step was reached
 var _route_map_seen := false               # the route lesson's map step was reached
+var _clear_hint_until := -1.0              # when the area-clear lesson goes away (-1 = not shown yet)
 
 
 func _ready() -> void:
@@ -179,6 +184,21 @@ func _current_hint() -> Dictionary:
 	if not waypoint_hint.is_empty():
 		return waypoint_hint
 
+	# After the waypoint lesson, in a dungeon: why clearing it is worth it
+	var clear_hint := _clear_hint(qm)
+	if not clear_hint.is_empty():
+		return clear_hint
+
+	# A hull breach has its own panel in the same spot: no convoy hints over it
+	for b in get_tree().get_nodes_in_group("hull_breach"):
+		if (b as HullBreach).is_running():
+			return {}
+
+	# On the convoy before its rank exam: Sudo first, then the road
+	var road_exam := _road_exam_hint()
+	if not road_exam.is_empty():
+		return road_exam
+
 	# The first time on the convoy: how its dungeons are reached
 	var route_hint := _route_hint()
 	if not route_hint.is_empty():
@@ -214,6 +234,40 @@ func _current_hint() -> Dictionary:
 	return _exam_hint(qm)
 
 
+# ---------- THE AREA CLEAR LESSON ----------
+## The first time the player is in a dungeon after training (and after the waypoint lesson):
+## clearing every enemy there makes every skill's script stronger. Stays up for
+## CLEAR_HINT_TIME seconds, then never again; clearing an area before that ends it too.
+func _clear_hint(qm: QuestManager) -> Dictionary:
+	if _lesson_seen(LESSON_CLEARS):
+		return {}
+	if not ScriptBudget.cleared_areas(qm).is_empty():
+		_mark_lesson_seen(LESSON_CLEARS)              # they found out by themselves
+		return {}
+	if not qm.is_completed(QUEST_BASICS) or not _lesson_seen(LESSON_WAYPOINTS) or not _in_waypoint_dungeon():
+		return {}
+	if _clear_hint_until < 0.0:
+		_clear_hint_until = _time + CLEAR_HINT_TIME
+	elif _time >= _clear_hint_until:
+		_mark_lesson_seen(LESSON_CLEARS)
+		return {}
+	var sp := get_tree().get_first_node_in_group("skill_panel") as SkillPanel
+	var sp_key := OS.get_keycode_string(sp.toggle_key) if sp != null else "K"
+	var pts := ScriptBudget.POINTS_PER_CLEAR
+	var waves := get_tree().get_nodes_in_group(DungeonPopulator.WAVE_EVENTS).any(
+			func(n: Node) -> bool: return n.has_method("wave_event_done") and not n.wave_event_done())
+	return {"text": "Clear every enemy here for +%s script point on every skill" % (
+			str(int(pts)) if is_equal_approx(pts, roundf(pts)) else "%.1f" % pts),
+		"sub": "Once per area%s. HOSTILE on your map counts the enemies near you. Your bonus points show in the script editor [%s]."
+			% [", and this area's ward beacon must be rebooted too" if waves else "", sp_key],
+		"targets": _minimap_target()}
+
+
+func _minimap_target() -> Array:
+	var mm := get_tree().get_first_node_in_group("minimap") as Control
+	return [mm] if mm != null and mm.is_visible_in_tree() else []
+
+
 # ---------- THE ROUTE TERMINAL LESSON ----------
 ## Starts the first time the player stands on a convoy (a town in an act with a route,
 ## WaypointAct.convoy_route): points at the route terminal, then explains the route map once
@@ -247,6 +301,23 @@ func _route_hint() -> Dictionary:
 		"sub": "This act's dungeons are stops on the convoy's route. Walk up and press [%s], or click it. It's the R on your map."
 			% Interactable.key_name(),
 		"world": term}
+
+
+## On a convoy whose route terminal wants a rank exam (RouteTerminal.required_exam) that the
+## player hasn't passed yet: point at Examiner Sudo, not the terminal.
+func _road_exam_hint() -> Dictionary:
+	if not _in_town():
+		return {}
+	var term := _get_terminal() as RouteTerminal
+	var player := get_tree().get_first_node_in_group("players") as Node3D
+	if term == null or player == null or term.exam_needed(player) == "":
+		return {}
+	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
+	if dialogue != null and dialogue.is_open():
+		return {}
+	return {"text": "Before the road: see Examiner Sudo",
+		"sub": term.exam_needed(player) + " The route terminal stays locked until then.",
+		"world": _get_examiner()}
 
 
 func _get_terminal() -> Node3D:

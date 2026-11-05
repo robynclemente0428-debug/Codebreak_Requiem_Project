@@ -11,6 +11,10 @@ extends Area3D
 ##   3. Booted, and the last of those waves down: the beacon is lit.
 ## Dying calls it off: the waves leave and it starts over from 0 next time.
 ## Not solid and not in the navmesh: enemies and the player walk right through it.
+## A wave event (DungeonPopulator.WAVE_EVENTS): its area only counts as cleared once it is lit.
+
+## Emitted once it is lit (see DungeonPopulator.WAVE_EVENTS).
+signal wave_event_finished
 
 const COL_DARK := Color(0.45, 0.20, 0.75)
 const COL_LIT := Color(0.0, 0.90, 1.0)
@@ -72,12 +76,23 @@ func is_lit() -> bool:
 	return _lit
 
 
+## Lit (now, or on an earlier visit): no waves left to fight here.
+func wave_event_done() -> bool:
+	return _lit
+
+
+## What the "area not cleared yet" message calls it.
+func wave_event_label() -> String:
+	return "reboot %s" % QuestItems.name_of(beacon_id).to_upper()
+
+
 func is_rebooting() -> bool:
 	return state == State.BOOTING or state == State.CLEARING
 
 
 func _ready() -> void:
 	add_to_group("ward_beacons")               # the minimap rings it while a quest wants it
+	add_to_group(DungeonPopulator.WAVE_EVENTS)
 	collision_layer = 0
 	collision_mask = 3                         # finds the player's body (same as portals and NPCs)
 	monitoring = true
@@ -362,6 +377,7 @@ func _finish() -> void:
 		qm.recover(beacon_id)
 	_set_lit(true, true)
 	QuestItems.toast(get_tree(), "%s ONLINE\nThe ward holds here again." % QuestItems.name_of(beacon_id), COL_GOOD)
+	wave_event_finished.emit()
 
 
 ## Dying calls it off: the Null leave, and it boots from 0 next time.

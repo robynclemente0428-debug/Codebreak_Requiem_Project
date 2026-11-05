@@ -80,51 +80,10 @@ static func _glitch_material(original: Material) -> ShaderMaterial:
 	return m
 
 
-## Cyan and magenta pixels drifting up off the body. Added to the enemy's parent so they
-## outlive it, and freed when done.
+## Cyan and magenta pixels drifting up off the body, on the world's shared GlitchBurst system
+## (so they outlive the enemy, and every death's pixels draw together).
 static func _burst(enemy: Node3D, radius: float, height: float) -> void:
 	var parent := enemy.get_parent()
 	if parent == null:
 		return
-	var p := CPUParticles3D.new()
-	p.one_shot = true
-	p.emitting = false
-	p.amount = clampi(roundi(28.0 * height), 16, 90)
-	p.lifetime = 0.9
-	p.explosiveness = 0.55
-	p.randomness = 0.5
-	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
-	p.emission_box_extents = Vector3(radius, height * 0.5, radius)
-	p.direction = Vector3.UP
-	p.spread = 70.0
-	p.initial_velocity_min = 0.8
-	p.initial_velocity_max = 2.6
-	p.gravity = Vector3(0.0, 1.2, 0.0)          # they drift up, like data leaving
-	p.damping_min = 1.5
-	p.damping_max = 3.0
-	p.scale_amount_min = 0.7
-	p.scale_amount_max = 1.4
-	var shrink := Curve.new()
-	shrink.add_point(Vector2(0.0, 1.0))
-	shrink.add_point(Vector2(0.7, 0.8))
-	shrink.add_point(Vector2(1.0, 0.0))
-	p.scale_amount_curve = shrink
-	var ramp := Gradient.new()
-	ramp.set_color(0, COL_A)
-	ramp.set_color(1, Color(COL_B, 0.0))
-	ramp.add_point(0.5, COL_B)
-	p.color_ramp = ramp
-	var pixel := QuadMesh.new()                 # flat squares facing the camera: crisp pixels
-	pixel.size = Vector2.ONE * 0.14
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.vertex_color_use_as_albedo = true
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
-	pixel.material = mat
-	p.mesh = pixel
-	parent.add_child(p)
-	p.global_position = enemy.global_position + Vector3.UP * height * 0.5
-	p.emitting = true
-	p.finished.connect(p.queue_free)
+	GlitchBurst.burst(parent, enemy.global_position + Vector3.UP * height * 0.5, radius, height)

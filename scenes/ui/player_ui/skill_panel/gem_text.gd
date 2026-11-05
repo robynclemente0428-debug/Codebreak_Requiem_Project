@@ -128,7 +128,6 @@ static func skill_lines(skill: SkillInstance) -> Array[String]:
 	out.append_array(_base_flag_lines({
 		"arc_angle": skill.get_flag("arc_angle"),
 		"range": skill.get_flag("range"),
-		"max_targets": skill.get_flag("max_targets"),
 	}))
 	return out
 
@@ -197,8 +196,6 @@ static func _flag_text(key: String, v: float) -> String:
 			return "%+d° Arc" % roundi(v)
 		"range":
 			return "%+.1f Range" % v
-		"max_targets":
-			return "%+d Max Targets" % roundi(v)
 	return "%s %+.1f" % [key.capitalize(), v]
 
 
@@ -208,6 +205,4 @@ static func _base_flag_lines(flags: Dictionary) -> Array[String]:
 		out.append("Arc: %d°" % roundi(flags["arc_angle"]))
 	if float(flags.get("range", 0.0)) > 0.0:
 		out.append("Range: %.1f" % float(flags["range"]))
-	if float(flags.get("max_targets", 0.0)) > 0.0:
-		out.append("Max Targets: %d" % roundi(flags["max_targets"]))
 	return out

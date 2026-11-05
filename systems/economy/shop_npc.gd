@@ -9,6 +9,10 @@ signal stock_changed
 ## In a town, stock at the act's level instead (Waypoints.top_level: Act I 10, Act II 20), so a
 ## shop moved to a later act sells that act's gear. Off = stock_level as set (the gem vendor).
 @export var follow_act_level := true
+## Salvage caches recovered on the convoy route (SalvageCache) improve the stock: each one adds
+## this much to the shop's magic and rare chances (the Quartermaster). 0 = salvage doesn't count.
+@export var salvage_magic_per := 0.0
+@export var salvage_rare_per := 0.0
 @export_group("Appearance")
 @export var model_scene: PackedScene
 @export var model_scale: Vector3 = Vector3.ONE
@@ -247,9 +251,20 @@ func _make_item(def: ItemDefinition, roll_rarity: bool) -> ItemInstance:
 		return ItemInstance.make_gem(def)          # may return null, callers skip those
 	var rarity := "normal"
 	if roll_rarity:
+		var salvage := _salvage()
+		var rare := minf(shop.rare_chance + salvage_rare_per * salvage, 0.6)
+		var magic := minf(shop.magic_chance + salvage_magic_per * salvage, 0.9 - rare)
 		var r := randf()
-		if r < shop.rare_chance:
+		if r < rare:
 			rarity = "rare"
-		elif r < shop.rare_chance + shop.magic_chance:
+		elif r < rare + magic:
 			rarity = "magic"
 	return ItemGenerator.generate_item(def, stock_level, rarity)
+
+
+## Salvage caches the player has recovered (0 when salvage doesn't count here).
+func _salvage() -> int:
+	if salvage_magic_per <= 0.0 and salvage_rare_per <= 0.0:
+		return 0
+	var p := get_tree().get_first_node_in_group("players")
+	return SalvageCache.recovered(p.get("quests") as QuestManager) if p != null else 0

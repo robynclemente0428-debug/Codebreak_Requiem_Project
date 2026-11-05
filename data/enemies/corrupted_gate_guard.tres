@@ -7,6 +7,7 @@
 [ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_gem"]
 [ext_resource type="Resource" uid="uid://7b1ycqkysva8" path="res://data/support_gems/aftershock.tres" id="5_poq2y"]
 [ext_resource type="Resource" uid="uid://fknn5tyerrs2" path="res://data/skill_gems/slam.tres" id="5_slam"]
+[ext_resource type="Script" path="res://systems/enemies/traits/handshake_lock_trait.gd" id="6_lock"]
 
 [resource]
 script = ExtResource("1_def")
@@ -15,7 +16,7 @@ display_name = "Corrupted Gate Guard"
 allowed_modifier_tags = Array[int]([0, 2, 3, 4, 6])
 scene = ExtResource("2_base")
 model_scene = ExtResource("3_model")
-max_health = 500.0
+max_health = 250.0
 armour = 60.0
 move_speed = 2.0
 aggro_range = 12.0
@@ -27,3 +28,5 @@ skills = Array[ExtResource("4_gem")]([ExtResource("5_slam")])
 skill_supports = Array[ExtResource("4_c6p6h")]([ExtResource("5_poq2y")])
 skill_cooldown = 4.0
 cooldown_jitter = 1.0
+act_boss = true
+innate_traits = Array[Script]([ExtResource("6_lock")])

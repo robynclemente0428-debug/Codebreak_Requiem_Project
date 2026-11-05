@@ -61,7 +61,7 @@ func apply_style(style: Dictionary) -> void:
 			mat.albedo_color = style["primary"]
 			mat.emission_enabled = true
 			mat.emission = style["primary"]
-			mat.emission_energy_multiplier = 3.0
+			mat.emission_energy_multiplier = 4.0
 			mesh_node.material_override = mat
 	if light != null:
 		light.light_color = style["secondary"]

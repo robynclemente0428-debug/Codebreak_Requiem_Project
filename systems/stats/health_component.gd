@@ -135,3 +135,8 @@ func revive(fraction: float = 1.0) -> void:
 func _emit_changed() -> void:
 	_last_max = stats.get_stat(StatTypes.Stat.MAX_HEALTH)
 	health_changed.emit(current_health, _last_max)
+
+## True while a scripted barrier or guard is up (HandshakeLock opens to a shielded player).
+func is_shielded() -> bool:
+	var now := Time.get_ticks_msec()
+	return (barrier > 0.0 and now < _barrier_until) or (guard > 0.0 and now < _guard_until)

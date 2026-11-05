@@ -39,10 +39,23 @@ extends Resource
 ## Per-skill supports, on top of skill_supports: skill gem id -> Array of support ids,
 ## e.g. {"slam": ["aftershock_support"], "blast": ["many_projectiles_support"]}.
 @export var skill_support_ids: Dictionary = {}
+## FOR loops on the skills above, as a player would script them: skill gem id -> repeats, e.g.
+## {"strike": 2} is "for i in range(2)" on Strike (the cast, then 2 repeats).
+@export var skill_loops: Dictionary = {}
 @export var basic_attack_enabled: bool = true
 @export var skill_cooldown: float = 6.0
 @export var cooldown_jitter: float = 2.0
 @export var cast_lock_fraction: float = 1.0 
+
+@export_group("Progression")
+## An act's boss (Glitchling Queen, Gate Guard, Loop Hound Alpha): the first kill gives every
+## knob ScriptBudget.STEPS_PER_ACT_BOSS more steps.
+@export var act_boss := false
+
+@export_group("Lock")
+## EnemyTrait scripts this enemy always has, whatever its modifiers: a boss lock such as
+## ChecksumLock (checksum_lock_trait.gd), the puzzle its fight is built round.
+@export var innate_traits: Array[Script] = []
 
 @export_group("Pool")
 ## Rarities this enemy can spawn as when a dungeon picks it from its theme's enemy_pool, e.g.

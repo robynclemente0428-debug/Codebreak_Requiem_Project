@@ -7,7 +7,6 @@ extends SkillBehavior
 ##   speed            projectile speed in metres per second
 ##   range            how far it flies before exploding on its own
 ##   radius           explosion radius in metres
-##   max_targets      cap on how many enemies one explosion can hit
 ##   spawn_height     metres above the caster's feet where it starts
 ##   spawn_forward    metres in front of the caster where it starts
 ##   recovery_mult    how much longer than a normal attack the cast takes
@@ -88,7 +87,7 @@ func _explode(center: Vector3, cast: SkillCast, style: Dictionary, direction := 
 	var radius := cast.flag("radius") * float(cast.extra.get("radius_mult", 1.0))
 	ImpactEffect.spawn(cast.effect_parent(), center, radius, style["secondary"], style["primary"])
 	SoundManager.play_blast_impact(cast.effect_parent(), center)
-	for target in SkillDeliveries.hits_in_circle(cast, center, radius, int(cast.flag("max_targets"))):
+	for target in SkillDeliveries.hits_in_circle(cast, center, radius):
 		cast.hit(target)
 	for s in cast.skill.support_behaviors:
 		s.on_area_impact(cast, center, direction)

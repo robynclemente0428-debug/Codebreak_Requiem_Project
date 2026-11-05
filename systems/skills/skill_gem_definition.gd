@@ -7,7 +7,7 @@ extends Resource
 ## Applied on top of the caster's final stats when the skill is cast, exactly like a support's
 ## stat_modifiers. Example: Slam = SKILL_DAMAGE_MULT, PERCENT_MULT, 1.0 (100% more damage).
 @export var stat_modifiers: Array[Modifier] = []
-@export var base_flags: Dictionary = {}     # e.g. {"arc_angle": 90.0, "range": 2.5, "max_targets": 1.0}
+@export var base_flags: Dictionary = {}     # e.g. {"arc_angle": 90.0, "range": 2.5}
 @export var tags: Array[TagTypes.TagGem] = []
 @export var animation_keys: PackedStringArray = []   # cycled in order, e.g. ["slash_l", "slash_r"]
 @export var max_support_slots: int = 3

@@ -90,17 +90,11 @@ static func spawn_enemy(def: EnemyDefinition, rarity: String, parent: Node,
 			instance.source_id = "enemymod_%s" % mod_def.id
 			enemy.stats.add_modifier(instance)
 		name_parts.append(mod_def.display_name_prefix)
-		if mod_def.on_spawn_script != null and "traits" in enemy:
-			var t := Node.new()
-			t.set_script(mod_def.on_spawn_script)
-			if t is EnemyTrait:
-				t.name = "Trait_%s" % mod_def.id
-				enemy.add_child(t)
-				(t as EnemyTrait).setup(enemy)
-				enemy.traits.append(t)
-			else:
-				t.free()
-				push_warning("Modifier %s: on_spawn_script is not an EnemyTrait" % mod_def.id)
+		if mod_def.on_spawn_script != null:
+			_add_trait(enemy, mod_def.on_spawn_script, mod_def.id)
+	for script in def.innate_traits:            # a boss lock (ChecksumLock...)
+		if script != null:
+			_add_trait(enemy, script, script.resource_path.get_file().get_basename())
 
 	if "modifiers" in enemy:                    # needs `var modifiers: Array = []` on enemy_base.gd
 		enemy.modifiers = mods                  # the hover plate reads this
@@ -113,7 +107,7 @@ static func spawn_enemy(def: EnemyDefinition, rarity: String, parent: Node,
 		enemy.add_child(caster)
 		print("[Spawner] %s skill_flag_overrides=%s  def_path=%s" % [def.id, def.skill_flag_overrides, def.resource_path])
 		caster.setup(enemy, enemy.stats, def.skills, def.skill_flag_overrides,
-				def.skill_supports, def.skill_support_ids)
+				def.skill_supports, def.skill_support_ids, def.skill_loops)
 		caster.skill_cooldown = def.skill_cooldown
 		caster.cooldown_jitter = def.cooldown_jitter
 		caster.cast_lock_fraction = def.cast_lock_fraction
@@ -158,3 +152,19 @@ static func empower(enemy: Node3D, health: float, armour: float, damage: float, 
 	var hp = enemy.get("health")
 	if hp is HealthComponent:
 		hp.revive(1.0)                          # full, at the new maximum
+
+
+## An EnemyTrait node from `script`, set up on the enemy and listed in enemy.traits.
+static func _add_trait(enemy: Node3D, script: Script, id: String) -> void:
+	if not "traits" in enemy:
+		return
+	var t := Node.new()
+	t.set_script(script)
+	if t is EnemyTrait:
+		t.name = "Trait_%s" % id
+		enemy.add_child(t)
+		(t as EnemyTrait).setup(enemy)
+		enemy.traits.append(t)
+	else:
+		t.free()
+		push_warning("Trait %s: script is not an EnemyTrait" % id)

@@ -127,6 +127,7 @@ func _enter_sandbox() -> void:
 	GameEvents.muted = false
 	p.equipment.sandbox_locked = true
 	p.skills.sandbox_locked = true
+	p.skills.refresh_rank()                       # the exam runs without the bonus script points
 	p.health.heal(p.stats.get_stat(StatTypes.Stat.MAX_HEALTH))
 
 

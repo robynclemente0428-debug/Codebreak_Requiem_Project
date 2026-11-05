@@ -45,7 +45,7 @@ func _hop(cast: SkillCast, sub: SkillCast, from: Vector3, left: int) -> void:
 	_link_fx(cast.effect_parent(), from, at)
 	var radius := cast.flag("radius") * HOP_RADIUS
 	ImpactEffect.spawn(cast.effect_parent(), at, radius, LINK_COLOR, HOP_ACCENT)
-	for t in SkillDeliveries.hits_in_circle(sub, at, radius, int(cast.flag("max_targets")), sub.already_hit):
+	for t in SkillDeliveries.hits_in_circle(sub, at, radius, SkillDeliveries.NO_CAP, sub.already_hit):
 		sub.hit(t, cast.flag("pointer_hop_damage"))
 	if not (target in sub.already_hit):
 		sub.already_hit.append(target)               # never hop back to it, even if it was missed

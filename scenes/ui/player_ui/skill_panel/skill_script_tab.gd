@@ -5,7 +5,11 @@ extends VBoxContainer
 ##
 ##  - EXPLORER (left): one "file" per socketed skill and per scriptable support. A skill and its
 ##                     supports share one point budget, so they are checked together.
-##  - EDITOR (middle): the selected file's rules as code, with line numbers:
+##  - EDITOR (middle): every file of the skill as code, one after another under its own header
+##                     (the skill's file first, then each scriptable support), in one scroll.
+##                     Clicking a file in EXPLORER scrolls to it; scrolling makes the file at
+##                     the top the open one (its knobs in SNIPPETS, clear() acts on it).
+##                     Each file's rules, with line numbers:
 ##                         always:
 ##                     +       damage += 20%          # costs 8.0
 ##                     -       attack_speed -= 20%    # pays 10.0
@@ -23,7 +27,10 @@ extends VBoxContainer
 ##                     click it to add it to the selected rule (or start a new rule).
 ##                     Two tabs: OFFENSE (damage, reach, loops, the gem blocks) and DEFENSE
 ##                     (staying alive: my_life_below, hit_recently, leech, barrier, guard...).
-##  - OUTPUT (bottom): points, blocks, tier and compile errors. apply() runs the program.
+##  - OUTPUT (bottom): two tabs. OUTPUT: points, budget, blocks, tier and whether it runs.
+##                     ERRORS (n): the compile errors and their fixes. It opens by itself when
+##                     an error appears, and OUTPUT comes back once the script compiles.
+##                     apply() runs the program.
 ##  - SET A / B / C (top right): the script sets. Each skill keeps one program per set and the
 ##                     script_set key swaps them all in the field (SkillComponent.switch_script_set).
 ##                     Sets start empty; on an empty set, copy_from(A) copies another set into it.
@@ -31,6 +38,10 @@ extends VBoxContainer
 ##                     Sets past the player's rank aren't shown (Ranks.PERKS: B at OPERATOR, C at STRATEGIST),
 ##                     nor are blocks above it (Ranks.LOCKED_BLOCKS: loops need ARCHITECT).
 ##  - save_as() / load() (OUTPUT, rank ARCHITECT): the script library (SkillComponent.library).
+##
+## The panes are resizable: drag the bars between EXPLORER, the editor and SNIPPETS, and between
+## the editor and OUTPUT. The sizes are saved (Settings "layout/script_panes"), so they stay as
+## you left them, after a restart too.
 ##
 ## Edits are a draft until apply(). Built in code like the rest of SkillPanel, using its styling.
 
@@ -67,7 +78,14 @@ var _rules_box: VBoxContainer
 var _palette_box: VBoxContainer
 var _console: RichTextLabel
 var _output_frame: PanelContainer
-var _output_title: Label
+var _errors_console: RichTextLabel
+var _console_scroll: ScrollContainer  # OUTPUT's text: fills the pane, scrolls when it's small
+var _errors_scroll: ScrollContainer   # ERRORS' text, likewise
+# Resizable panes: where the player left each bar is saved in Settings "layout/script_panes"
+var _splits := {}                      # "explorer" / "snippets" / "output" -> its SplitContainer
+var _out_tab := "output"           # "output" or "errors": which console OUTPUT shows
+var _out_tab_btns := {}            # tab name -> its button
+var _last_errors := 0              # error count at the last update (more = open ERRORS)
 ## Check result for the open socket's draft, made at the start of each rebuild so the editor
 ## can mark the lines with errors while it draws them.
 var _validation: ProgramValidation
@@ -97,21 +115,30 @@ var _load_btn: Button
 var _library_box: VBoxContainer   # under OUTPUT's buttons while load() is open
 var _library_open := false
 var _set_hooked: SkillComponent   # the SkillComponent whose script_set_changed we listen to
+# One scroll for all files of the open skill
+var _editor_scroll: ScrollContainer
+var _file_headers: Dictionary = {}  # owner id ("" = the skill) -> its header line in the editor
+var _end_pad: Control              # room after the last file, so its header can reach the top
+var _pad_height := 0.0
+var _jump_serial := 0              # a newer jump cancels an older one still waiting for layout
 
 
 # ---------- BUILDING ----------
 func build() -> void:
 	add_theme_constant_override("separation", 6)
 
-	var body := HBoxContainer.new()
+	# EXPLORER | (editor | SNIPPETS), each bar draggable
+	var body := _split(false, "explorer", 40.0 * _k())
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 10)
 	add_child(body)
+	var rest := _split(false, "snippets", -30.0 * _k())
+	rest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	# Left: explorer
 	var left := VBoxContainer.new()
-	left.custom_minimum_size.x = 150.0 * _k()
+	left.custom_minimum_size.x = 110.0 * _k()
 	body.add_child(left)
+	body.add_child(rest)
 	left.add_child(panel._label("EXPLORER", _sz(13), SkillPanel.COL_DIM))
 	var left_scroll := _scroll()
 	left.add_child(left_scroll)
@@ -123,8 +150,9 @@ func build() -> void:
 	# Middle: editor + output
 	var mid := VBoxContainer.new()
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mid.custom_minimum_size.x = 320.0 * _k()
 	mid.add_theme_constant_override("separation", 6)
-	body.add_child(mid)
+	rest.add_child(mid)
 	var head := HBoxContainer.new()
 	head.add_theme_constant_override("separation", 6)
 	mid.add_child(head)
@@ -154,22 +182,32 @@ func build() -> void:
 			+ "Enter to save. You can also double-click a set.")
 	_rename_btn.pressed.connect(func() -> void: _start_rename(_skills().script_set))
 	head.add_child(_rename_btn)
+	# editor / OUTPUT, the bar between them draggable
+	var rows := _split(true, "output", -90.0 * _k())
+	rows.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mid.add_child(rows)
 	var editor := PanelContainer.new()
 	editor.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	editor.custom_minimum_size.y = 100.0 * _k()
 	editor.add_theme_stylebox_override("panel", _box_style(Color(0.0, 0.02, 0.04, 0.6), Color(panel.accent, 0.3)))
-	mid.add_child(editor)
+	rows.add_child(editor)
 	var mid_scroll := _scroll()
+	mid_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO   # long lines scroll when narrow
+	panel._style_scrollbar(mid_scroll.get_h_scroll_bar())
+	mid_scroll.get_h_scroll_bar().custom_minimum_size = Vector2(0, 8)   # styled for vertical bars
+	_editor_scroll = mid_scroll
+	mid_scroll.get_v_scroll_bar().value_changed.connect(_on_editor_scrolled)
 	editor.add_child(mid_scroll)
 	_rules_box = VBoxContainer.new()
 	_rules_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rules_box.add_theme_constant_override("separation", 0)
 	mid_scroll.add_child(_rules_box)
-	mid.add_child(_build_output())
+	rows.add_child(_build_output())
 
 	# Right: snippets. Dropping a code line here deletes it.
 	var right := VBoxContainer.new()
-	right.custom_minimum_size.x = 170.0 * _k()
-	body.add_child(right)
+	right.custom_minimum_size.x = 140.0 * _k()
+	rest.add_child(right)
 	right.add_child(panel._label("SNIPPETS", _sz(13), SkillPanel.COL_DIM))
 	var tabs := HBoxContainer.new()
 	tabs.add_theme_constant_override("separation", 4)
@@ -199,21 +237,57 @@ func build() -> void:
 	add_child(hint)
 
 
+## A draggable split. `key` remembers where the player left its bar; `default_offset` is where
+## it starts (from the side that doesn't expand: + grows the first pane, - the second).
+func _split(vertical: bool, key: String, default_offset: float) -> SplitContainer:
+	var s: SplitContainer = VSplitContainer.new() if vertical else HSplitContainer.new()
+	s.add_theme_constant_override("separation", roundi(8.0 * _k()))
+	s.add_theme_constant_override("minimum_grab_thickness", roundi(10.0 * _k()))
+	s.add_theme_constant_override("autohide", 0)
+	var bar := StyleBoxFlat.new()                      # a faint strip with a brighter centre line
+	bar.bg_color = Color(panel.accent, 0.06)
+	bar.border_color = Color(panel.accent, 0.35)
+	if vertical:
+		bar.content_margin_top = 0
+		bar.border_width_top = 1
+		bar.expand_margin_top = -roundi(4.0 * _k())
+	else:
+		bar.border_width_left = 1
+		bar.expand_margin_left = -roundi(4.0 * _k())
+	s.add_theme_stylebox_override("split_bar_background", bar)
+	var saved: Dictionary = Settings.get_value("layout", "script_panes")
+	s.split_offset = roundi(float(saved.get(key, default_offset)))
+	s.dragged.connect(func(offset: int) -> void:
+		var panes: Dictionary = (Settings.get_value("layout", "script_panes") as Dictionary).duplicate()
+		panes[key] = offset
+		Settings.set_value("layout", "script_panes", panes))
+	_splits[key] = s
+	return s
+
+
 func _build_output() -> Control:
 	var frame := PanelContainer.new()
 	frame.add_theme_stylebox_override("panel", _box_style(Color(0, 0, 0, 0.5), Color(panel.accent, 0.3)))
+	frame.custom_minimum_size.y = 70.0 * _k()       # the tabs and a line or two: drag the bar for more
 	_output_frame = frame
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	frame.add_child(box)
 
-	var head := HBoxContainer.new()
-	head.add_theme_constant_override("separation", 6)
+	var head := HFlowContainer.new()               # wraps onto a second row when the pane is narrow
+	head.add_theme_constant_override("h_separation", 6)
+	head.add_theme_constant_override("v_separation", 4)
 	box.add_child(head)
-	var title := panel._label("OUTPUT", _sz(12), SkillPanel.COL_DIM)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head.add_child(title)
-	_output_title = title
+	for tab_name in ["output", "errors"]:
+		var tb := _code_button(tab_name.to_upper(), "Points, budget, blocks and tier." if tab_name == "output"
+				else "Compile errors and how to fix them.")
+		tb.pressed.connect(_set_out_tab.bind(tab_name))
+		head.add_child(tb)
+		_out_tab_btns[tab_name] = tb
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(spacer)
 	_apply_btn = _code_button("apply()", "Run this program on the skill.")
 	_apply_btn.pressed.connect(_apply)
 	head.add_child(_apply_btn)
@@ -249,8 +323,44 @@ func _build_output() -> Control:
 		_console.add_theme_font_override("normal_font", panel._font)
 	_console.add_theme_font_size_override("normal_font_size", roundi(_sz(12) * panel.font_scale))
 	_console.add_theme_color_override("default_color", SkillPanel.COL_TEXT)
-	box.add_child(_console)
+	_console.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_errors_console = _console.duplicate() as RichTextLabel
+	_console_scroll = _scroll()
+	_console_scroll.add_child(_console)
+	box.add_child(_console_scroll)
+	_errors_scroll = _scroll()
+	_errors_scroll.visible = false
+	_errors_scroll.add_child(_errors_console)
+	box.add_child(_errors_scroll)
+	_update_out_tabs(0)
 	return frame
+
+
+func _set_out_tab(tab_name: String) -> void:
+	_out_tab = tab_name
+	_update_out_tabs(_last_errors)
+
+
+## Shows the chosen console and styles the tab buttons: "ERRORS (2)" turns red while there are any.
+func _update_out_tabs(errors: int) -> void:
+	if _errors_console == null:
+		return
+	_console_scroll.visible = _out_tab == "output"
+	_errors_scroll.visible = _out_tab == "errors"
+	for tab_name in _out_tab_btns:
+		var b: Button = _out_tab_btns[tab_name]
+		var active: bool = tab_name == _out_tab
+		var col: Color = panel.accent
+		if tab_name == "errors":
+			b.text = "ERRORS (%d)" % errors if errors > 0 else "ERRORS"
+			if errors > 0:
+				col = SkillPanel.COL_WARN
+		var dim := Color(col, 0.6) if col != panel.accent else COL_GUTTER
+		b.add_theme_color_override("font_color", col if active else dim)
+		var st := (b.get_theme_stylebox("normal") as StyleBoxFlat).duplicate() as StyleBoxFlat
+		st.border_color = col if active else Color(dim, 0.4)
+		st.bg_color = Color(col, 0.15) if active else Color(0, 0, 0, 0)
+		b.add_theme_stylebox_override("normal", st)
 
 
 func _scroll() -> ScrollContainer:
@@ -464,10 +574,77 @@ func refresh() -> void:
 
 
 func _select_gem(socket: int, owner_id: String) -> void:
+	var same_skill := socket == _socket
 	_socket = socket
 	_owner = owner_id
 	_selected = null
 	_rebuild()
+	if not same_skill:
+		_editor_scroll.scroll_vertical = 0
+	_scroll_to_file(owner_id)
+
+
+## Scrolls the editor so `owner_id`'s header is at the top (once the new lines are laid out).
+func _scroll_to_file(owner_id: String) -> void:
+	_jump_serial += 1
+	var serial := _jump_serial
+	await get_tree().process_frame
+	if serial != _jump_serial or not _file_headers.has(owner_id):
+		return
+	_fit_end_pad()
+	await get_tree().process_frame                  # the pad's new height has to be laid out too
+	if serial != _jump_serial or not _file_headers.has(owner_id):
+		return
+	var header: Control = _file_headers[owner_id]
+	if is_instance_valid(header):
+		_editor_scroll.scroll_vertical = roundi(header.position.y)
+
+
+## Scrolling makes the file whose header is at (or above) the top of the editor the open one.
+func _on_editor_scrolled(value: float) -> void:
+	if _file_headers.size() < 2:
+		return
+	var top := ""
+	var best := -INF
+	for owner_id in _file_headers:
+		var h: Control = _file_headers[owner_id]
+		if is_instance_valid(h) and h.position.y <= value + 6.0 and h.position.y > best:
+			best = h.position.y
+			top = owner_id
+	if top == _owner:
+		return
+	_owner = top
+	if _selected != null and _selected.owner != top:
+		_selected = null                            # snippet clicks go to the open file
+	_queue_rebuild()
+
+
+## The skill's files in the order the editor shows them: the skill, then each scriptable support.
+func _file_owners() -> Array:
+	var out: Array = [""]
+	var s := _sock()
+	if s == null:
+		return out
+	for item in s.supports:
+		var def := item.definition.support_gem
+		if not def.program_knobs.is_empty() and not (def.id in out):
+			out.append(def.id)
+	return out
+
+
+## Sizes the space after the last file so its header can still be scrolled to the top.
+func _fit_end_pad() -> void:
+	if _end_pad == null or not is_instance_valid(_end_pad):
+		return
+	var need := 0.0
+	if _file_headers.size() > 1:
+		var last: Control = _file_headers[_file_owners().back()] if _file_headers.has(_file_owners().back()) else null
+		if last != null and is_instance_valid(last):
+			var content := _end_pad.position.y               # where the last file's lines end
+			need = maxf(_editor_scroll.size.y - (content - last.position.y), 0.0)
+	if not is_equal_approx(need, _pad_height):
+		_pad_height = need
+		_end_pad.custom_minimum_size.y = need
 
 
 ## Rebuilding frees the control that is handling the current click or drop, so wait a frame.
@@ -756,6 +933,9 @@ func _build_rules() -> void:
 	_rule_line.clear()
 	_effect_num.clear()
 	_cond_nums.clear()
+	_file_headers.clear()
+	_new_rule_ctrl = null
+	_end_pad = null
 	var s := _sock()
 	if s == null:
 		_title.text = "no file open"
@@ -767,21 +947,79 @@ func _build_rules() -> void:
 		_title.text = skill_file
 		_comment_line("# this skill can't be scripted")
 		return
+	var owners := _file_owners()
+	if not (_owner in owners):
+		_owner = ""
 	if _owner == "":
 		_title.text = skill_file
 	else:
 		var sup: SupportGemDefinition = SkillGemRegistry.get_support_gem(_owner)
 		_title.text = "%s / %s" % [skill_file.trim_suffix(".gd"), _file_name(sup.display_name) if sup else _owner]
 
-	_comment_line("# points are shared with every file of this skill")
-	var rules := _draft().rules_of(_owner)
-	if _selected != null and not (_selected in rules):
+	var shown: Array = []
+	for owner_id in owners:
+		shown.append_array(_draft().rules_of(owner_id))
+	if _selected != null and not (_selected in shown):
 		_selected = null
-	for rule in rules:
-		_blank_line(rule)
-		_rule_lines(rule, limits)
-	_blank_line(null)
-	_new_rule_line()
+	for owner_id in owners:
+		_file_header(owner_id)
+		_line_no = 0                                     # each file counts its own lines
+		if owner_id == "":
+			_comment_line("# points are shared with every file of this skill")
+		for rule in _draft().rules_of(owner_id):
+			_blank_line(rule)
+			_rule_lines(rule, limits)
+		_blank_line(null)
+		_new_rule_line(owner_id)
+	_end_pad = Control.new()
+	_end_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_end_pad.custom_minimum_size.y = _pad_height if owners.size() > 1 else 0.0
+	_rules_box.add_child(_end_pad)
+	_fit_end_pad.call_deferred()
+
+
+## A file's title bar in the editor: "== finishing_blow.gd ==". Click it to open that file.
+func _file_header(owner_id: String) -> void:
+	var active := owner_id == _owner
+	var col := SkillPanel.COL_SKILL if owner_id == "" else SkillPanel.COL_SUPPORT
+	var bar := PanelContainer.new()
+	bar.mouse_filter = Control.MOUSE_FILTER_STOP
+	bar.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	bar.tooltip_text = "%s\nClick to open this file: its knobs show in SNIPPETS." % _owner_file(owner_id)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(col, 0.16 if active else 0.06)
+	sb.border_color = Color(col, 0.9 if active else 0.35)
+	sb.border_width_bottom = 1
+	sb.border_width_left = 3 if active else 0
+	sb.content_margin_left = 6
+	sb.content_margin_top = roundi(5.0 * _k())
+	sb.content_margin_bottom = roundi(5.0 * _k())
+	bar.add_theme_stylebox_override("panel", sb)
+	var title := _tok("%s %s" % ["v" if active else ">", _owner_file(owner_id)], Color(col, 1.0 if active else 0.7))
+	_shrinkable(title)
+	bar.add_child(title)
+	bar.gui_input.connect(func(ev: InputEvent) -> void:
+		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
+			_select_gem(_socket, owner_id))
+	if not _file_headers.is_empty():                  # before every file but the first: room and a rule
+		_rules_box.add_child(_spacer(18.0))
+		var rule := ColorRect.new()
+		rule.color = Color(panel.accent, 0.22)
+		rule.custom_minimum_size.y = 1.0
+		rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_rules_box.add_child(rule)
+		_rules_box.add_child(_spacer(18.0))
+	_rules_box.add_child(bar)
+	_rules_box.add_child(_spacer(4.0))                # a breath between the title and the first line
+	_file_headers[owner_id] = bar
+
+
+## Empty space in the editor, `height` px at the original 13 px design size.
+func _spacer(height: float) -> Control:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = height * _k()
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return gap
 
 
 func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
@@ -992,16 +1230,34 @@ func _loop_tip(mode: ProgramLoop.Mode, limits: SkillProgramLimits) -> String:
 		head, ProgramLoop.FALLOFF, roundi(ProgramLoop.MANA_FRACTION * limits.repeat_mana_mult() * 100.0), limits.loop_cap()]
 
 
-func _new_rule_line() -> void:
-	var parts := _code_line(null, "+", Color(panel.accent, 0.6))
+func _new_rule_line(owner_id: String) -> void:
+	var parts := _code_line(null, "+", COL_OK)
 	var line: Control = parts[0]
 	var code: HBoxContainer = parts[1]
-	code.add_child(_comment_tok("drop a snippet here to start a new rule"))
-	_new_rule_ctrl = line
-	line.set_drag_forwarding(Callable(), _can_drop_new_rule, _drop_new_rule)
+	var hint := _comment_tok("drop a snippet here to start a new rule")
+	hint.add_theme_color_override("font_color", Color(COL_OK, 0.85))
+	code.add_child(hint)
+	# Green, so it's plain where snippets go; brighter while the mouse (or a drag) is over it
+	var sb := line.get_theme_stylebox("panel") as StyleBoxFlat
+	if sb != null:
+		sb.bg_color = Color(COL_OK, 0.07)
+		sb.border_color = Color(COL_OK, 0.55)
+		sb.border_width_left = 2
+		sb.border_width_top = 1
+		sb.border_width_bottom = 1
+		line.mouse_entered.connect(func() -> void:
+			sb.bg_color = Color(COL_OK, 0.18)
+			sb.border_color = COL_OK)
+		line.mouse_exited.connect(func() -> void:
+			sb.bg_color = Color(COL_OK, 0.07)
+			sb.border_color = Color(COL_OK, 0.55))
+	if owner_id == _owner or _new_rule_ctrl == null:
+		_new_rule_ctrl = line                # the tutorial points at the open file's
+	line.set_drag_forwarding(Callable(), _can_drop_new_rule, _drop_new_rule.bind(owner_id))
 	line.gui_input.connect(func(e: InputEvent) -> void:
 		if e is InputEventMouseButton and not e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 			_selected = null                 # the next snippet click starts a new rule
+			_owner = owner_id                # ...in this file
 			_queue_rebuild())
 
 
@@ -1068,8 +1324,9 @@ func _make_line_interactive(line: Control, rule: ProgramRule, info: Dictionary) 
 		if not (ev is InputEventMouseButton):
 			return
 		if ev.button_index == MOUSE_BUTTON_LEFT and not ev.pressed and not get_viewport().gui_is_dragging():
-			if _selected != rule:
+			if _selected != rule or _owner != rule.owner:
 				_selected = rule
+				_owner = rule.owner              # its file is the open one (its knobs in SNIPPETS)
 				_queue_rebuild()
 		elif ev.button_index == MOUSE_BUTTON_RIGHT and ev.pressed and not info.is_empty():
 			_remove_block(info)
@@ -1350,7 +1607,8 @@ func _can_drop_new_rule(_pos: Vector2, data: Variant) -> bool:
 	return data is Dictionary and data.get("src") in ["palette", "rule"]
 
 
-func _drop_new_rule(_pos: Vector2, data: Variant) -> void:
+func _drop_new_rule(_pos: Vector2, data: Variant, owner_id: String) -> void:
+	_owner = owner_id                        # the new rule goes in the file it was dropped in
 	if data.get("src") == "palette":
 		_add_from_palette(data, null)
 	else:
@@ -1388,6 +1646,8 @@ func _add_from_palette(data: Dictionary, rule: ProgramRule) -> void:
 	if data["kind"] == "break" and (rule == null or rule.loop == null):
 		panel._notify("ADD A FOR OR WHILE LOOP FIRST")
 		return
+	if data["kind"] == "effect" and not _knob_fits(data["knob"], rule.owner if rule != null else _owner):
+		return
 	if rule == null:
 		rule = _new_rule()
 	if data["kind"] == "condition":
@@ -1417,6 +1677,19 @@ func _add_from_palette(data: Dictionary, rule: ProgramRule) -> void:
 	_changed()
 
 
+## False (with a message) when `knob_id` isn't one of `owner_id`'s file's knobs: every file is
+## on screen now, so a knob can be dropped into another file's rule.
+func _knob_fits(knob_id: StringName, owner_id: String) -> bool:
+	var limits := _limits()
+	if limits == null:
+		return false
+	for k in limits.knobs_for(owner_id):
+		if (k as SkillKnob).id == knob_id:
+			return true
+	panel._notify("%s ISN'T A KNOB OF %s" % [String(knob_id).to_upper(), _owner_file(owner_id).to_upper()])
+	return false
+
+
 func _detach(info: Dictionary) -> void:
 	var from: ProgramRule = info["rule"]
 	match info["kind"]:
@@ -1439,6 +1712,9 @@ func _move_block(info: Dictionary, to: ProgramRule) -> void:
 	var moved_break := moved_loop.break_on if moved_loop != null else ProgramLoop.Break.NONE
 	if info["kind"] == "break" and (to == null or to.loop == null):
 		panel._notify("ADD A FOR OR WHILE LOOP FIRST")
+		return
+	if info["kind"] == "effect" and not _knob_fits((info["effect"] as ProgramEffect).knob,
+			to.owner if to != null else _owner):
 		return
 	_detach(info)
 	if to == null:
@@ -1475,6 +1751,7 @@ func _update_status() -> void:
 	_state = ""
 	if not enabled:
 		_console.text = _c("// nothing to compile", COL_COMMENT)
+		_errors_console.text = _c("// nothing to compile", COL_COMMENT)
 		_set_output_alert(0)
 		return
 
@@ -1490,6 +1767,12 @@ func _update_status() -> void:
 	var bar := "#".repeat(filled) + ".".repeat(16 - filled)
 	lines.append("%s points  [lb]%s[rb]  %s" % [_c(">", COL_GUTTER), _c(bar, SkillPanel.COL_WARN if over else COL_OK),
 		_c("%.1f / %.1f" % [v.buff_points, paid], SkillPanel.COL_WARN if over else SkillPanel.COL_TEXT)])
+	if limits.bonus_steps > 0:
+		lines.append("%s knobs   %s %s" % [_c(">", COL_GUTTER), _c("+%d step%s" % [limits.bonus_steps, "" if limits.bonus_steps == 1 else "s"], COL_OK),
+			_c("// every knob goes further: " + _step_sources(), COL_COMMENT)])
+	if limits.bonus_points > 0.0:
+		lines.append("%s bonus   %s %s" % [_c(">", COL_GUTTER), _c("+%s points" % String.num(limits.bonus_points, 1), COL_OK),
+			_c("// " + _bonus_sources(), COL_COMMENT)])
 	lines.append("%s blocks  %d/%d   rules %d/%d" % [_c(">", COL_GUTTER), v.actions_used, v.max_actions,
 		draft.rules.size(), limits.max_rules])
 	if limits.class_trait != null:
@@ -1517,24 +1800,26 @@ func _update_status() -> void:
 			_c("// %d fewer blocks -> %s" % [v.actions_to_next_tier, v.next_tier.display_name.to_lower()], COL_COMMENT)])
 
 	var dirty := _is_dirty(_socket)
+	var err_lines: Array[String] = []
 	if not v.valid:
 		_state = "invalid"
 		var count := v.error_count()
-		lines.append(_c("x %d error%s: fix %s to apply()" % [count, "" if count == 1 else "s",
+		lines.append(_c("x %d error%s: see ERRORS, fix %s to apply()" % [count, "" if count == 1 else "s",
 			"it" if count == 1 else "them"], SkillPanel.COL_WARN))
-		var shown := 0
+		err_lines.append(_c("x %d error%s: fix %s to apply()" % [count, "" if count == 1 else "s",
+			"it" if count == 1 else "them"], SkillPanel.COL_WARN))
 		for i in v.issues.size():
 			var issue: Dictionary = v.issues[i]
 			if issue["kind"] != "error" or issue["dup"]:
 				continue
-			if shown == 5:
-				lines.append(_c("  ... %d more: hover the red lines for details" % (count - shown), SkillPanel.COL_WARN))
-				break
-			shown += 1
-			lines.append(_c("  error ", SkillPanel.COL_WARN) + _c(_where(issue, i), COL_FN)
+			err_lines.append(_c("  error ", SkillPanel.COL_WARN) + _c(_where(issue, i), COL_FN)
 				+ _c(_esc(issue["text"]), SkillPanel.COL_TEXT))
 			if issue["hint"] != "":
-				lines.append(_c("        fix: ", COL_GUTTER) + _c(_esc(issue["hint"]), COL_OK))
+				err_lines.append(_c("        fix: ", COL_GUTTER) + _c(_esc(issue["hint"]), COL_OK))
+	else:
+		err_lines.append(_c("// no errors", COL_COMMENT))
+	if not v.valid:
+		pass                                    # the errors are on the ERRORS tab
 	elif dirty:
 		_state = "pending"
 		lines.append(_c("ok: ", COL_PENDING) + _c("compiles. apply() to run it", Color(COL_PENDING, 0.85)))
@@ -1542,6 +1827,7 @@ func _update_status() -> void:
 		_state = "applied"
 		lines.append(_c("ok: ", COL_OK) + _c("running", Color(COL_OK, 0.85)))
 	_console.text = "\n".join(lines)
+	_errors_console.text = "\n".join(err_lines)
 	_apply_btn.disabled = not dirty or not v.valid
 	_revert_btn.disabled = not dirty
 	_set_output_alert(0 if v.valid else v.error_count())
@@ -1605,11 +1891,10 @@ func _where(issue: Dictionary, index: int) -> String:
 	var rule: ProgramRule = issue["rule"]
 	if rule == null:
 		return ""
-	if rule.owner != _owner:
-		return "in %s: " % _owner_file(rule.owner)
-	if _issue_line.has(index):
-		return "line %d: " % _issue_line[index]
-	return ""
+	var line := ("line %d" % _issue_line[index]) if _issue_line.has(index) else ""
+	if rule.owner != "":
+		return "%s%s: " % [_owner_file(rule.owner), (" " + line) if line != "" else ""]
+	return (line + ": ") if line != "" else ""
 
 
 func _owner_file(owner_id: String) -> String:
@@ -1644,8 +1929,13 @@ func _set_output_alert(errors: int) -> void:
 		return
 	var border := Color(SkillPanel.COL_WARN, 0.9) if errors > 0 else Color(panel.accent, 0.3)
 	_output_frame.add_theme_stylebox_override("panel", _box_style(Color(0, 0, 0, 0.5), border))
-	_output_title.text = "OUTPUT  x %d ERROR%s" % [errors, "" if errors == 1 else "S"] if errors > 0 else "OUTPUT"
-	_output_title.add_theme_color_override("font_color", SkillPanel.COL_WARN if errors > 0 else SkillPanel.COL_DIM)
+	# A new error opens ERRORS; once it compiles, back to OUTPUT
+	if errors > _last_errors:
+		_out_tab = "errors"
+	elif errors == 0:
+		_out_tab = "output"
+	_last_errors = errors
+	_update_out_tabs(errors)
 
 
 func _apply() -> void:
@@ -1758,3 +2048,28 @@ func _clear(node: Node) -> void:
 	for child in node.get_children():
 		node.remove_child(child)
 		child.queue_free()
+
+## Where the bonus script points come from, e.g. "rank +2, exam grades +1, 3 areas cleared +3".
+func _bonus_sources() -> String:
+	var owner_node := _skills().get_parent()
+	var b := ScriptBudget.breakdown(owner_node.get("quests") as QuestManager)
+	var parts: Array[String] = []
+	if b["rank"] > 0.0:
+		parts.append("rank +%s" % String.num(b["rank"], 1))
+	if b["grades"] > 0.0:
+		parts.append("exam grades +%s" % String.num(b["grades"], 1))
+	if b["areas"] > 0:
+		parts.append("%d area%s cleared +%s" % [b["areas"], "" if b["areas"] == 1 else "s", String.num(b["clears"], 1)])
+	return ", ".join(parts)
+
+## Where the extra knob steps come from, e.g. "2 DISTINCTIONs +2, 1 act boss +1".
+func _step_sources() -> String:
+	var b := ScriptBudget.breakdown(_skills().get_parent().get("quests") as QuestManager)
+	var parts: Array[String] = []
+	if b["distinctions"] > 0:
+		parts.append("%d DISTINCTION%s +%d" % [b["distinctions"], "" if b["distinctions"] == 1 else "s",
+				b["distinctions"] * ScriptBudget.STEPS_PER_DISTINCTION])
+	if b["bosses"] > 0:
+		parts.append("%d act boss%s +%d" % [b["bosses"], "" if b["bosses"] == 1 else "es",
+				b["bosses"] * ScriptBudget.STEPS_PER_ACT_BOSS])
+	return ", ".join(parts)

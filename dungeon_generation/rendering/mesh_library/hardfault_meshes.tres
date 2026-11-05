@@ -14,6 +14,11 @@ uniform vec3 rust : source_color = vec3(0.34, 0.16, 0.07);
 uniform vec3 amber : source_color = vec3(1.0, 0.55, 0.12);
 uniform vec3 cyan : source_color = vec3(0.0, 0.9, 1.0);
 uniform float glow = 2.5;
+// Wall cutaway: wall pixels between the camera and the player, near the player on screen,
+// dither away so you can see into the room you're in (Player sets player_world_pos).
+global uniform vec3 player_world_pos;
+uniform float cutaway_radius = 3.2;                      // metres on screen round the player
+uniform float cutaway_keep = 0.12;                       // share of the wall's pixels kept in the middle
 
 varying vec3 lp;
 varying vec3 ln;
@@ -32,9 +37,26 @@ float noise(vec2 p) {
 		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
 float box(vec2 p, vec2 half_size) { vec2 d = abs(p) - half_size; return max(d.x, d.y); }   // <0 inside
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = x + y * 4;
+	float m[16] = { 0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0 };
+	return (m[i] + 0.5) / 16.0;
+}
 
 void fragment() {
 	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (piece == 2 && !IN_SHADOW_PASS) {
+		vec3 pv = (VIEW_MATRIX * vec4(player_world_pos + vec3(0.0, 1.0, 0.0), 1.0)).xyz;
+		if (VERTEX.z > pv.z + 0.3) {                         // nearer the camera than the player
+			float d = length(VERTEX.xy - pv.xy);
+			float fade = 1.0 - smoothstep(cutaway_radius * 0.55, cutaway_radius, d);
+			if (bayer4(FRAGCOORD.xy) < fade * (1.0 - cutaway_keep)) {
+				discard;
+			}
+		}
+	}
 	vec3 an = abs(ln);
 	bool top = an.y > 0.5;
 	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
@@ -138,7 +160,7 @@ shader_parameter/dark = Color(0.06, 0.065, 0.075, 1)
 shader_parameter/rust = Color(0.34, 0.16, 0.07, 1)
 shader_parameter/amber = Color(1, 0.55, 0.12, 1)
 shader_parameter/cyan = Color(0, 0.9, 1, 1)
-shader_parameter/glow = 2.5
+shader_parameter/glow = 1.2
 
 [sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
 material = SubResource("ShaderMaterial_nqxis")
@@ -156,7 +178,7 @@ shader_parameter/dark = Color(0.06, 0.065, 0.075, 1)
 shader_parameter/rust = Color(0.34, 0.16, 0.07, 1)
 shader_parameter/amber = Color(1, 0.55, 0.12, 1)
 shader_parameter/cyan = Color(0, 0.9, 1, 1)
-shader_parameter/glow = 2.5
+shader_parameter/glow = 1.2
 
 [sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
 material = SubResource("ShaderMaterial_j70o3")
@@ -174,7 +196,7 @@ shader_parameter/dark = Color(0.06, 0.065, 0.075, 1)
 shader_parameter/rust = Color(0.34, 0.16, 0.07, 1)
 shader_parameter/amber = Color(1, 0.55, 0.12, 1)
 shader_parameter/cyan = Color(0, 0.9, 1, 1)
-shader_parameter/glow = 2.5
+shader_parameter/glow = 1.2
 
 [sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
 material = SubResource("ShaderMaterial_bcrlo")

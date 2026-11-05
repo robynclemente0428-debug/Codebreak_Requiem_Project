@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Silence The Hollow Choir"
+kind = "kill"
+target = "hollow_choir"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q04b_hollow_choir"
+title = "THE HOLLOW CHOIR"
+description = "The Hollow Relay is the only way to call ahead to Checkpoint, and something in it keeps sending our own evacuation call back at us. Past the Static Mire, at the end of the route.
+LOCK: ECHO. It learns the pattern that hits it, the skill and the script set, and shrugs that pattern off. No single attack works twice in a row.
+TIP: alternate. Switch skills, or switch script sets so the same skill runs a different program. The Echo Wisps in the Static Mire work the same way: practise on them.
+SCRIPT TASK: none. This one tests everything Act II taught you."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_2")])
+prerequisite_quest_ids = Array[String](["q03_loop_hound_alpha", "q04_the_overflow"])
+reward_credits = 300
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "II"

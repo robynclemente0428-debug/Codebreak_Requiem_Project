@@ -21,6 +21,10 @@ var flag_overrides: Dictionary = {}
 var class_trait: ClassTrait
 ## The owner's rank (Ranks.LADDER index, set by SkillComponent): more rules and blocks.
 var rank := 0
+## Extra script points from ScriptBudget (set by SkillComponent; 0 for enemies).
+var bonus_points := 0.0
+## Extra knob steps from ScriptBudget (exam DISTINCTIONs; set by SkillComponent).
+var bonus_steps := 0
 
 ## Skill-local numbers only (currently just the mana cost). Everything that changes what the
 ## skill does to the world lives in _modifiers and is applied on top of the caster's stats.
@@ -121,7 +125,7 @@ func get_program_limits() -> SkillProgramLimits:
 	for support in supports:
 		if _tags_compatible(support.allowed_tags, gem.tags):
 			active.append(support)
-	return SkillProgramLimits.for_socket(gem, active, class_trait, rank)
+	return SkillProgramLimits.for_socket(gem, active, class_trait, rank, bonus_points, bonus_steps)
 
 ## Never edit the shared resource: every skill gets its own copy of each modifier.
 func _tagged(m: Modifier, source: String) -> Modifier:

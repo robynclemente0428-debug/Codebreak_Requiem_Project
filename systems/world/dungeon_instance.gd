@@ -15,6 +15,7 @@ var killed: Dictionary = {}             # enemy index -> true, so dead enemies s
 var opened: Dictionary = {}             # prop index -> true, so looted barrels stay looted
 var explored: Dictionary = {}           # minimap cell -> true, so the fog stays lifted where you went
 var threats := PackedStringArray()      # DungeonThreats ids, rolled when the instance opens
+var cleared := false                    # every enemy dead (reported once: DungeonPopulator)
 ## Where the player stood when they left by the waypoint map (to town, say). Rejoining puts
 ## them back there instead of at the entrance, once. has_return_spot false = the entrance.
 var return_spot := Vector3.ZERO

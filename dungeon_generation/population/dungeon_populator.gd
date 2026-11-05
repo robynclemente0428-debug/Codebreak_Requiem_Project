@@ -1,6 +1,11 @@
 class_name DungeonPopulator
 extends Node
 
+## Anything with waves in a dungeon (a WardBeacon) joins this group, has wave_event_done() and
+## emits wave_event_finished when its waves are over (wave_event_label() names it, optional).
+## The area only counts as cleared once every one of them is done, as well as every enemy.
+const WAVE_EVENTS := "wave_events"
+
 @export var director: DungeonDirector
 @export var enemies_root: Node3D
 @export var loot_root: Node3D
@@ -52,6 +57,7 @@ const DEFAULT_CHEST := "res://scenes/props/loot_chest.tscn"
 @export var ward_beacon_id: String = ""
 
 var _beacon_cell := Vector2i(-99999, -99999)   # props keep clear of the ward beacon
+var _salvage_cell := Vector2i(-99999, -99999)  # ...and of the salvage cache
 var _loot_cache: Array[ItemDefinition] = []
 var _loot_cache_level := -1
 
@@ -73,6 +79,7 @@ var _is_floor: Callable      # (Vector3i) -> bool   supplied by dungeon.gd
 ## Set it before populate() to override (a test scene).
 var threats: PackedStringArray = []
 var _threat_rng := RandomNumberGenerator.new()
+var _told_waves_left := false   # the "not cleared yet: waves left" toast, once per visit
 var _to_world: Callable      # (Vector2i) -> Vector3  supplied by dungeon.gd
 
 func populate(level: int, skip_rooms: Array, is_floor: Callable, to_world: Callable) -> void:
@@ -216,6 +223,7 @@ func _spawn_enemy(def: EnemyDefinition, rarity: String, cell: Vector2i,
 	enemy.set_meta(&"enemy_id", def.id)      # the minimap marks the ones a quest asks for
 	enemy.set_meta(&"rarity", rarity)
 	enemy.set_meta(&"base_name", def.display_name)   # without the rolled modifiers' words
+	enemy.set_meta(&"act_boss", def.act_boss)
 	enemy.health.died.connect(_on_enemy_died.bind(enemy, rarity, def.id))
 	return enemy
 
@@ -236,8 +244,68 @@ func _track(enemy: Node3D) -> bool:
 		enemy.queue_free()
 		return false
 	var inst := instance
-	enemy.health.died.connect(func() -> void: inst.killed[index] = true)
+	enemy.health.died.connect(func() -> void:
+		inst.killed[index] = true
+		_check_cleared(inst))
 	return true
+
+
+## Wave events in this area (WAVE_EVENTS) whose waves aren't over yet.
+func _pending_wave_events() -> Array:
+	var area := get_parent()
+	return get_tree().get_nodes_in_group(WAVE_EVENTS).filter(func(n: Node) -> bool:
+		return area != null and area.is_ancestor_of(n) and n.has_method("wave_event_done") \
+				and not n.wave_event_done())
+
+
+## An act boss died: the first kill of each widens every knob (ScriptBudget.STEPS_PER_ACT_BOSS).
+func _on_act_boss_died(enemy_id: String, boss_name: String) -> void:
+	var player := get_tree().get_first_node_in_group("players")
+	var qm := player.get("quests") as QuestManager if player != null else null
+	var first := qm != null and not ScriptBudget.is_boss_killed(qm, enemy_id)
+	GameEvents.report(ScriptBudget.BOSS_DEED, enemy_id)
+	if first:
+		var n := ScriptBudget.STEPS_PER_ACT_BOSS
+		QuestItems.toast(get_tree(), "%s DEFEATED  +%d KNOB STEP%s" % [boss_name.to_upper(), n, "" if n == 1 else "S"],
+				Color(0.80, 0.50, 1.0))
+
+
+## The last enemy of the instance died, and every wave event here (a ward beacon) is done:
+## the area is cleared. Reports clear_area (a deed, so the first clear of each area gives every
+## skill ScriptBudget.POINTS_PER_CLEAR more points). Runs again when a wave event finishes.
+## _enemy_index is how many enemies populate() and spawn_marked() made, dead or alive.
+func _check_cleared(inst: DungeonInstance) -> void:
+	if inst.cleared or inst.killed.size() < _enemy_index:
+		return
+	var pending := _pending_wave_events()
+	if not pending.is_empty():
+		if not _told_waves_left:
+			_told_waves_left = true
+			var names: Array[String] = []
+			for n in pending:
+				names.append(n.wave_event_label() if n.has_method("wave_event_label") else "a wave event")
+			QuestItems.toast(get_tree(), "AREA NOT CLEARED YET\nStill to go: %s." % ", ".join(names),
+					Color(1.0, 0.82, 0.30))
+		return
+	inst.cleared = true
+	var area_id := _area_id()
+	if area_id == "":
+		return
+	var player := get_tree().get_first_node_in_group("players")
+	var qm := player.get("quests") as QuestManager if player != null else null
+	var first := qm != null and not ScriptBudget.is_cleared(qm, area_id)
+	GameEvents.report(ScriptBudget.CLEAR_DEED, area_id)
+	var area := owner if owner != null else get_parent()
+	var w := Waypoints.for_scene(area.scene_file_path) if area != null else null
+	var area_name := w.display_name if w != null else area_id.capitalize()
+	var reward := ""
+	if first:
+		var pts := ScriptBudget.POINTS_PER_CLEAR
+		reward = "+%s SCRIPT POINT%s ON EVERY SKILL" % [
+				str(int(pts)) if is_equal_approx(pts, roundf(pts)) else "%.1f" % pts, "" if pts <= 1.0 else "S"]
+	elif qm != null:
+		reward = "ALREADY CLEARED BEFORE: NO NEW POINT"
+	AreaClearedBanner.announce(get_tree(), area_name, reward)
 
 
 ## The area scene's file name, e.g. "act_1_coolant_vaults".
@@ -252,6 +320,8 @@ func _on_enemy_died(enemy: Node3D, rarity: String, enemy_id: String) -> void:
 	GameEvents.report("kill_rarity", rarity)      # for "kill 3 rare enemies" / "kill a champion"
 	# Where it died, for "the Raider in the Coolant Vaults": "corrupted_raider@act_1_coolant_vaults"
 	GameEvents.report("kill_at", "%s@%s" % [enemy_id, _area_id()])
+	if enemy.get_meta(&"act_boss", false):
+		_on_act_boss_died(enemy_id, str(enemy.get_meta(&"base_name", enemy_id)))
 
 	# Award credits when the enemy dies
 	_award_credits(rarity, enemy.global_position)
@@ -298,6 +368,7 @@ func place_props(is_floor: Callable, to_world: Callable) -> void:
 	for dx in range(-2, 3):
 		for dy in range(-2, 3):
 			taken[_beacon_cell + Vector2i(dx, dy)] = true
+			taken[_salvage_cell + Vector2i(dx, dy)] = true
 	# Keep the cells around every enemy free: a barrel right beside an enemy cuts its spot out of
 	# the navmesh (props are baked into it), and an enemy standing off the navmesh can't path.
 	if enemies_root != null and director.grid_map != null:
@@ -530,6 +601,35 @@ func _drop_key(key: String, at: Vector3) -> void:
 		QuestKeyPickup.spawn(loot_root, at, key)
 
 
+## A convoy stop's salvage cache (SalvageCache), once per stop: in an ordinary room off the
+## way, picked from the stop's id so it's in the same place on a rejoin. Not once recovered.
+func place_salvage(scene_path: String, is_floor: Callable, to_world: Callable) -> void:
+	var w := Waypoints.for_scene(scene_path)
+	if w == null or not Waypoints.is_convoy_stop(w):
+		return
+	var player := get_tree().get_first_node_in_group("players")
+	var qm := player.get("quests") as QuestManager if player != null else null
+	if qm != null and qm.deed_count(SalvageCache.DEED, w.id) > 0:
+		return
+	var rooms: Array[RoomData] = []
+	for room: RoomData in director.rooms:
+		if not (room.room_type in ["start", "portal", "boss", "custom"]):   # custom: arenas
+			rooms.append(room)
+	if rooms.is_empty():
+		return
+	var room := rooms[absi(hash(w.id)) % rooms.size()]
+	var c := room.center()
+	for r in range(0, 6):                         # nearest floor cell, rings outwards
+		for dx in range(-r, r + 1):
+			for dy in range(-r, r + 1):
+				var t := c + Vector2i(dx, dy)
+				if maxi(absi(dx), absi(dy)) == r and t != _beacon_cell and is_floor.call(Vector3i(t.x, 0, t.y)):
+					_salvage_cell = t
+					SalvageCache.spawn(get_parent(), to_world.call(t), w.id)
+					return
+	push_warning("No floor for the salvage cache of %s" % w.id)
+
+
 ## The district's ward beacon, in the room farthest from where the player arrives (so it's
 ## worth the walk), at the free floor cell nearest that room's middle.
 func place_ward_beacon(is_floor: Callable, to_world: Callable) -> void:
@@ -561,4 +661,7 @@ func place_ward_beacon(is_floor: Callable, to_world: Callable) -> void:
 		push_warning("No floor for the ward beacon %s" % ward_beacon_id)
 		return
 	_beacon_cell = cell
-	WardBeacon.spawn(get_parent(), to_world.call(cell), ward_beacon_id)
+	var beacon := WardBeacon.spawn(get_parent(), to_world.call(cell), ward_beacon_id)
+	beacon.wave_event_finished.connect(func() -> void:
+		if instance != null:
+			_check_cleared(instance))

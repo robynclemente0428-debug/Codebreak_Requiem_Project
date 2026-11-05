@@ -14,17 +14,6 @@ min_steps = -4
 max_steps = 4
 unit = "deg"
 
-[sub_resource type="Resource" id="Knob_cleave_targets"]
-script = ExtResource("8_knob")
-id = &"cleave_targets"
-display_name = "Cleave targets"
-flag_key = "max_targets"
-step = 1.0
-min_steps = -4
-max_steps = 4
-cost_per_step = 1.5
-unit = ""
-
 [sub_resource type="Resource" id="Knob_cleave_reach"]
 script = ExtResource("8_knob")
 id = &"cleave_reach"
@@ -49,6 +38,6 @@ id = "cleave_support"
 display_name = "Cleave Support"
 stat_modifiers = Array[ExtResource("2_p0106")]([SubResource("Resource_12cyo")])
 allowed_tags = Array[int]([0])
-program_knobs = Array[ExtResource("8_knob")]([SubResource("Knob_cleave_arc"), SubResource("Knob_cleave_targets"), SubResource("Knob_cleave_reach")])
+program_knobs = Array[ExtResource("8_knob")]([SubResource("Knob_cleave_arc"), SubResource("Knob_cleave_reach")])
 mana_cost_increase = 0.2
 metadata/_custom_type_script = "uid://nmpkxw061f5h"

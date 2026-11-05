@@ -10,7 +10,7 @@ extends Resource
 enum Kind {
 	## Skill damage. Works in every rule: always, per cast and per hit.
 	DAMAGE,
-	## A gem flag (range_bonus, radius, max_targets, pierce...). Always or per-cast rules only.
+	## A gem flag (range_bonus, radius, arc_angle, pierce...). Always or per-cast rules only.
 	FLAG,
 	## Any other stat (mana cost, attack speed, crit...). Only in ALWAYS rules, because mana and
 	## cooldown are paid before any condition can be checked.

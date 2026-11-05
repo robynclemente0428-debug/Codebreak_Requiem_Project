@@ -3,9 +3,9 @@
 [ext_resource type="Script" uid="uid://blbsgtjt3mdxp" path="res://scenes/map/dungeon/dungeon.gd" id="1_dun"]
 [ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_portal"]
 [ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
-[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act2_stops.tres" id="4_theme"]
+[ext_resource type="Resource" uid="uid://im2oo6ufcumi" path="res://dungeon_generation/rendering/mesh_library/resources/act2_stops.tres" id="4_theme"]
 [ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
-[ext_resource type="MeshLibrary" uid="uid://bktm4q5140ysj" path="res://dungeon_generation/rendering/mesh_library/hardfault_meshes.tres" id="6_mesh"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act2_road_meshes.tres" id="6_mesh"]
 [ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
 [ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
 [ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
@@ -103,4 +103,5 @@ metadata/_custom_type_script = "uid://c5hhflptas7h1"
 [node name="LoopHoundAlpha" type="Marker3D" parent="Layout/MiniBossArena" unique_id=2007172697]
 script = ExtResource("10_enemym")
 enemy = ExtResource("e_alpha")
+threat_traits = false
 metadata/_custom_type_script = "uid://bri1ph1ms875r"

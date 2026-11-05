@@ -4,7 +4,6 @@ extends SkillBehavior
 ## Flags (set per gem in SkillGemRegistry, changeable by supports through flag_modifiers):
 ##   arc_angle      width of the cone in degrees
 ##   range_bonus    extra reach on top of the caster's ATTACK_RANGE stat
-##   max_targets    cap on how many enemies one swing can hit
 ##   combo_grace    extra seconds after the attack before the combo restarts from the first clip
 
 func release(cast: SkillCast) -> void:
@@ -16,8 +15,7 @@ func release(cast: SkillCast) -> void:
 	SlashEffect.spawn(caster, reach, arc, SkillStyle.for_caster(caster),
 			cast.skill.get_combo_index() % 2 == 0)
 
-	for target in SkillDeliveries.hits_in_arc(cast, caster.global_position, forward, arc, reach,
-			int(cast.flag("max_targets"))):
+	for target in SkillDeliveries.hits_in_arc(cast, caster.global_position, forward, arc, reach):   # everyone in the cone
 		cast.hit(target)
 
 

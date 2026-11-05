@@ -12,6 +12,9 @@ var damage := 0.0
 var is_crit := false
 ## Set to true in modify_hit() to stop the hit entirely.
 var cancelled := false
+## Set by an enemy trait (a boss lock) in modify_incoming: the hit counts as landed (loops,
+## on-hit supports and conditions see it) but deals no damage. Unlike cancelled.
+var absorbed := false
 
 ## Filled in after the damage is applied:
 var dealt := 0.0          # damage after armour

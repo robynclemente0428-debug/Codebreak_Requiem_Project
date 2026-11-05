@@ -5,12 +5,12 @@
 [ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
 [ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act2_stops.tres" id="4_theme"]
 [ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
-[ext_resource type="MeshLibrary" uid="uid://bktm4q5140ysj" path="res://dungeon_generation/rendering/mesh_library/hardfault_meshes.tres" id="6_mesh"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act2_road_meshes.tres" id="6_mesh"]
 [ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
 [ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
 [ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
 [ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="10_enemym"]
-[ext_resource type="Resource" path="res://data/enemies/enchanter_boss.tres" id="e_raider"]
+[ext_resource type="Resource" path="res://data/enemies/the_overflow.tres" id="e_raider"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 agent_height = 1.8
@@ -103,5 +103,6 @@ metadata/_custom_type_script = "uid://c5hhflptas7h1"
 [node name="MiniBoss" type="Marker3D" parent="Layout/MiniBossArena" unique_id=2007172697]
 script = ExtResource("10_enemym")
 enemy = ExtResource("e_raider")
-rarity = "rare"
+threat_traits = false
+rarity = "champion"
 metadata/_custom_type_script = "uid://bri1ph1ms875r"

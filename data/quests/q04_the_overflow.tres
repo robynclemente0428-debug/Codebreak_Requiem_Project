@@ -22,8 +22,9 @@ metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 script = ExtResource("2_quest")
 id = "q04_the_overflow"
 title = "THE OVERFLOW"
-description = "A giant Stack Crawler is sitting on Hex's power cells.
-BOSS TRAIT: gets stronger as more enemies stack on it. Kill the small ones first.
+description = "A giant Stack Crawler is sitting on Hex's power cells out in the Signal Wastes.
+LOCK: OVERFLOW. Its buffer holds against anyone at healthy life: only a player at half life or lower gets through.
+TIP: fight it low. Script a when my_life_below() rule with leech, barrier or guard to stay alive down there, and damage for the window.
 SCRIPT TASK: make a skill hit harder when your life is low."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true

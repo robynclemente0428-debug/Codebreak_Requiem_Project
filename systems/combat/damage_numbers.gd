@@ -123,7 +123,8 @@ func _process(delta: float) -> void:
 		var e: Dictionary = _entries[i]
 		var label: Label = e["label"]
 		e["age"] += delta
-		if e["age"] >= duration:
+		var dur: float = e.get("dur", duration)
+		if e["age"] >= dur:
 			label.queue_free()
 			_entries.remove_at(i)
 			continue
@@ -134,7 +135,7 @@ func _process(delta: float) -> void:
 			continue
 		label.visible = true
 
-		var t: float = e["age"] / duration
+		var t: float = e["age"] / dur
 		var rise := rise_px * (1.0 - pow(1.0 - t, 3.0))            # fast at first, then slows
 		var base := cam.unproject_position(world) * ratio + container.global_position
 		var half: Vector2 = e["half"]
@@ -150,7 +151,8 @@ func pop_credits(world_pos: Vector3, amount: int) -> void:
 
 
 ## Any floating text at a world point, with the same rise-and-fade as damage numbers.
-func pop_text(world_pos: Vector3, text: String, color: Color, size_mult := 1.0) -> void:
+## `seconds` > 0: how long this one stays on screen (default `duration`), for text meant to be read.
+func pop_text(world_pos: Vector3, text: String, color: Color, size_mult := 1.0, seconds := 0.0) -> void:
 	if _viewport == null:
 		return
 	var label := Label.new()
@@ -174,6 +176,7 @@ func pop_text(world_pos: Vector3, text: String, color: Color, size_mult := 1.0) 
 		"age": 0.0,
 		"dx": 0.0,
 		"half": label.size * 0.5,
+		"dur": seconds if seconds > 0.0 else duration,
 	})
 
 

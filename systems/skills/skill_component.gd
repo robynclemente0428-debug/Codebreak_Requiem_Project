@@ -63,11 +63,13 @@ func _ready() -> void:
 	_watch_rank.call_deferred()
 
 
-## Passing a rank exam changes the limits (Ranks.PERKS), so every skill rebuilds.
+## Passing a rank exam changes the limits (Ranks.PERKS), so every skill rebuilds. So does a
+## change to the bonus script points (a better exam grade, a cleared area).
 func _watch_rank() -> void:
 	var qm := get_parent().get("quests") as QuestManager
 	if qm != null and not qm.quest_completed.is_connected(_on_quest_completed):
 		qm.quest_completed.connect(_on_quest_completed)
+		qm.budget_changed.connect(refresh_rank)
 
 
 func _on_quest_completed(_state: QuestState) -> void:
@@ -79,13 +81,32 @@ func rank() -> int:
 	return Ranks.of(get_parent())
 
 
+## Extra script points every skill gets (ScriptBudget: rank, exam grades, cleared areas).
+## None in Sudo's sandbox: every exam is sat on the gem's own budget, so grades stay comparable.
+func bonus_points() -> float:
+	if sandbox_locked:
+		return 0.0
+	return ScriptBudget.points(get_parent().get("quests") as QuestManager)
+
+
+## Extra steps on every knob (ScriptBudget: one per exam DISTINCTION). None in the sandbox either.
+func bonus_steps() -> int:
+	if sandbox_locked:
+		return 0
+	return ScriptBudget.steps(get_parent().get("quests") as QuestManager)
+
+
 ## Re-checks every skill's program with the current rank's limits: programs that didn't fit
 ## before (too many rules for a lower rank) apply now.
 func refresh_rank() -> void:
 	var r := rank()
+	var bonus := bonus_points()
+	var steps := bonus_steps()
 	for s in sockets:
 		if s.skill != null:
 			s.skill.rank = r
+			s.skill.bonus_points = bonus
+			s.skill.bonus_steps = steps
 	_apply_set()
 	changed.emit()
 
@@ -568,6 +589,8 @@ func _rebuild(s: Socket) -> void:
 	skill.program = s.program
 	skill.class_trait = _class_trait()
 	skill.rank = rank()
+	skill.bonus_points = bonus_points()
+	skill.bonus_steps = bonus_steps()
 	skill.rebuild()
 	s.skill = skill
 	_apply_trait_rule_bonuses()

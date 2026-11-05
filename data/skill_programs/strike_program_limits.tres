@@ -26,17 +26,6 @@ max_steps = 6
 cost_per_step = 2.0
 unit = "m"
 
-[sub_resource type="Resource" id="Knob_max_targets"]
-script = ExtResource("1_knob")
-id = &"max_targets"
-display_name = "Max targets"
-flag_key = "max_targets"
-step = 1.0
-min_steps = -2
-max_steps = 3
-cost_per_step = 3.0
-unit = ""
-
 [sub_resource type="Resource" id="Knob_arc_angle"]
 script = ExtResource("1_knob")
 id = &"arc_angle"
@@ -59,6 +48,6 @@ cost_per_step = 2.5
 
 [resource]
 script = ExtResource("1_lim")
-knobs = Array[ExtResource("1_knob")]([SubResource("Knob_damage"), SubResource("Knob_range_bonus"), SubResource("Knob_max_targets"), SubResource("Knob_arc_angle"), SubResource("Knob_attack_speed")])
+knobs = Array[ExtResource("1_knob")]([SubResource("Knob_damage"), SubResource("Knob_range_bonus"), SubResource("Knob_arc_angle"), SubResource("Knob_attack_speed")])
 point_budget = 6.0
 tiers = Array[ExtResource("2_tierscript")]([ExtResource("3_elegant"), ExtResource("4_lean")])

@@ -59,7 +59,7 @@ func dealt(e: Node3D) -> float:
 func _ready() -> void:
 	var strike_limits := SkillGemRegistry.get_skill_gem("strike").program_limits
 	strike_limits.point_budget = 0.0    # the checks below assume no free points (only in this test)
-	check(strike_limits != null and strike_limits.knobs.size() == 5, "strike has program limits with 5 knobs")
+	check(strike_limits != null and strike_limits.knobs.size() == 4, "strike has program limits with 4 knobs")
 	check(strike_limits.get_knob(&"mana_cost") == null, "strike has no mana knob (costs no mana)")
 
 	# ---------- Your two examples ----------
@@ -90,7 +90,7 @@ func _ready() -> void:
 	check(not v.valid and "at most 10" in v.errors[0], "damage capped at +10 steps")
 	v = prog([rule([], [[&"damage", 6]]), rule([crowd(3, 4.0)], [[&"damage", 6]])]).validate(strike_limits)
 	check(not v.valid, "cap counts ALWAYS + conditional together")
-	var big := rule([crowd(1, 2.0), crowd(2, 2.0)], [[&"damage", 1], [&"damage", -1], [&"arc_angle", 1], [&"arc_angle", -1], [&"max_targets", 0], [&"damage", 0], [&"damage", 0], [&"damage", 0], [&"damage", 0]])
+	var big := rule([crowd(1, 2.0), crowd(2, 2.0)], [[&"damage", 1], [&"damage", -1], [&"arc_angle", 1], [&"arc_angle", -1], [&"damage", 0], [&"damage", 0], [&"damage", 0], [&"damage", 0], [&"damage", 0]])
 	v = prog([big]).validate(strike_limits)
 	check(not v.valid and "Too many blocks" in v.errors[0], "11 blocks is over the 10 limit")
 	var c := ProgramConditions.from_dict({"type": "enemies_nearby", "min_count": 99, "radius": 0.1})

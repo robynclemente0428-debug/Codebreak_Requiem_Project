@@ -150,7 +150,7 @@ func _build_ui() -> void:
 	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast.anchor_left = 0.0
 	_toast.anchor_right = 1.0
-	_toast.offset_top = 215          # under the tutorial banner (TutorialHints.BANNER_Y + its height)
+	_toast.offset_top = TOAST_TOP
 	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_toast.add_theme_font_size_override("font_size", base_font_size + 10)
 	_toast.add_theme_color_override("font_outline_color", Color.BLACK)
@@ -243,10 +243,28 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+# ---------- MESSAGES ----------
+const TOAST_TOP := 215.0          # under the tutorial banner (TutorialHints.BANNER_Y + its height)
+const TOAST_GAP := 14.0           # below the AREA CLEARED band while it's up
+
+
+## The message line sits under the tutorial banner, or under the AREA CLEARED band while that is
+## on screen (it would cover the band's text otherwise: a ward beacon coming online clears the
+## area in the same moment).
+func _place_toast() -> void:
+	if _toast == null:
+		return
+	var band := AreaClearedBanner.bottom_y(get_tree())
+	var top := TOAST_TOP if band < 0.0 else maxf(TOAST_TOP, band - global_position.y + TOAST_GAP)
+	if not is_equal_approx(_toast.offset_top, top):
+		_toast.offset_top = top
+
+
 # ---------- FOLLOWING THE MINIMAP ----------
 ## Stays right under the minimap, and glides up into its place when the minimap is hidden.
 ## Fades with the minimap's opacity ([ and ], see Minimap.opacity), so the two read as one.
 func _process(_delta: float) -> void:
+	_place_toast()
 	if _scan != null:
 		_scan.visible = _panel != null and _panel.visible
 	if _panel == null or not _panel.visible:

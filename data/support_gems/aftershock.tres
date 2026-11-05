@@ -8,8 +8,8 @@
 [sub_resource type="Resource" id="Knob_echoes"]
 script = ExtResource("3_knob")
 id = &"aftershock_echoes"
-first_cast_only = true
 display_name = "Echoes"
+first_cast_only = true
 flag_key = "aftershock_count"
 step = 1.0
 min_steps = -1
@@ -20,8 +20,8 @@ unit = ""
 [sub_resource type="Resource" id="Knob_echo_damage"]
 script = ExtResource("3_knob")
 id = &"aftershock_power"
-first_cast_only = true
 display_name = "Echo damage"
+first_cast_only = true
 flag_key = "aftershock_damage"
 step = 0.1
 min_steps = -3

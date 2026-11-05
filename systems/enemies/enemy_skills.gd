@@ -26,8 +26,10 @@ var _timer := 0.0
 ## `gems` is an Array of SkillGemDefinition (the same resources the player's gems hold).
 ## `supports` link to every skill they fit; `support_ids` maps a skill gem id to extra
 ## support ids for that skill only (see EnemyDefinition.skill_supports / skill_support_ids).
+## `loops` maps a skill gem id to FOR repeats (EnemyDefinition.skill_loops).
 func setup(caster: Node3D, stats: StatComponent, gems: Array,
-		flag_overrides: Dictionary = {}, supports: Array = [], support_ids: Dictionary = {}) -> void:
+		flag_overrides: Dictionary = {}, supports: Array = [], support_ids: Dictionary = {},
+		loops: Dictionary = {}) -> void:
 	_caster = caster
 	_stats = stats
 	for gem in gems:
@@ -45,12 +47,26 @@ func setup(caster: Node3D, stats: StatComponent, gems: Array,
 				push_warning("EnemySkills: no support gem '%s' (for %s)" % [id, gem.id])
 			elif sup not in skill.supports:
 				skill.supports.append(sup)
+		if int(loops.get(gem.id, 0)) > 0:
+			_give_loop(skill, int(loops[gem.id]))
 		skill.rebuild()                          # rebuild() skips supports that don't fit the gem
 		_skills.append(skill)
 		# Stagger the first use so a fresh spawn doesn't open with an instant slam
 		_ready_at[skill] = Time.get_ticks_msec() + int(randf_range(1.0, 3.0) * 1000.0)
 		print("[EnemySkills] gem=%s overrides=%s supports=%s" % [gem.id, flag_overrides.get(gem.id, "NONE"),
 				skill.supports.map(func(s: SupportGemDefinition) -> String: return s.id)])
+
+
+## A "for i in range(repeats)" program on the skill, run by the same loop code as the player's.
+## Enemies have no rank or budget, so it gets the top rank and points to spare.
+func _give_loop(skill: SkillInstance, repeats: int) -> void:
+	var rule := ProgramRule.new()
+	rule.loop = ProgramLoop.make(ProgramLoop.Mode.FOR, repeats)
+	var program := SkillProgram.new()
+	program.rules.append(rule)
+	skill.program = program
+	skill.rank = Ranks.LADDER.size() - 1
+	skill.bonus_points = 100.0
 
 
 func _process(delta: float) -> void:

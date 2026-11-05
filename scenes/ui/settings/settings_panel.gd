@@ -230,6 +230,7 @@ func _build_display() -> void:
 	_toggle_row("VSYNC", "display", "vsync")
 	_choice_row("FPS LIMIT", "display", "max_fps", Settings.FPS_LIMITS,
 		func(v): return "UNLIMITED" if int(v) == 0 else "%d" % v)
+	_toggle_row("SHOW FPS", "display", "show_fps")
 	_slider_row("UI SIZE", "display", "ui_scale", 0.75, 1.5, 0.05, func(v): return "%d%%" % roundi(v * 100.0))
 	_choice_row("CURSOR", "display", "cursor", Settings.CURSOR_MODES,
 		func(v): return "GAME CURSOR" if v == "themed" else "SYSTEM CURSOR")

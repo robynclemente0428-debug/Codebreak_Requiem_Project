@@ -5,6 +5,10 @@ extends Resource
 ## With a loop (FOR / WHILE, see ProgramLoop) the rule repeats the skill instead, and its
 ## effects only apply to those repeats (the loop body).
 
+## Knobs taken out of the game. Saved scripts still name them, so their lines are skipped on
+## load (max_targets: every skill now hits everyone in its area).
+const REMOVED_KNOBS: Array[StringName] = [&"max_targets", &"cleave_targets"]
+
 ## Which gem this rule belongs to: "" = the skill, or a support gem's id. A rule may only
 ## move knobs of its own gem. Rules of a support are removed when that support is unsocketed.
 @export var owner: String = ""
@@ -138,7 +142,9 @@ static func from_dict(d: Dictionary) -> ProgramRule:
 		if c != null:
 			r.conditions.append(c)
 	for ed in d.get("do", []):
-		r.effects.append(ProgramEffect.from_dict(ed))
+		var e := ProgramEffect.from_dict(ed)
+		if not e.knob in REMOVED_KNOBS:              # old saves: knobs that no longer exist
+			r.effects.append(e)
 	if d.get("loop") is Dictionary:
 		r.loop = ProgramLoop.from_dict(d["loop"])
 	return r

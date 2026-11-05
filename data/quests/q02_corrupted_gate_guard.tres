@@ -29,7 +29,8 @@ script = ExtResource("2_quest")
 id = "q02_corrupted_gate_guard"
 title = "THE CORRUPTED GATE GUARD"
 description = "The Gate Guard went rogue. Nobody gets in or out until it falls. Its gate is sealed: the Enchanter at the Firewall Approach carries the Gate Key.
-BOSS TRAIT: slow, heavy swings. Dodge, then strike.
+BOSS TRAIT: HANDSHAKE. Its gate shrugs off every hit until you answer its slam with a shield.
+TIP: script a skill with the BARRIER or GUARD knob, cast it just before the slam lands, and take the hit. The port opens for a few seconds: that's your window.
 SCRIPT TASK: pass Examiner Sudo's first rank exam."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_key"), SubResource("Objective_2")])
 ordered = true

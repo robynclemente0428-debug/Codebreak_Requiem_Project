@@ -260,7 +260,7 @@ func _on_died() -> void:
 func _pop(text: String, col: Color) -> void:
 	var numbers := _enemy.get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
 	if numbers:
-		numbers.pop_text(_enemy.global_position + Vector3.UP * 2.0, text, col, 1.3)
+		numbers.pop_text(_enemy.global_position + Vector3.UP * 2.0, text, col, 1.3, EnemyTrait.HINT_SECONDS)
 
 
 ## Pulls a point onto the navmesh so the loop never runs through a wall.

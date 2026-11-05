@@ -22,9 +22,10 @@ metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 script = ExtResource("2_quest")
 id = "q03_loop_hound_alpha"
 title = "LOOP HOUND ALPHA"
-description = "Alpha leads the pack that blocks our road. He holds Scrapline Crossing, the convoy's first stop: set course from the route terminal.
-BOSS TRAIT: charges along the same path again and again. Learn the loop, break it.
-TIP: its loop is marked on the floor. Step off it before it charges, and hit it hard mid-charge to break the loop.
+description = "Alpha leads the pack that blocks our road. He holds Scrapline Crossing, past the Road Gate: set course from the route terminal.
+BOSS TRAIT: bites in loops. Every strike repeats twice, so step out after the first one.
+LOCK: CHECKSUM. It only accepts a cast that loops exactly 2 times. Only the loop's repeats count: the cast itself doesn't, and extra projectiles or attacks don't either. It takes one looped cast at a time, then stops to verify it: while it verifies, nothing gets in, so keep swinging. Too few or too many and nothing gets through.
+TIP: a FOR loop with range(2). Damage doesn't matter to a checksum, so trade some for the loop's points. It even shows you how: every one of its bites is a FOR loop with range(2).
 SCRIPT TASK: give a skill a repeating cycle with every_nth_cast()."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true

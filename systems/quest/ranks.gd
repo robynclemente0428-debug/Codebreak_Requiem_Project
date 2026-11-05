@@ -26,14 +26,15 @@ const LADDER := [
 ##   hints     the threat panel shows how to counter each threat
 ##   library   the SCRIPTING editor's save / load library (SkillComponent.library)
 ##   loops     for / while / break and the blocks about repeats (see LOCKED_BLOCKS)
+##   budget    extra script points on every skill (ScriptBudget adds exam grades and clears)
 const PERKS := [
 	{"sets": 1},                                          # INITIATE
 	{"sets": 2, "rules": 1, "hints": true},               # OPERATOR
 	{"rules": 1, "blocks": 4, "library": true, "loops": true},   # ARCHITECT
 	{"sets": 3},                                          # STRATEGIST
-	{},                                                   # ENGINEER
-	{},                                                   # DEFRAGMENTER
-	{},                                                   # THEORIST
+	{"budget": 2},                                        # ENGINEER
+	{"budget": 2},                                        # DEFRAGMENTER
+	{"budget": 2},                                        # THEORIST
 ]
 ## One line per perk for the rank-up message and the character panel tooltip.
 const PERK_TEXT := {
@@ -43,6 +44,7 @@ const PERK_TEXT := {
 	"hints": "Threat counter hints",
 	"library": "Script library (save / load scripts)",
 	"loops": "Loops (for / while / break)",
+	"budget": "+%d script points on every skill",
 }
 ## Perks that are on / off (the rest are numbers).
 const FLAG_PERKS := ["hints", "library", "loops"]

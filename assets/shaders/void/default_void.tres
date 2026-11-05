@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/convoy/convoy_void.gdshader" id="1_convoy"]
+[ext_resource type="Texture2D" path="res://assets/textures/convoy/convoy_void_far.png" id="2_far"]
+[ext_resource type="Texture2D" path="res://assets/textures/convoy/convoy_void_near.png" id="3_near"]
+
+[resource]
+render_priority = -100
+shader = ExtResource("1_convoy")
+shader_parameter/far_tex = ExtResource("2_far")
+shader_parameter/near_tex = ExtResource("3_near")
+shader_parameter/travel = 0.0
+shader_parameter/far_tiling = 0.7
+shader_parameter/near_tiling = 0.7
+shader_parameter/far_rate = 0.25
+shader_parameter/near_rate = 1.0
+shader_parameter/twinkle = 0.3
+shader_parameter/stretch = 0.0
+shader_parameter/tint = Color(1, 1, 1, 1)
+shader_parameter/screen_space = true

@@ -143,10 +143,7 @@ func _physics_process(delta: float) -> void:
 func _cut(from_d: float, to_d: float) -> void:
 	if _cast == null or not _cast.is_valid():
 		return
-	var cap := int(_cast.flag("max_targets"))
-	for t in SkillTargets.hittable(_cast.caster):
-		if cap > 0 and _hit.size() >= cap + _cast.already_hit.size():
-			return
+	for t in SkillTargets.hittable(_cast.caster):      # everyone the blade sweeps over
 		if not is_instance_valid(t) or not (t is Node3D) or t in _hit:
 			continue
 		var rel: Vector3 = (t as Node3D).global_position - _origin

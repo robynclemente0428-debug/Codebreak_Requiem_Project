@@ -1,0 +1,249 @@
+[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="Shader" id="Shader_jb42q"]
+code = "shader_type spatial;
+// CodeBreak Requiem - Act II \"The Road\" tiles: the convoy's stops along the old highway.
+// Cracked asphalt corridors with faded paint and amber road studs, weathered concrete slabs
+// drifted with sand, and concrete barrier walls with hazard chevrons and red warning strips.
+// One shader for all three pieces; `piece` picks the pattern (the same pieces as Act I's
+// hardfault_meshes, so dungeons swap one library for the other).
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform int piece = 0;                                   // 0 = Floor, 1 = Room_Floor, 2 = Wall
+uniform vec3 asphalt : source_color = vec3(0.10, 0.10, 0.11);
+uniform vec3 concrete : source_color = vec3(0.44, 0.39, 0.32);
+uniform vec3 sand : source_color = vec3(0.62, 0.47, 0.28);
+uniform vec3 paint : source_color = vec3(0.85, 0.66, 0.16);
+uniform vec3 rust : source_color = vec3(0.36, 0.17, 0.08);
+uniform vec3 sodium : source_color = vec3(1.0, 0.52, 0.15);
+uniform vec3 warn : source_color = vec3(1.0, 0.16, 0.10);
+uniform float glow = 1.2;
+// Wall cutaway (as hardfault_meshes): wall pixels between the camera and the player, near the
+// player on screen, dither away so you can see into the room you're in.
+global uniform vec3 player_world_pos;
+uniform float cutaway_radius = 3.2;
+uniform float cutaway_keep = 0.12;
+
+varying vec3 lp;
+varying vec3 ln;
+
+void vertex() {
+	lp = VERTEX;
+	ln = NORMAL;
+}
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = x + y * 4;
+	float m[16] = { 0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0 };
+	return (m[i] + 0.5) / 16.0;
+}
+// Thin dark lines where a noise field crosses 0.5: cracks that run across tiles.
+float cracks(vec2 p) {
+	float n = noise(p) * 0.65 + noise(p * 2.7) * 0.35;
+	return 1.0 - smoothstep(0.0, 0.035, abs(n - 0.5));
+}
+
+void fragment() {
+	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (piece == 2 && !IN_SHADOW_PASS) {
+		vec3 pv = (VIEW_MATRIX * vec4(player_world_pos + vec3(0.0, 1.0, 0.0), 1.0)).xyz;
+		if (VERTEX.z > pv.z + 0.3) {
+			float d = length(VERTEX.xy - pv.xy);
+			float fade = 1.0 - smoothstep(cutaway_radius * 0.55, cutaway_radius, d);
+			if (bayer4(FRAGCOORD.xy) < fade * (1.0 - cutaway_keep)) {
+				discard;
+			}
+		}
+	}
+	vec3 an = abs(ln);
+	bool top = an.y > 0.5;
+	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
+	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
+	float grain = noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5;
+	float drift = smoothstep(0.45, 0.8, noise(wuv * 0.45) * 0.7 + noise(wuv * 1.7) * 0.3);   // windblown sand
+
+	vec3 col = concrete;
+	vec3 em = vec3(0.0);
+	float metal = 0.0;
+	float rough = 0.85;
+
+	if (piece == 0) {
+		// Corridor: cracked asphalt, patches of faded lane paint, amber road studs
+		if (top) {
+			col = asphalt * (0.8 + grain * 0.45);
+			col = mix(col, asphalt * 1.7, step(0.82, noise(wuv * 0.8 + 7.0)) * 0.6);     // patched asphalt
+			float paint_patch = step(0.68, noise(wuv * 0.35 + 3.0));
+			float dash = step(0.72, abs(uv.x)) * step(0.4, fract(wuv.x * 0.25 + wuv.y * 0.25));
+			col = mix(col, paint * 0.55, dash * paint_patch * (0.55 + grain * 0.4));
+			col = mix(col, asphalt * 0.35, cracks(wuv * 0.9) * 0.9);
+			// a road stud on two corners of every tile, glowing amber
+			vec2 s = abs(uv) - vec2(0.8, 0.8);
+			float stud = 1.0 - smoothstep(0.05, 0.08, length(s));
+			float lit = step(0.25, hash(floor(wuv * 0.5)));
+			em += sodium * glow * stud * lit * 1.4;
+			col = mix(col, sodium * 0.5, stud);
+			col = mix(col, sand * 0.8, drift * 0.55);
+			rough = 0.95;
+		} else {
+			col = asphalt * 0.6;
+		}
+	} else if (piece == 1) {
+		// Room floor: weathered concrete slabs, expansion joints, oil stains, a drain now and then
+		if (top) {
+			vec2 slab = fract(uv * 0.5 + 0.5) * 2.0 - 1.0;          // one slab per tile
+			float joint = step(0.93, max(abs(slab.x), abs(slab.y)));
+			col = concrete * (0.85 + grain * 0.25) * mix(0.9, 1.08, hash(floor(wuv * 0.5)));
+			col = mix(col, asphalt, joint * 0.8);
+			float stain = smoothstep(0.62, 0.8, noise(wuv * 0.9 + 11.0));
+			col = mix(col, asphalt * 0.7, stain * 0.65);                // oil
+			col = mix(col, concrete * 0.55, cracks(wuv * 0.7 + 5.0) * 0.7);
+			// faded bay lines on some slabs
+			float bay = step(0.85, hash(floor(wuv * 0.5) + 3.0)) * step(0.82, abs(slab.x)) * (1.0 - joint);
+			col = mix(col, vec3(0.75, 0.73, 0.68) * 0.7, bay * (0.25 + grain * 0.2));
+			// a drain grate in the middle of a few slabs
+			float drain = step(0.86, hash(floor(wuv * 0.5) + 9.0)) * step(max(abs(uv.x), abs(uv.y)), 0.22);
+			float slots = step(0.5, fract(uv.x * 9.0));
+			col = mix(col, mix(asphalt * 0.4, concrete * 0.7, slots), drain);
+			metal = drain * 0.6;
+			col = mix(col, sand, drift * 0.7);
+		} else {
+			col = concrete * 0.5;
+		}
+	} else {
+		// Wall: stacked concrete barrier blocks, a red warning strip, hazard chevrons, rust streaks
+		if (top) {
+			float m = max(abs(uv.x), abs(uv.y));
+			col = concrete * (0.62 + grain * 0.2);
+			col = mix(col, sand, drift * 0.7);
+			// the barrier's painted rim: red and white chevrons round the edge
+			float rim = step(0.8, m) * (1.0 - step(0.95, m));
+			float chev_top = step(0.5, fract((wp.x + wp.z) * 0.9));
+			col = mix(col, mix(vec3(0.82, 0.8, 0.76) * 0.75, warn * 0.6, chev_top), rim * (0.8 + grain * 0.2));
+			em += warn * glow * rim * chev_top * 0.12;
+			col = mix(col, concrete * 0.4, step(0.95, m));
+		} else {
+			float y = uv.y;                                           // -1 bottom .. 1 top of the block
+			float seam = step(0.95, abs(fract(uv.x * 0.5 + 0.5) * 2.0 - 1.0));
+			col = concrete * (0.78 + grain * 0.3);
+			col = mix(col, asphalt, seam * 0.8);
+			float chamfer = step(0.88, abs(y));                       // the block's top and bottom edge
+			col = mix(col, concrete * 0.55, chamfer);
+			float upper = step(0.5, fract(wp.y * 0.25));              // which block of the stack
+			// lower blocks: a red / white hazard chevron band
+			float band = step(abs(y + 0.35), 0.17) * (1.0 - upper);
+			float chev = step(0.5, fract((uv.x + abs(y + 0.35) * 1.4) * 1.25));
+			col = mix(col, mix(vec3(0.8, 0.78, 0.74) * 0.7, warn * 0.55, chev), band * (0.75 + grain * 0.25));
+			// upper blocks: a red warning strip that pulses slowly
+			float strip = step(abs(y - 0.45), 0.04) * upper;
+			float pulse = 0.6 + 0.4 * sin(TIME * 1.6 + wp.x * 0.4 + wp.z * 0.4);
+			em += warn * glow * strip * pulse * 0.9;
+			col = mix(col, warn * 0.4, strip);
+			// weathering: dark rain streaks and rust bleeding from the rebar
+			float streak = smoothstep(0.6, 0.9, noise(vec2(wuv.x * 5.0, wuv.y * 0.5)));
+			col = mix(col, concrete * 0.45, streak * 0.55);
+			float bleed = smoothstep(0.72, 0.92, noise(vec2(wuv.x * 3.0, wuv.y * 0.8) + 2.0)) * step(y, 0.6);
+			col = mix(col, rust, bleed * 0.7);
+			col = mix(col, concrete * 0.5, cracks(wuv * 0.8) * 0.6);
+			col = mix(col, sand * 0.8, smoothstep(-0.55, -1.0, y) * 0.6);   // sand piled at the foot
+		}
+	}
+
+	ALBEDO = col;
+	METALLIC = metal;
+	ROUGHNESS = rough;
+	EMISSION = em;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nqxis"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 0
+shader_parameter/asphalt = Color(0.1, 0.1, 0.11, 1)
+shader_parameter/concrete = Color(0.44, 0.39, 0.32, 1)
+shader_parameter/sand = Color(0.62, 0.47, 0.28, 1)
+shader_parameter/paint = Color(0.85, 0.66, 0.16, 1)
+shader_parameter/rust = Color(0.36, 0.17, 0.08, 1)
+shader_parameter/sodium = Color(1, 0.52, 0.15, 1)
+shader_parameter/warn = Color(1, 0.16, 0.1, 1)
+shader_parameter/glow = 1.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
+material = SubResource("ShaderMaterial_nqxis")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_1c3s2"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_j70o3"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 2
+shader_parameter/asphalt = Color(0.1, 0.1, 0.11, 1)
+shader_parameter/concrete = Color(0.44, 0.39, 0.32, 1)
+shader_parameter/sand = Color(0.62, 0.47, 0.28, 1)
+shader_parameter/paint = Color(0.85, 0.66, 0.16, 1)
+shader_parameter/rust = Color(0.36, 0.17, 0.08, 1)
+shader_parameter/sodium = Color(1, 0.52, 0.15, 1)
+shader_parameter/warn = Color(1, 0.16, 0.1, 1)
+shader_parameter/glow = 1.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
+material = SubResource("ShaderMaterial_j70o3")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_52fan"]
+data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bcrlo"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 1
+shader_parameter/asphalt = Color(0.1, 0.1, 0.11, 1)
+shader_parameter/concrete = Color(0.44, 0.39, 0.32, 1)
+shader_parameter/sand = Color(0.62, 0.47, 0.28, 1)
+shader_parameter/paint = Color(0.85, 0.66, 0.16, 1)
+shader_parameter/rust = Color(0.36, 0.17, 0.08, 1)
+shader_parameter/sodium = Color(1, 0.52, 0.15, 1)
+shader_parameter/warn = Color(1, 0.16, 0.1, 1)
+shader_parameter/glow = 1.2
+
+[sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
+material = SubResource("ShaderMaterial_bcrlo")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_fjas6"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[resource]
+item/0/name = "Floor"
+item/0/mesh = SubResource("BoxMesh_thlkj")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = [SubResource("ConcavePolygonShape3D_1c3s2"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1
+item/1/name = "Wall"
+item/1/mesh = SubResource("BoxMesh_okwpl")
+item/1/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/mesh_cast_shadow = 1
+item/1/shapes = [SubResource("ConcavePolygonShape3D_52fan"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/1/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/navigation_layers = 1
+item/2/name = "Room_Floor"
+item/2/mesh = SubResource("BoxMesh_gs8hm")
+item/2/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/mesh_cast_shadow = 1
+item/2/shapes = [SubResource("ConcavePolygonShape3D_fjas6"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/2/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/navigation_layers = 1

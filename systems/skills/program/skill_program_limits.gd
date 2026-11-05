@@ -26,6 +26,10 @@ var support_ids: PackedStringArray = []
 var class_trait: ClassTrait
 ## The caster's rank (Ranks.LADDER index): blocks above it don't exist (Ranks.LOCKED_BLOCKS).
 var rank := 0
+## Points on top of the gem's own budget (ScriptBudget), already in point_budget.
+var bonus_points := 0.0
+## Steps every knob got past its own limits (ScriptBudget: exam DISTINCTIONs), already applied.
+var bonus_steps := 0
 
 
 func get_knob(knob_id: StringName) -> SkillKnob:
@@ -51,14 +55,16 @@ func knobs_for(owner_id: String) -> Array[SkillKnob]:
 
 ## The limits for one socket: the skill's knobs plus the knobs of its socketed supports.
 ## Everything shares one point budget, block limit and set of tiers. `rank` (Ranks.LADDER index)
-## adds the rank's extra rules and blocks.
-static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: ClassTrait = null, rank := 0) -> SkillProgramLimits:
+## adds the rank's extra rules and blocks, `bonus_points` / `bonus_steps` the player's ScriptBudget.
+static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: ClassTrait = null, rank := 0,
+		bonus_points := 0.0, bonus_steps := 0) -> SkillProgramLimits:
 	var base := gem.program_limits if gem != null else null
 	if base == null:
 		return null
 	var out := SkillProgramLimits.new()
 	out.knobs = base.knobs.duplicate()
-	out.point_budget = base.point_budget
+	out.point_budget = base.point_budget + bonus_points
+	out.bonus_points = bonus_points
 	out.max_actions = base.max_actions
 	out.max_rules = base.max_rules + int(Ranks.perk(rank, "rules"))
 	out.max_actions += int(Ranks.perk(rank, "blocks"))
@@ -83,7 +89,28 @@ static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: Clas
 		out.point_budget += trait_res.extra_points
 		for i in out.knobs.size():
 			out.knobs[i] = trait_res.adjust_knob(out.knobs[i])
+	if bonus_steps > 0:
+		out.bonus_steps = bonus_steps
+		for i in out.knobs.size():
+			out.knobs[i] = widen_knob(out.knobs[i], bonus_steps)
 	return out
+
+
+## A copy of `k` that can go `extra` more steps the way that costs points (the buff side):
+## up for most knobs, down for a knob whose steps pay points back (mana cost: fewer is the buff).
+## The drawback side keeps its limit, and a knob with no buff side is left alone.
+static func widen_knob(k: SkillKnob, extra: int) -> SkillKnob:
+	if extra <= 0:
+		return k
+	if k.cost_per_step > 0.0 and k.max_steps > 0:
+		var c := k.duplicate() as SkillKnob
+		c.max_steps += extra
+		return c
+	if k.cost_per_step < 0.0 and k.min_steps < 0:
+		var c := k.duplicate() as SkillKnob
+		c.min_steps -= extra
+		return c
+	return k
 
 
 ## True when the caster's rank may use a script block ("loop", "cond:<id>", "knob:<id>", "gem:<id>").

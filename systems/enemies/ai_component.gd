@@ -16,6 +16,8 @@ signal state_changed(new_state: State)
 @export var separation_radius: float = 1.1
 @export var stop_distance: float = 1.2 
 @export var basic_attack_enabled: bool = true
+## Prints STUCK lines for enemies that can't move (slow: only turn on while debugging).
+@export var debug_stuck := false
 @export var preferred_distance: float = 0.0   # 0 = melee, approach freely
 @export var flee_distance: float = 0.0        # back away if the player is closer than this
 @export var kite_delay_min: float = 0.5
@@ -33,6 +35,13 @@ var _stalled_time := 0.0
 var _hold_time := 0.0
 
 const SCAN_INTERVAL := 0.25
+
+# Every enemy's position, taken once per physics frame and shared by all of them, so
+# _separation() doesn't fetch the whole group again for each enemy (and each call).
+static var _crowd_frame := -1
+static var _crowd: PackedVector3Array = []
+var _sep_frame := -1
+var _sep := Vector3.ZERO
 
 var state: State = State.IDLE:
 	set(value):
@@ -164,7 +173,8 @@ func _physics_process(delta: float) -> void:
 	if _is_busy():
 		move_dir = Vector3.ZERO
 	var desired := move_dir * speed
-	_debug_stuck(delta, desired)
+	if debug_stuck:
+		_debug_stuck(delta, desired)
 	_desired = desired
 	if _is_busy():
 		_apply_velocity(Vector3.ZERO, delta)      # skip avoidance so neighbours can't nudge a casting enemy
@@ -199,11 +209,6 @@ func _apply_velocity(v: Vector3, delta: float) -> void:
 	if not _body.is_on_floor():
 		_body.velocity.y -= 20.0 * delta
 	_body.move_and_slide()
-
-	if _body.name == "EnemyBase":                 # debug: first enemy only
-		var hits: Array[String] = []
-		for i in _body.get_slide_collision_count():
-			hits.append(str(_body.get_slide_collision(i).get_collider().name))
 
 func _debug_stuck(delta: float, desired: Vector3) -> void:
 	if state == State.CHASE and _body.get_real_velocity().length() < 0.5:
@@ -250,17 +255,29 @@ func _has_line_of_sight(p: Node3D) -> bool:
 	query.exclude = [_body.get_rid()]
 	return _body.get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
+## A push away from enemies standing closer than separation_radius. Worked out once per
+## physics frame (it's asked for several times in one).
 func _separation() -> Vector3:
+	var frame := Engine.get_physics_frames()
+	if _sep_frame == frame:
+		return _sep
+	_sep_frame = frame
+	if _crowd_frame != frame:
+		_crowd_frame = frame
+		_crowd.clear()
+		for e in get_tree().get_nodes_in_group("enemies"):
+			_crowd.append((e as Node3D).global_position)
+	var here := _body.global_position
+	var r_sq := separation_radius * separation_radius
 	var push := Vector3.ZERO
-	for e in get_tree().get_nodes_in_group("enemies"):
-		if e == _body:
-			continue
-		var offset: Vector3 = _body.global_position - e.global_position
-		offset.y = 0.0
-		var d := offset.length()
-		if d > 0.001 and d < separation_radius:
+	for pos in _crowd:
+		var offset := Vector3(here.x - pos.x, 0.0, here.z - pos.z)
+		var d_sq := offset.length_squared()
+		if d_sq < r_sq and d_sq > 0.000001:              # 0 = this enemy itself
+			var d := sqrt(d_sq)
 			push += offset / d * (1.0 - d / separation_radius)
-	return push.limit_length(1.0)
+	_sep = push.limit_length(1.0)
+	return _sep
 
 func _face_direction(dir: Vector3, delta: float) -> void:
 	# Casting a skill: EnemySkills turned us to the target when the cast began. Hold that facing

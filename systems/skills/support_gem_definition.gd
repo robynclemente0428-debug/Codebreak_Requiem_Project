@@ -4,7 +4,7 @@ extends Resource
 @export var id: String
 @export var display_name: String
 @export var stat_modifiers: Array[Modifier] = []
-@export var flag_modifiers: Dictionary = {}   # e.g. {"arc_angle": 90.0, "max_targets": 4.0}
+@export var flag_modifiers: Dictionary = {}   # e.g. {"arc_angle": 90.0, "range_bonus": 2.0}
 @export var allowed_tags: Array[TagTypes.TagGem] = []
 ## Optional. A script extending SupportBehavior, for supports that change what the skill DOES
 ## (explode on kill, chain, ...). Leave empty for number-only supports.

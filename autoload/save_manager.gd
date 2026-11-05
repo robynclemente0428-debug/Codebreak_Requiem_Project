@@ -160,6 +160,36 @@ func delete_slot(slot: int) -> void:
 		DirAccess.remove_absolute(_path(slot))
 
 
+# ---------- MOVE ----------
+## Swaps two slots' characters (Character Select's MOVE). An empty slot works too: the character
+## simply moves there. A seated character (already in the party) can't move. True on success.
+func swap_slots(a: int, b: int) -> bool:
+	if a == b or a < 0 or b < 0 or a >= MAX_SLOTS or b >= MAX_SLOTS:
+		return false
+	if a in party or b in party:
+		return false
+	var has_a := slot_exists(a)
+	var has_b := slot_exists(b)
+	if not has_a and not has_b:
+		return false
+	var tmp := SAVE_DIR + 'slot_swap.tmp'
+	if FileAccess.file_exists(tmp):
+		DirAccess.remove_absolute(tmp)
+	# a -> tmp, b -> a, tmp -> b: every step is a rename, so nothing is ever copied half-way
+	if has_a and DirAccess.rename_absolute(_path(a), tmp) != OK:
+		push_error('Could not move slot %d' % a)
+		return false
+	if has_b and DirAccess.rename_absolute(_path(b), _path(a)) != OK:
+		push_error('Could not move slot %d' % b)
+		if has_a:
+			DirAccess.rename_absolute(tmp, _path(a))      # put it back
+		return false
+	if has_a and DirAccess.rename_absolute(tmp, _path(b)) != OK:
+		push_error('Could not finish moving slot %d (it is in %s)' % [a, tmp])
+		return false
+	return true
+
+
 # ---------- SESSION / PARTY ----------
 ## Call once before opening Character Select (e.g. from the main menu's Play button).
 ## Do NOT call it inside Character Select's _ready(): that scene reloads after every

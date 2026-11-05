@@ -27,7 +27,7 @@ BOSS TRAIT: splits into smaller blobs when hit. Use area attacks.
 SCRIPT TASK: script an AREA skill (Slam or Blast)."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true
-prerequisite_quest_ids = Array[String](["q03_loop_hound_alpha", "q04_the_overflow"])
+prerequisite_quest_ids = Array[String](["q04b_hollow_choir"])
 reward_credits = 150
 metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "Brack"
