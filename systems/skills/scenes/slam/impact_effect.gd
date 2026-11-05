@@ -60,5 +60,8 @@ func _add_flash(radius: float, color: Color) -> void:
 	light.omni_range = radius * 1.5
 	light.light_energy = 4.0
 	light.position = Vector3(0, 0.5, 0)
+	if not GraphicsQuality.allow_effect_light(light):  # GRAPHICS > EFFECT LIGHTS
+		light.free()
+		return
 	add_child(light)
 	create_tween().tween_property(light, "light_energy", 0.0, 0.25)

@@ -10,6 +10,10 @@ extends PortLock
 ##     "BROOD CUT // PORT OPEN"     the last of the wave died
 ##     "BROOD LINKED"               a new wave arrived and closed the port
 
+## Shown on the lock banner (LockBanner) and under the boss's quest objective.
+const LOCK_NAME := "BROOD LINK"
+const HINT := "Her brood shields her. Kill every Glitchling of the wave, then hit her while the port is open."
+
 const LINK_GAP := 1.2                            # seconds between "BROOD LINK" pops
 
 var _summoner: Summoner

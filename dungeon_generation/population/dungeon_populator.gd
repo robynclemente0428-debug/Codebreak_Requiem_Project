@@ -197,7 +197,7 @@ func _eligible_loot() -> Array[ItemDefinition]:
 	var out: Array[ItemDefinition] = []
 	if theme.auto_loot:
 		out.append_array(ItemCatalog.for_level(_level, loot_level_window,
-				theme.loot_include_gems, theme.loot_folders))
+				theme.loot_include_gems, PackedStringArray(theme.loot_folders)))
 	for def in theme.loot_pool:                      # hand-placed extras
 		if def not in out and def.item_level <= _level and def.item_level >= _level - loot_level_window:
 			out.append(def)
@@ -225,6 +225,7 @@ func _spawn_enemy(def: EnemyDefinition, rarity: String, cell: Vector2i,
 	enemy.set_meta(&"base_name", def.display_name)   # without the rolled modifiers' words
 	enemy.set_meta(&"act_boss", def.act_boss)
 	enemy.health.died.connect(_on_enemy_died.bind(enemy, rarity, def.id))
+	EnemySleep.allow(enemy)                  # sleeps while far from every player (EnemySleep)
 	return enemy
 
 ## A rolled enemy with this dungeon's threat traits on top of its random modifiers.

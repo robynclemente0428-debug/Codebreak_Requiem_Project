@@ -46,7 +46,7 @@ static func for_scene(scene_path: String) -> PackedStringArray:
 	var w := Waypoints.for_scene(scene_path)
 	if w == null:
 		return PackedStringArray()
-	return w.threats.duplicate()
+	return PackedStringArray(w.threats)
 
 
 ## The threats of one instance: the fixed ones plus the random roll. The same seed always
@@ -55,7 +55,7 @@ static func roll_for(scene_path: String, rng_seed: int) -> PackedStringArray:
 	var w := Waypoints.for_scene(scene_path)
 	if w == null:
 		return PackedStringArray()
-	var out := w.threats.duplicate()
+	var out := PackedStringArray(w.threats)
 	if w.random_threats.y <= 0:
 		return out
 	var rng := RandomNumberGenerator.new()
@@ -86,7 +86,7 @@ static func preview(scene_path: String, level: int, new_instance := false) -> Pa
 		var inst: DungeonInstance = WorldState.find_open(scene_path, level if level > 0 else w.dungeon_level)
 		if inst != null:
 			return inst.threats.duplicate()
-	var out := w.threats.duplicate()
+	var out := PackedStringArray(w.threats)
 	if w.random_threats.y > 0:
 		out.append(RANDOM)
 	return out

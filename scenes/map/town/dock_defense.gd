@@ -34,7 +34,7 @@ extends Node3D
 @export var hold_radius := 11.0
 @export var load_time := 45.0
 @export var wave_every := 9.0
-@export var wave_sizes: PackedInt32Array = [12, 17, 22, 27, 32]
+@export var wave_sizes: Array[int] = [12, 17, 22, 27, 32]
 @export var enemy_level := 9
 ## Every wave is tougher than the last. Wave n gets health_flat x n more health and
 ## armour_flat x n more armour (added to the base, so the level and percentages scale it too),
@@ -51,6 +51,8 @@ extends Node3D
 	preload("res://data/enemies/enchanter_boss.tres"),
 ]
 @export var mini_boss_rarity := "rare"
+## The mini-bosses come once, with the last wave (the fight's climax), instead of with every wave.
+@export var bosses_last_wave_only := false
 ## Where waves come from: floor this far from the portal (metres).
 @export var spawn_min := 9.0
 @export var spawn_max := 15.0
@@ -280,18 +282,26 @@ func _spawn_wave() -> void:
 		if _wave >= 2 and i % 4 == 0:
 			def = shooter
 		var rarity := "magic" if i % 5 == 1 and _wave >= 3 else "normal"
-		_spawn_one(def, rarity, [], grow)
-	for boss in mini_bosses:
-		_spawn_one(boss, mini_boss_rarity, null, grow)      # null: they roll their modifiers
-
-
-func _spawn_one(def: EnemyDefinition, rarity: String, mods: Variant, grow: float) -> void:
-	if def == null:
+		_spawned(_spawn_one(def, rarity, [], grow), i)
+	if bosses_last_wave_only and _wave < wave_sizes.size():
 		return
+	for boss in mini_bosses:
+		_spawned(_spawn_one(boss, mini_boss_rarity, null, grow), -1)   # null: they roll their modifiers
+
+
+## A wave enemy just arrived: `index` is its place in the wave (-1 for a mini-boss). For
+## subclasses (HullBreach picks its saboteurs here). `e` may be null (it failed to spawn).
+func _spawned(_e: Node3D, _index: int) -> void:
+	pass
+
+
+func _spawn_one(def: EnemyDefinition, rarity: String, mods: Variant, grow: float) -> Node3D:
+	if def == null:
+		return null
 	var at: Vector3 = _spawn_points[randi() % _spawn_points.size()] + Vector3.UP * 0.1
 	var e := EnemySpawner.spawn_enemy(def, rarity, _enemies, at, enemy_level, mods)
 	if e == null:
-		return
+		return null
 	EnemySpawner.empower(e, wave_health_growth * grow, wave_armour_growth * grow,
 			wave_damage_growth * (grow - 1.0), "wave", wave_health_flat * grow, wave_armour_flat * grow)
 	e.ai.aggro_range = spawn_max * 3.0          # they all come for the portal
@@ -299,6 +309,7 @@ func _spawn_one(def: EnemyDefinition, rarity: String, mods: Variant, grow: float
 	var numbers := get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
 	if numbers:
 		numbers.track(e.health)
+	return e
 
 
 func _held() -> void:

@@ -83,6 +83,9 @@ const COL_PORTAL := Color(0.30, 1.0, 0.60)
 const COL_NPC := Color(1.0, 0.82, 0.30)
 const COL_QUEST := Color(1.0, 0.82, 0.30)    # quest targets: the quest tracker's gold
 const COL_ROUTE := Color(0.0, 0.90, 1.0)     # the convoy's route terminal
+const COL_SYS := Color(0.80, 1.0, 0.95)      # a deck system, working
+const COL_SYS_HIT := Color(1.0, 0.55, 0.15)  # the Null are at it
+const COL_SYS_DOWN := Color(1.0, 0.22, 0.25) # offline
 const COL_BG := Color(0.02, 0.05, 0.09)
 ## [neighbour direction, edge start, edge end] in cell units
 const EDGES := [
@@ -99,11 +102,20 @@ var _enemies_root: Node3D
 var _player: Node3D
 
 var _explored := {}                    # Vector2i -> true
+# The explored floor and walls, painted once into a texture (TEX_RES pixels per cell) and
+# updated as cells are revealed, instead of drawing every cell again each frame.
+const TEX_RES := 6
+var _map_img: Image
+var _map_tex: ImageTexture
+var _map_grid: GridData                # the grid the texture was painted for
+var _map_dirty := true                 # repaint all of it (new area, fog change)
+var _map_new: Array[Vector2i] = []     # cells revealed since the last paint
 var _town := false                     # a town: everything revealed, no hostiles
 var _alert := false                    # a town under attack (set_alert): hostiles after all
 var _dungeon_overlay_px := -1.0        # the player's full-map zoom for dungeons, kept while in town
 var _npcs: Array = []                  # Node3D (DialogueNPC) shown as gold markers
 var _terminals: Array = []             # RouteTerminal: an "R" badge
+var _systems: Array = []               # DeckSystem: a diamond with its letter, in its state's colour
 var _last_cell := Vector2i(-99999, -99999)
 var _center := Vector2.ZERO            # player position in (float) cell coordinates
 var _facing := Vector2.UP
@@ -239,7 +251,8 @@ func _build_ui() -> void:
 ## Call from dungeon.gd once generation is done. Also resets the explored area.
 ## options: "town" (bool) = no fog of war and a SAFE ZONE label; "npcs" (Array of Node3D) =
 ## people to mark on the map (names show on the full-screen map); "terminals" (Array of
-## RouteTerminal) = the convoy's route terminal, an "R" badge; "explored" (Dictionary) =
+## RouteTerminal) = the convoy's route terminal, an "R" badge; "systems" (Array of DeckSystem) =
+## the convoy's machines the Null go for, a diamond each; "explored" (Dictionary) =
 ## the cells already revealed, kept and added to (without it the fog starts fresh).
 func bind_dungeon(director: DungeonDirector, grid_map: GridMap, enemies_root: Node3D = null,
 		options: Dictionary = {}) -> void:
@@ -251,6 +264,7 @@ func bind_dungeon(director: DungeonDirector, grid_map: GridMap, enemies_root: No
 	_town = bool(options.get("town", false))
 	_npcs = options.get("npcs", [])
 	_terminals = options.get("terminals", [])
+	_systems = options.get("systems", [])
 	# Towns are small: their full-screen map zooms in to fit the screen. Dungeons get back the
 	# zoom the player had there.
 	if _town:
@@ -263,6 +277,8 @@ func bind_dungeon(director: DungeonDirector, grid_map: GridMap, enemies_root: No
 	# was. Revealing writes straight into the instance's dictionary.
 	var kept = options.get("explored")
 	_explored = kept if kept is Dictionary else {}
+	_map_dirty = true
+	_map_new.clear()
 	_last_cell = Vector2i(-99999, -99999)
 	_player = null
 	_hostiles = -1
@@ -431,7 +447,10 @@ func _reveal(cell: Vector2i) -> void:
 	for dy in range(-r, r + 1):
 		for dx in range(-r, r + 1):
 			if dx * dx + dy * dy <= r * r:
-				_explored[cell + Vector2i(dx, dy)] = true
+				var c := cell + Vector2i(dx, dy)
+				if not _explored.has(c):
+					_explored[c] = true
+					_map_new.append(c)
 
 
 func _known(cell: Vector2i) -> bool:
@@ -507,39 +526,14 @@ func _paint(c: Control, full := false) -> void:
 	var px := _px
 	var alpha := _map_alpha
 	var rot := _map_rotation()
-	var rotated := not is_zero_approx(rot)
 	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)    # (0,0) is now the player
 
-	# How many cells can be on screen (more when the map is rotated)
-	var ext := c.size * 0.5
-	if rotated:
-		ext = Vector2.ONE * c.size.length() * 0.5
-	var rx := ceili(ext.x / px) + 1
-	var ry := ceili(ext.y / px) + 1
-
-	var floor_col := Color(accent, 0.16 * alpha)
-	var wall_col := Color(accent, 0.85 * alpha)
-	var base := Vector2i(floori(_center.x), floori(_center.y))
-
-	# Only cells inside the dungeon (the full-screen map would otherwise walk thousands of
-	# empty cells every frame)
+	# The explored floor and walls: one texture for the whole dungeon (see _map_texture)
 	var g := _director.grid
-	var y0 := maxi(base.y - ry, 0)
-	var y1 := mini(base.y + ry, g.height - 1)
-	var x0 := maxi(base.x - rx, 0)
-	var x1 := mini(base.x + rx, g.width - 1)
-	for cy in range(y0, y1 + 1):
-		for cx in range(x0, x1 + 1):
-			var cell := Vector2i(cx, cy)
-			if not _known(cell) or not _walk(cell):
-				continue
-			var p := (Vector2(cell) - _center) * px
-			c.draw_rect(Rect2(p + Vector2(0.5, 0.5),
-				Vector2(px - 1.0, px - 1.0)), floor_col)
-			for e in EDGES:
-				if not _walk(cell + (e[0] as Vector2i)):
-					c.draw_line(p + (e[1] as Vector2) * px,
-						p + (e[2] as Vector2) * px, wall_col, 2.0, rotated)
+	var tex := _map_texture()
+	if tex != null:
+		c.draw_texture_rect(tex, Rect2(-_center * px, Vector2(g.width, g.height) * px), false,
+			Color(1, 1, 1, alpha))
 
 	# Faint detection ring
 	c.draw_arc(Vector2.ZERO, enemy_detect_radius * px, 0.0, TAU, 64,
@@ -558,9 +552,49 @@ func _paint(c: Control, full := false) -> void:
 	_paint_quest_spots(c, rot, full)
 	_paint_npcs(c, rot, full)
 	_paint_terminals(c, rot, full)
+	_paint_systems(c, rot, full)
 	_paint_player(c)
 	_paint_rim_arrows(c, rot)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## The explored map as a texture: all of it painted when the area (or the fog) changes, then
+## only newly revealed cells. Floors faint, walls bright on the edges next to a wall cell.
+func _map_texture() -> ImageTexture:
+	var g := _director.grid
+	if g == null or g.width <= 0 or g.height <= 0:
+		return null
+	if _map_img == null or _map_grid != g or _map_dirty:
+		_map_grid = g
+		_map_dirty = false
+		_map_new.clear()
+		_map_img = Image.create_empty(g.width * TEX_RES, g.height * TEX_RES, false, Image.FORMAT_RGBA8)
+		for cy in g.height:
+			for cx in g.width:
+				_paint_cell(Vector2i(cx, cy))
+		_map_tex = ImageTexture.create_from_image(_map_img)
+	elif not _map_new.is_empty():
+		for cell in _map_new:
+			_paint_cell(cell)
+		_map_new.clear()
+		_map_tex.update(_map_img)
+	return _map_tex
+
+
+func _paint_cell(cell: Vector2i) -> void:
+	if not _director.grid.in_bounds(cell) or not _known(cell) or not _walk(cell):
+		return
+	var o := cell * TEX_RES
+	_map_img.fill_rect(Rect2i(o, Vector2i(TEX_RES - 1, TEX_RES - 1)), Color(accent, 0.16))
+	var wall := Color(accent, 0.85)
+	if not _walk(cell + Vector2i.UP):
+		_map_img.fill_rect(Rect2i(o, Vector2i(TEX_RES, 1)), wall)
+	if not _walk(cell + Vector2i.DOWN):
+		_map_img.fill_rect(Rect2i(o + Vector2i(0, TEX_RES - 1), Vector2i(TEX_RES, 1)), wall)
+	if not _walk(cell + Vector2i.LEFT):
+		_map_img.fill_rect(Rect2i(o, Vector2i(1, TEX_RES)), wall)
+	if not _walk(cell + Vector2i.RIGHT):
+		_map_img.fill_rect(Rect2i(o + Vector2i(TEX_RES - 1, 0), Vector2i(1, TEX_RES)), wall)
 
 
 ## Soft fade so the map melts into the frame instead of being cut off.
@@ -748,6 +782,54 @@ func _paint_terminals(c: Control, rot: float, full: bool) -> void:
 		_glyph_badge(c, pos, rot, "R", COL_ROUTE)
 		if full:
 			_upright_tag(c, screen + Vector2(0.0, -14.0), "ROUTE TERMINAL", COL_ROUTE, rot)
+
+
+## The convoy's deck systems (DeckSystem): a diamond with the system's letter (P, C, S), pale
+## while it works, flashing orange while the Null are at it, red once it's offline. One that's
+## hit or down and off the map edge gets a rim arrow; the full-screen map adds its name.
+func _paint_systems(c: Control, rot: float, full: bool) -> void:
+	var half := c.size * 0.5 - Vector2(16.0, 16.0)
+	for s in _systems:
+		var sys := s as Node3D
+		if sys == null or not is_instance_valid(sys) or not sys.is_inside_tree():
+			continue
+		var offline := bool(sys.call("is_offline"))
+		var hit := bool(sys.get("under_attack"))
+		var col := COL_SYS_DOWN if offline else (COL_SYS_HIT if hit else COL_SYS)
+		var pos := (_to_cell_f(sys.global_position) - _center) * _px
+		var screen := pos.rotated(rot)
+		if absf(screen.x) > half.x or absf(screen.y) > half.y:
+			if offline or hit:
+				_rim.append([screen, col])
+			continue
+		_diamond_badge(c, screen, str(sys.get("map_glyph")), col, hit or offline)
+		if full:
+			var name_ := str(sys.get("npc_name")).to_upper() + ("  OFFLINE" if offline else "")
+			_upright_tag(c, screen + Vector2(0.0, -16.0), name_, col, rot)
+
+
+## A diamond badge with a letter, upright (`at` is screen space round the map's centre).
+## `alarm`: a faster, bigger pulse.
+func _diamond_badge(c: Control, at: Vector2, glyph: String, col: Color, alarm: bool) -> void:
+	c.draw_set_transform(c.size * 0.5, 0.0, Vector2.ONE)
+	var r := 10.0
+	var pulse := (0.5 + 0.5 * sin(_t * (9.0 if alarm else 2.5))) * (4.0 if alarm else 1.5)
+	var glow := r + 3.0 + pulse
+	c.draw_colored_polygon(_diamond(at, glow), Color(col, (0.35 if alarm else 0.18) * _map_alpha))
+	c.draw_colored_polygon(_diamond(at, r), Color(COL_BG, 0.92 * _map_alpha))
+	var edge := _diamond(at, r - 0.75)
+	edge.append(edge[0])
+	c.draw_polyline(edge, Color(col, _map_alpha), 1.5, true)
+	var f := _font if _font else ThemeDB.fallback_font
+	var fs := roundi(13 * font_scale)
+	var w := f.get_string_size(glyph, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+	c.draw_string(f, (at + Vector2(-w * 0.5, fs * 0.34)).round(), glyph,
+		HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Color(col, _map_alpha))
+	c.draw_set_transform(c.size * 0.5, _map_rotation(), Vector2.ONE)
+
+
+func _diamond(at: Vector2, r: float) -> PackedVector2Array:
+	return PackedVector2Array([at + Vector2(0, -r), at + Vector2(r, 0), at + Vector2(0, r), at + Vector2(-r, 0)])
 
 
 # ---------- QUESTS ----------

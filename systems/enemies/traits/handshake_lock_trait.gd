@@ -10,6 +10,10 @@ extends PortLock
 ##     "HANDSHAKE FAILED // NO SHIELD"  its slam hit you with no barrier or guard up
 ##     "HANDSHAKE OK // PORT OPEN"      its slam hit your shield
 
+## Shown on the lock banner (LockBanner) and under the boss's quest objective.
+const LOCK_NAME := "HANDSHAKE"
+const HINT := "Take its slam with a scripted BARRIER or GUARD up. A shielded hit opens the port."
+
 const LOCKED_GAP := 1.5                          # seconds between "LOCKED" pops
 
 

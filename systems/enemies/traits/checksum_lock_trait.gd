@@ -18,6 +18,10 @@ extends PortLock
 ## half-way through: only a fresh cast does, so the count is always the whole loop. Hits
 ## from a cast with no loop never start a packet: "LOCKED // LOOPS ONLY" now and then.
 
+## Shown on the lock banner (LockBanner) and under the boss's quest objective.
+const LOCK_NAME := "CHECKSUM"
+const HINT := "Hit it with one cast that loops exactly twice: for i in range(2). Plain hits do nothing."
+
 ## A packet was judged: `count` loop repeats, out of the `packets` wanted (equal = the port opened).
 signal burst_resolved(count: int, packets: int)
 

@@ -14,7 +14,7 @@ extends Resource
 @export var rank_id: String = "operator"           # Ranks.LADDER name, lower case
 @export var title: String = "OPERATOR EXAM"
 ## What the test asks for, one line each, shown on the spec card.
-@export var brief: PackedStringArray = []
+@export var brief: Array[String] = []
 ## A condition id (ProgramCondition.type_id()) the script must use, e.g. "enemies_nearby".
 @export var required_condition: String = ""
 @export var required_condition_label: String = "enemies_nearby()"
@@ -24,7 +24,7 @@ extends Resource
 @export var required_stop_loop := false
 ## Perks the sandbox lends during this exam (Ranks.PERKS flag keys), so an exam can ask for what
 ## its own rank unlocks: the Architect exam lends "loops".
-@export var lends: PackedStringArray = []
+@export var lends: Array[String] = []
 
 @export_group("Run")
 @export var time_limit: float = 75.0
@@ -32,7 +32,7 @@ extends Resource
 @export var par_damage: float = 0.30               # fraction of max health
 @export var fail_health: float = 0.25              # the sandbox ends the run below this
 @export var wave_enemy: EnemyDefinition
-@export var wave_sizes: PackedInt32Array = [4, 6, 8]
+@export var wave_sizes: Array[int] = [4, 6, 8]
 @export var enemy_level: int = 1
 @export var spawn_radius: float = 8.5
 

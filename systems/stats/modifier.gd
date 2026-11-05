@@ -12,4 +12,4 @@ enum ModOp {
 @export var op: ModOp
 @export var value: float
 @export var source_id: String = ""
-@export var tags: PackedStringArray = []
+@export var tags: Array[String] = []

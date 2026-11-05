@@ -7,7 +7,7 @@
 script = ExtResource("1_spec")
 rank_id = "operator"
 title = "OPERATOR EXAM"
-brief = PackedStringArray("Test processes will close in from every side, in 3 waves.", "Your script must react when they crowd you: a rule using enemies_nearby().", "It must fire at least 3 times.", "Clear every wave within 75 seconds.", "Graded on: your script's efficiency tier, time (par 45 s), damage taken (par 30%).")
+brief = Array[String](["Test processes will close in from every side, in 3 waves.", "Your script must react when they crowd you: a rule using enemies_nearby().", "It must fire at least 3 times.", "Clear every wave within 75 seconds.", "Graded on: your script's efficiency tier, time (par 45 s), damage taken (par 30%)."])
 required_condition = "enemies_nearby"
 required_condition_label = "enemies_nearby()"
 required_fires = 3
@@ -16,6 +16,6 @@ par_time = 45.0
 par_damage = 0.3
 fail_health = 0.25
 wave_enemy = ExtResource("2_enemy")
-wave_sizes = PackedInt32Array(4, 6, 8)
+wave_sizes = Array[int]([4, 6, 8])
 enemy_level = 1
 spawn_radius = 8.5

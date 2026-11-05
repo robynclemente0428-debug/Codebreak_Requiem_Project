@@ -43,6 +43,8 @@ var _ghost_delay := 0.0
 var _flash := 0.0
 var _denied := 0.0
 var _time := 0.0
+var _drawn: Array = []      # what the bar was last drawn with: redraw only when it changes
+var _sweep: HudSweep
 
 
 func _init() -> void:
@@ -133,7 +135,19 @@ func _process(delta: float) -> void:
 		_ghost = move_toward(_ghost, _target, delta * 0.8)
 	_flash = move_toward(_flash, 0.0, delta * 4.0)
 	_denied = move_toward(_denied, 0.0, delta * 3.0)
-	queue_redraw()
+	if _sweep == null:
+		_sweep = HudSweep.new()
+		add_child(_sweep)
+	_sweep.visible = show_scanlines
+	if show_scanlines:
+		_sweep.follow(size, CHAMFER * ui_scale, ui_scale, _time)
+	# Redraw only when something on the bar changed. Low mana (the pulse, DEPLETED blink)
+	# moves every frame, so it always does.
+	var moving := _target < 0.2
+	var state := [_shown, _ghost, _flash, _denied, _max, ui_scale, size]
+	if moving or state != _drawn:
+		_drawn = state
+		queue_redraw()
 
 
 # ---------- DRAWING ----------
@@ -220,10 +234,7 @@ func _draw() -> void:
 		while y < h - 2.0:
 			draw_line(Vector2(chamfer, y), Vector2(w - chamfer, y), Color(0, 0, 0, 0.14), line_w)
 			y += step
-		var sweep_y := fposmod(_time * 40.0 * s, h + 60.0 * s) - 30.0 * s
-		if sweep_y > 2.0 and sweep_y < h - 2.0:
-			draw_line(Vector2(chamfer, sweep_y), Vector2(w - chamfer, sweep_y),
-				Color(1, 1, 1, 0.08), 5.0 * s)
+		# The moving sweep is its own child (HudSweep), so the bar only redraws when it changes
 
 
 ## Text with a dark outline, so it stays readable over a see-through background.

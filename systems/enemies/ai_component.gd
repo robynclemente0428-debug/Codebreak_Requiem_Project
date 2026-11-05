@@ -50,6 +50,10 @@ var state: State = State.IDLE:
 		state = value
 		state_changed.emit(value)
 var target: Node3D = null
+## Something it goes for instead of the player (a HullBreach saboteur's DeckSystem). While it
+## is set, a player only pulls it off once they're within aggro_range (keep that short); else
+## it heads for the objective and swings at it. Null = hunt players as usual.
+var objective: Node3D = null
 
 var _body: CharacterBody3D
 var _stats: StatComponent
@@ -226,6 +230,12 @@ func _slot_offset() -> Vector3:
 
 func _update_target() -> void:
 	var best := _find_nearest_visible_player()
+	if best == null and objective != null:
+		if is_instance_valid(objective) and objective.is_inside_tree():
+			target = objective
+			_time_since_seen = 0.0
+			return
+		objective = null
 	if best != null:
 		target = best
 		_time_since_seen = 0.0

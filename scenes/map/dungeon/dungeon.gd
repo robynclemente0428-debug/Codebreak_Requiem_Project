@@ -46,6 +46,10 @@ func _ready() -> void:
 	_spawn_enemies()
 	_scatter_null_decals()
 	randomize()                             # back to real randomness for loot and combat
+	var sleeper := EnemySleep.new()         # far-away enemies stop running until you get near
+	sleeper.name = "EnemySleep"
+	sleeper.enemies_root = $Enemies
+	add_child(sleeper)
 	_bind_minimap()
 	await _bake_navigation()
 

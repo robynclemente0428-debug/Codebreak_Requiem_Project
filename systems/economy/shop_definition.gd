@@ -20,7 +20,7 @@ extends Resource
 @export_group("Random stock from the item catalog")
 @export var use_catalog: bool = true
 ## Only items under these folders. Empty = every item the catalog finds.
-@export_dir var catalog_folders: PackedStringArray = []
+@export_dir var catalog_folders: Array[String] = []
 @export var include_gems: bool = false
 ## Items from (stock_level - window) up to stock_level can appear.
 @export var level_window: int = 20

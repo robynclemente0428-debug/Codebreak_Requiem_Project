@@ -158,6 +158,16 @@ static func route_blocked_reason(w: Waypoint, tree: SceneTree) -> String:
 		return "NO AREA MANAGER"
 	if am.is_busy():
 		return "TRAVELLING..."
+	return breach_reason(tree)
+
+
+## Why the convoy can't sail on because of a hull breach (HullBreach.blocks_route: on, or due
+## because its stop was just cleared), or "".
+static func breach_reason(tree: SceneTree) -> String:
+	for b in tree.get_nodes_in_group("hull_breach"):
+		if b.has_method("blocks_route") and b.blocks_route():
+			return "HULL BREACH: CLEAR THE DECK FIRST" if b.is_running() \
+					else "THE NULL ARE BOARDING: HOLD THE DECK FIRST"
 	return ""
 
 

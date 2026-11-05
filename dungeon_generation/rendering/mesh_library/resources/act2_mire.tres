@@ -37,5 +37,5 @@ branch_rarity_weights = {
 }
 loot_pool = Array[ExtResource("2_2w6d7")]([ExtResource("4_4y11d"), ExtResource("5_u6yo1"), ExtResource("6_mywbb"), ExtResource("7_jur4a"), ExtResource("8_em106")])
 loot_include_gems = true
-loot_folders = PackedStringArray()
+loot_folders = Array[String]([])
 metadata/_custom_type_script = "uid://ieg5mjinobvq"

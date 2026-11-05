@@ -61,7 +61,7 @@ extends Resource
 ## Rarities this enemy can spawn as when a dungeon picks it from its theme's enemy_pool, e.g.
 ## ["rare", "champion"] for an elite that never shows up as a plain mob. Empty = any rarity.
 ## Hand-placed EnemyMarkers ignore this.
-@export var pool_rarities: PackedStringArray = []
+@export var pool_rarities: Array[String] = []
 
 
 func allows_rarity(rarity: String) -> bool:

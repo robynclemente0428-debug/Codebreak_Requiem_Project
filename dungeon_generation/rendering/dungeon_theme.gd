@@ -26,4 +26,4 @@ extends Resource
 ## Skill and support gems drop too. Off by default.
 @export var loot_include_gems: bool = false
 ## Only items under these folders. Empty = all of them, e.g. ["res://data/items/weapons/"].
-@export var loot_folders: PackedStringArray = []
+@export var loot_folders: Array[String] = []

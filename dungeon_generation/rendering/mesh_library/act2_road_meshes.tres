@@ -21,6 +21,8 @@ uniform float glow = 1.2;
 // Wall cutaway (as hardfault_meshes): wall pixels between the camera and the player, near the
 // player on screen, dither away so you can see into the room you're in.
 global uniform vec3 player_world_pos;
+// GRAPHICS > TILE DETAIL (GraphicsQuality): 0 = simple (no fine grain, cracks, sand or weathering)
+global uniform float gfx_detail;
 uniform float cutaway_radius = 3.2;
 uniform float cutaway_keep = 0.12;
 
@@ -49,6 +51,9 @@ float bayer4(vec2 p) {
 }
 // Thin dark lines where a noise field crosses 0.5: cracks that run across tiles.
 float cracks(vec2 p) {
+	if (gfx_detail < 0.5) {
+		return 0.0;
+	}
 	float n = noise(p) * 0.65 + noise(p * 2.7) * 0.35;
 	return 1.0 - smoothstep(0.0, 0.035, abs(n - 0.5));
 }
@@ -69,8 +74,12 @@ void fragment() {
 	bool top = an.y > 0.5;
 	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
 	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
-	float grain = noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5;
-	float drift = smoothstep(0.45, 0.8, noise(wuv * 0.45) * 0.7 + noise(wuv * 1.7) * 0.3);   // windblown sand
+	float grain = 0.5;
+	float drift = 0.0;
+	if (gfx_detail > 0.5) {
+		grain = noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5;
+		drift = smoothstep(0.45, 0.8, noise(wuv * 0.45) * 0.7 + noise(wuv * 1.7) * 0.3);   // windblown sand
+	}
 
 	vec3 col = concrete;
 	vec3 em = vec3(0.0);
@@ -149,10 +158,12 @@ void fragment() {
 			em += warn * glow * strip * pulse * 0.9;
 			col = mix(col, warn * 0.4, strip);
 			// weathering: dark rain streaks and rust bleeding from the rebar
-			float streak = smoothstep(0.6, 0.9, noise(vec2(wuv.x * 5.0, wuv.y * 0.5)));
-			col = mix(col, concrete * 0.45, streak * 0.55);
-			float bleed = smoothstep(0.72, 0.92, noise(vec2(wuv.x * 3.0, wuv.y * 0.8) + 2.0)) * step(y, 0.6);
-			col = mix(col, rust, bleed * 0.7);
+			if (gfx_detail > 0.5) {
+				float streak = smoothstep(0.6, 0.9, noise(vec2(wuv.x * 5.0, wuv.y * 0.5)));
+				col = mix(col, concrete * 0.45, streak * 0.55);
+				float bleed = smoothstep(0.72, 0.92, noise(vec2(wuv.x * 3.0, wuv.y * 0.8) + 2.0)) * step(y, 0.6);
+				col = mix(col, rust, bleed * 0.7);
+			}
 			col = mix(col, concrete * 0.5, cracks(wuv * 0.8) * 0.6);
 			col = mix(col, sand * 0.8, smoothstep(-0.55, -1.0, y) * 0.6);   // sand piled at the foot
 		}

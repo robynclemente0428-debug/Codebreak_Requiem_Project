@@ -16,6 +16,9 @@ extends Interactable
 
 var _prompt: ConfirmationDialog
 
+## The comms relay (a DeckSystem) must be working to plot a course. By path: see HullBreach.
+const DeckSystemScript := preload("res://scenes/map/town/convoy/deck_system.gd")
+
 
 func _ready() -> void:
 	super._ready()
@@ -23,10 +26,15 @@ func _ready() -> void:
 
 
 func interact(player: Node3D) -> void:
-	for b in get_tree().get_nodes_in_group("hull_breach"):
-		if (b as HullBreach).is_running():
-			QuestItems.toast(get_tree(), "HULL BREACH\nClear the deck before you plot a course.", Color(1.0, 0.35, 0.35))
-			return
+	if Waypoints.breach_reason(get_tree()) != "":
+		QuestItems.toast(get_tree(), "HULL BREACH\nThe Null are on the deck: clear it before you plot a course.",
+				Color(1.0, 0.35, 0.35))
+		return
+	var comms = DeckSystemScript.find(get_tree(), "comms")
+	if comms != null and comms.is_offline():
+		QuestItems.toast(get_tree(), "NO SIGNAL\n%s\n%s" % [comms.offline_text, comms.fix_hint()],
+				Color(1.0, 0.35, 0.35))
+		return
 	var why := exam_needed(player)
 	if why != "":
 		_ask(why)

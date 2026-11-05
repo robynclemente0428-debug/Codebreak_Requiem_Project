@@ -19,8 +19,8 @@ const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_DIM := Color(0.55, 0.78, 0.85)
 const COL_WARN := Color(1.0, 0.30, 0.37)
 const COL_OK := Color(0.30, 0.95, 0.60)
-const TABS := ["DISPLAY", "AUDIO", "GAMEPLAY", "CONTROLS"]
-const TAB_SECTIONS := {"DISPLAY": "display", "AUDIO": "audio", "GAMEPLAY": "gameplay"}
+const TABS := ["DISPLAY", "GRAPHICS", "AUDIO", "GAMEPLAY", "CONTROLS"]
+const TAB_SECTIONS := {"DISPLAY": "display", "GRAPHICS": "graphics", "AUDIO": "audio", "GAMEPLAY": "gameplay"}
 
 ## Rebindable actions, in menu order, with their names.
 const ACTIONS := [
@@ -209,6 +209,8 @@ func _show_tab(t: String) -> void:
 	match t:
 		"DISPLAY":
 			_build_display()
+		"GRAPHICS":
+			_build_graphics()
 		"AUDIO":
 			_build_audio()
 		"GAMEPLAY":
@@ -242,6 +244,34 @@ func _build_display() -> void:
 		+ "proportions at every resolution. UI SIZE makes all of it bigger or smaller.")
 	if embedded:
 		_note("Running inside the editor: window mode and resolution apply when the game runs on its own.", COL_WARN)
+
+
+## GRAPHICS (GraphicsQuality): a QUALITY preset, then each part of it on its own.
+func _build_graphics() -> void:
+	var q_names := {"low": "LOW", "medium": "MEDIUM", "high": "HIGH", "custom": "CUSTOM"}
+	var q_row := _choice_row("QUALITY", "graphics", "quality", GraphicsQuality.QUALITIES,
+		func(v): return q_names.get(v, str(v).to_upper()))
+	q_row.tooltip_text = "Sets everything below at once. LOW is for older or weaker computers."
+	_note("Changing anything below makes QUALITY show CUSTOM.")
+	var scale_row := _choice_row("3D RESOLUTION", "graphics", "render_scale", GraphicsQuality.RENDER_SCALES,
+		func(v): return "%d%%" % roundi(float(v) * 100.0))
+	scale_row.tooltip_text = "Draws the game world at a share of the window. Lower is much faster; menus stay sharp."
+	var sh_row := _choice_row("SHADOWS", "graphics", "shadows", GraphicsQuality.SHADOW_MODES,
+		func(v): return {"off": "OFF", "sun": "SUN ONLY", "all": "SUN + YOUR LIGHT"}.get(v, str(v)))
+	sh_row.tooltip_text = "Your own light's shadows cost the most."
+	var fx_row := _choice_row("EFFECT LIGHTS", "graphics", "effect_lights", GraphicsQuality.EFFECT_LIGHT_MODES,
+		func(v): return {"none": "NONE", "few": "A FEW", "all": "ALL"}.get(v, str(v)))
+	fx_row.tooltip_text = "Flashes from shots, slams and blasts lighting up the room."
+	_choice_row("GLOW", "graphics", "glow", [false, true], func(v): return "ON" if v else "OFF")
+	var tile_row := _choice_row("TILE DETAIL", "graphics", "tile_detail", GraphicsQuality.TILE_DETAILS,
+		func(v): return {"simple": "SIMPLE", "full": "FULL"}.get(v, str(v)))
+	tile_row.tooltip_text = "SIMPLE drops the fine cracks, sand and weathering on the road's floors and walls."
+	_choice_row("MAX DAMAGE NUMBERS", "graphics", "damage_numbers_max", GraphicsQuality.DAMAGE_NUMBER_CAPS,
+		func(v): return str(v))
+	var retro_row := _choice_row("RETRO FILTER", "graphics", "retro_filter", GraphicsQuality.RETRO_FILTERS,
+		func(v): return {"off": "OFF", "light": "LIGHT", "full": "FULL"}.get(v, str(v)))
+	retro_row.tooltip_text = "The screen's retro look. LIGHT drops its glow and colour bleed, the costly parts."
+	_note("Older computer? Pick LOW, or lower 3D RESOLUTION and SHADOWS first: they help the most.")
 
 
 func _build_audio() -> void:
@@ -321,8 +351,8 @@ func _choice_row(text: String, section: String, key: String, options: Array, nam
 		var i := options.find(current)
 		i = posmod((i if i >= 0 else 0) + d, options.size())
 		Settings.set_value(section, key, options[i])
-		if section == "display":
-			_show_tab(_tab)                 # e.g. resolution greys out outside windowed mode
+		if section == "display" or section == "graphics":
+			_show_tab(_tab)                 # e.g. resolution greys out; QUALITY moves to CUSTOM
 		else:
 			refresh.call()
 	prev.pressed.connect(step.bind(-1))

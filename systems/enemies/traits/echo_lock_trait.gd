@@ -8,6 +8,10 @@ extends EnemyTrait
 ##     "PATTERN LEARNED: STRIKE / SET A"     the pattern that just hit it is cached
 ##     "PATTERN CACHED: STRIKE / SET A"      a hit with the cached pattern (absorbed, now and then)
 
+## Shown on the lock banner (LockBanner) and under the boss's quest objective.
+const LOCK_NAME := "ECHO"
+const HINT := "Never hit it the same way twice: alternate skills, or swap script sets mid-fight."
+
 const COL_LEARN := Color(1.0, 0.75, 0.3)
 const COL_CACHED := Color(1.0, 0.3, 0.3)
 

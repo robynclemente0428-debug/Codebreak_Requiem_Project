@@ -49,6 +49,8 @@ var _shake := 0.0
 var _time := 0.0
 var _barrier_flash := 0.0  # bright pulse when a barrier goes up
 var _last_barrier := 0.0
+var _drawn: Array = []      # what the bar was last drawn with: redraw only when it changes
+var _sweep: HudSweep
 
 
 func _init() -> void:
@@ -68,6 +70,8 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	_sweep = HudSweep.new()
+	add_child(_sweep)
 	Settings.bind_to(self, &"shake_enabled", "gameplay", "hud_shake")
 	if font == null and ResourceLoader.exists(DEFAULT_FONT):
 		font = load(DEFAULT_FONT)
@@ -148,7 +152,16 @@ func _process(delta: float) -> void:
 		_barrier_flash = 1.0
 	_last_barrier = b
 	_barrier_flash = move_toward(_barrier_flash, 0.0, delta * 3.0)
-	queue_redraw()
+	_sweep.visible = show_scanlines
+	if show_scanlines:
+		_sweep.follow(size, CHAMFER * ui_scale, ui_scale, _time)
+	# Redraw only when something on the bar changed. Low life (the pulse, OFFLINE blink), a
+	# barrier (its draining strip) and the hit shake move every frame, so those always do.
+	var moving := _target <= 0.5 or b >= 1.0 or _shake > 0.0
+	var state := [_shown, _ghost, _flash, _barrier_flash, _max, ui_scale, size]
+	if moving or state != _drawn:
+		_drawn = state
+		queue_redraw()
 
 
 func _bar_color(r: float) -> Color:
@@ -277,10 +290,7 @@ func _draw() -> void:
 		while y < h - 2.0:
 			draw_line(Vector2(chamfer, y), Vector2(w - chamfer, y), Color(0, 0, 0, 0.14), line_w)
 			y += step
-		var sweep_y := fposmod(_time * 40.0 * s, h + 60.0 * s) - 30.0 * s
-		if sweep_y > 2.0 and sweep_y < h - 2.0:
-			draw_line(Vector2(chamfer, sweep_y), Vector2(w - chamfer, sweep_y),
-				Color(1, 1, 1, 0.08), 5.0 * s)
+		# The moving sweep is its own child (HudSweep), so the bar only redraws when it changes
 
 
 ## Text with a dark outline, so it stays readable over a see-through background.

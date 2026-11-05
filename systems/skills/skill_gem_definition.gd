@@ -9,7 +9,7 @@ extends Resource
 @export var stat_modifiers: Array[Modifier] = []
 @export var base_flags: Dictionary = {}     # e.g. {"arc_angle": 90.0, "range": 2.5}
 @export var tags: Array[TagTypes.TagGem] = []
-@export var animation_keys: PackedStringArray = []   # cycled in order, e.g. ["slash_l", "slash_r"]
+@export var animation_keys: Array[String] = []   # cycled in order, e.g. ["slash_l", "slash_r"]
 @export var max_support_slots: int = 3
 ## What players may change on this skill with a SkillProgram. Empty = not programmable.
 @export var program_limits: SkillProgramLimits

@@ -109,7 +109,7 @@ func _rescan() -> void:
 		if n is DialogueNPC or n is QuestGiverNPC:
 			_npcs.append(n)
 			_quest_ids[n] = NpcInfoPanel.quests_of(n)
-		elif n is RouteTerminal:                   # a plate, no quests
+		elif n is RouteTerminal or n.is_in_group("deck_systems"):   # a plate, no quests
 			_npcs.append(n)
 		elif n is Portal and n.visible:            # hidden story portals (Portal.shown_after_quest)
 			_portals.append(n)

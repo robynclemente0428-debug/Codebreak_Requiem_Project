@@ -1,6 +1,6 @@
-[gd_resource type="MeshLibrary" format=3]
+[gd_resource type="MeshLibrary" format=3 uid="uid://bkn5qrbnlobd8"]
 
-[ext_resource type="Texture2D" path="res://assets/textures/convoy/convoy_deck_plate.png" id="1_kt76i"]
+[ext_resource type="Texture2D" uid="uid://cgn2gsf80rka6" path="res://assets/textures/convoy/convoy_deck_plate.png" id="1_kt76i"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1xmvb"]
 albedo_texture = ExtResource("1_kt76i")

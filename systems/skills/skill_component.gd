@@ -35,8 +35,6 @@ const SCRIPT_SETS := 3
 ## Default set names. Players can rename sets (rename_set); set_label() gives the name to show.
 const SET_NAMES := ["A", "B", "C"]
 const SET_NAME_MAX := 10
-## No swapping with a living enemy this close (metres): sets are chosen between fights.
-const COMBAT_RANGE := 12.0
 var script_set := 0
 var set_names := PackedStringArray(SET_NAMES)
 
@@ -320,7 +318,8 @@ func _report_program(index: int) -> void:
 
 # ---------- SCRIPT SETS ----------
 ## Swaps every skill to its program in set `index`. Returns "" when done, or why not.
-## force: skip the combat check (loading a save).
+## Works any time, mid-fight included: swapping sets is part of fighting (the Hollow Choir's
+## Echo lock is built round it). force: skip the rank check (loading a save).
 func switch_script_set(index: int, force := false) -> String:
 	if index < 0 or index >= SCRIPT_SETS:
 		return "NO SUCH SET"
@@ -328,8 +327,6 @@ func switch_script_set(index: int, force := false) -> String:
 		return ""
 	if not force and not set_unlocked(index):
 		return "RANK %s UNLOCKS SET %s" % [Ranks.first_with("sets", index + 1), SET_NAMES[index]]
-	if not force and in_combat():
-		return "ENEMIES NEARBY: SWAP SETS BETWEEN FIGHTS"
 	script_set = index
 	_apply_set()
 	GameEvents.report("script_set", SET_NAMES[index])        # quests see the fixed letter
@@ -532,19 +529,6 @@ func uses_scripts() -> bool:
 		for p in s.sets:
 			if p != null:
 				return true
-	return false
-
-
-## A living enemy within COMBAT_RANGE of the owner.
-func in_combat() -> bool:
-	var me := get_parent() as Node3D
-	if me == null or not me.is_inside_tree():
-		return false
-	for e in get_tree().get_nodes_in_group(&"enemies"):
-		var hp := e.get("health") as HealthComponent
-		if e is Node3D and hp != null and hp.current_health > 0.0 \
-				and (e as Node3D).global_position.distance_to(me.global_position) <= COMBAT_RANGE:
-			return true
 	return false
 
 

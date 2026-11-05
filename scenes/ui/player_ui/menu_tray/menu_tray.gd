@@ -31,6 +31,7 @@ var _buttons := {}                  # id -> Button
 var _slide := 0.0                   # 0 = tucked in, 1 = out
 var _tween: Tween
 var _minimap: Control
+var _tracker: QuestTracker            # cached: looked up once, not every frame
 
 
 func _enter_tree() -> void:
@@ -137,8 +138,13 @@ func _process(_delta: float) -> void:
 	# its place, so then just left of the tracker; the corner only when neither is there.
 	var screen := get_viewport_rect().size
 	var right := screen.x - margin_right
-	var tracker := get_tree().get_first_node_in_group("quest_tracker") as QuestTracker
-	var tracker_panel: Control = tracker.tutorial_target()[0] if tracker != null and not tracker.tutorial_target().is_empty() else null
+	if _tracker == null or not is_instance_valid(_tracker):
+		_tracker = get_tree().get_first_node_in_group("quest_tracker") as QuestTracker
+	var tracker_panel: Control = null
+	if _tracker != null:
+		var targets := _tracker.tutorial_target()
+		if not targets.is_empty():
+			tracker_panel = targets[0]
 	if tracker_panel != null:
 		right = tracker_panel.get_global_rect().position.x - gap
 	var top := margin_top
@@ -149,8 +155,10 @@ func _process(_delta: float) -> void:
 	_tab.position = Vector2(right - TAB_SIZE.x, top).round()
 	if _tween != null and _tween.is_running():
 		_tab.queue_redraw()                       # the arrow turns as the tray slides
-	var tray_w := _tray.get_combined_minimum_size().x
-	_tray.size = Vector2(tray_w, _tray.get_combined_minimum_size().y)
+	var tray_min := _tray.get_combined_minimum_size()
+	var tray_w := tray_min.x
+	if _tray.size != tray_min:
+		_tray.size = tray_min
 	_tray.position = Vector2(right - TAB_SIZE.x - 4.0 - tray_w * _slide, top).round()
 	_tray.visible = _slide > 0.01
 	_tray.modulate.a = _slide
@@ -238,7 +246,7 @@ func _refresh_labels() -> void:
 
 ## Lit while its panel is open.
 func _style_button(b: Button, lit: bool) -> void:
-	if b.get_meta(&"lit", null) == lit:
+	if b.has_meta(&"lit") and b.get_meta(&"lit") == lit:
 		return
 	b.set_meta(&"lit", lit)
 	b.add_theme_color_override("font_color", accent if lit else COL_TEXT)

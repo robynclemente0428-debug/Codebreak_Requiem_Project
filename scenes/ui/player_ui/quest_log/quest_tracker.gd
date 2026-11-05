@@ -21,6 +21,7 @@ const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_DIM := Color(0.55, 0.78, 0.85)
 const COL_DONE := Color(0.35, 1.0, 0.65)
 const COL_READY := Color(1.0, 0.82, 0.30)
+const COL_HINT := Color(1.0, 0.62, 0.36)      # a boss lock hint under its "Defeat ..." objective
 
 var _font: Font
 var _quests: QuestManager
@@ -361,6 +362,11 @@ func _add_quest(s: QuestState) -> void:
 			text += "  %d/%d" % [have, o.required]
 		var mark := "[X] " if done else "[ ] "
 		_box.add_child(_wrapped(mark + text, base_font_size - 2, COL_DONE if done else COL_TEXT))
+		# A boss with a lock: how to hurt it, right under "Defeat ..." (from the lock itself)
+		if not done and o.kind == "kill" and not o.hidden:
+			var lock: Dictionary = preload("res://scenes/ui/player_ui/lock_banner/lock_banner.gd").hint_for_enemy(o.target)
+			if not lock.is_empty() and lock["hint"] != "":
+				_box.add_child(_wrapped("    %s: %s" % [lock["name"], lock["hint"]], base_font_size - 3, COL_HINT))
 
 
 func _on_recovered(id: String) -> void:

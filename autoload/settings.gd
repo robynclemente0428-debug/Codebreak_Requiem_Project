@@ -31,6 +31,16 @@ const DEFAULTS := {
 		"cursor": "themed",               # "themed" (the game's cursors) or "system"
 		"cursor_size": 32,                # pixels
 	},
+	"graphics": {                         # see GraphicsQuality (systems/graphics/graphics_quality.gd)
+		"quality": "high",                # "low" / "medium" / "high" preset, or "custom"
+		"render_scale": 1.0,              # share of the window the 3D world is drawn at
+		"shadows": "all",                 # "off", "sun" or "all" (sun + the player's light)
+		"effect_lights": "all",           # skill flash lights: "none", "few" or "all"
+		"glow": true,
+		"tile_detail": "full",            # "simple" or "full" floor / wall patterns
+		"damage_numbers_max": 60,
+		"retro_filter": "full",           # "off", "light" (no glow / colour bleed) or "full"
+	},
 	"audio": {
 		"master": 1.0,
 		"music": 0.8,
@@ -94,6 +104,7 @@ func _ready() -> void:
 	KeyBindings.load_saved()
 	_apply_display(true)
 	_apply_audio()
+	GraphicsQuality.apply(get_tree())             # the tile shaders' detail; the rest when the game loads
 	add_child(preload("res://scenes/ui/fps_counter.gd").new())   # FpsCounter
 	get_tree().root.size_changed.connect(_apply_ui_scale)
 	print("[Settings] window %s, UI laid out at %s" % [get_tree().root.size, get_tree().root.get_visible_rect().size])
@@ -115,8 +126,28 @@ func set_value(section: String, key: String, value: Variant) -> void:
 			_apply_display(key in ["window_mode", "resolution"])
 		"audio":
 			_apply_audio()
+		"graphics":
+			_set_graphics(key, value)
 	changed.emit(section, key, value)
 	_queue_save()
+
+
+## QUALITY sets every graphics setting from its preset; changing one by hand makes it CUSTOM
+## (or the preset it now matches). Then it all applies to what's on screen.
+func _set_graphics(key: String, value: Variant) -> void:
+	var g: Dictionary = _values["graphics"]
+	if key == "quality":
+		var preset: Dictionary = GraphicsQuality.PRESETS.get(value, {})
+		for k in preset:
+			if g.get(k) != preset[k]:
+				g[k] = preset[k]
+				changed.emit("graphics", k, preset[k])
+	else:
+		var q := GraphicsQuality.matching_preset()
+		if g.get("quality") != q:
+			g["quality"] = q
+			changed.emit("graphics", "quality", q)
+	GraphicsQuality.apply(get_tree())
 
 
 ## Puts a whole section back to its defaults.

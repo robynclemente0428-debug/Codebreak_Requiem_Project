@@ -35,6 +35,11 @@ func is_open() -> bool:
 	return _open_left > 0.0
 
 
+## How much of the open window is left (1 = just opened, 0 = closed). LockBanner's bar.
+func open_fraction() -> float:
+	return clampf(_open_left / maxf(_opened_for, 0.01), 0.0, 1.0) if is_open() else 0.0
+
+
 ## Closed port: absorb the hit. Subclasses that override this call super() first.
 func modify_incoming(info: HitInfo) -> void:
 	if not is_open():

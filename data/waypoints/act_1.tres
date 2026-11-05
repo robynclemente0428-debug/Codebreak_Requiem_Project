@@ -10,7 +10,7 @@ display_name = "Hardfault Outpost"
 scene = "uid://de57t2qg8my1n"
 kind = 0
 map_position = Vector2(0.13, 0.5)
-links = PackedStringArray("act1_map1")
+links = Array[String](["act1_map1"])
 note = "Brack, Sudo, vendor"
 
 [sub_resource type="Resource" id="Waypoint_act1_map1"]
@@ -21,7 +21,7 @@ scene = "uid://vgnxg54ci24w"
 spawn_id = &"act_1_map_1"
 dungeon_level = 1
 map_position = Vector2(0.24, 0.25)
-links = PackedStringArray("act1_town", "act1_spillway")
+links = Array[String](["act1_town", "act1_spillway"])
 note = "Level 1"
 
 [sub_resource type="Resource" id="Waypoint_act1_spillway"]
@@ -32,7 +32,7 @@ scene = "res://scenes/map/dungeon/act_1_spillway.tscn"
 spawn_id = &"spillway_in"
 dungeon_level = 2
 map_position = Vector2(0.4, 0.1)
-links = PackedStringArray("act1_map1", "act1_warrens")
+links = Array[String](["act1_map1", "act1_warrens"])
 note = "Level 2  -  Corrupted Raider"
 
 [sub_resource type="Resource" id="Waypoint_act1_warrens"]
@@ -43,7 +43,7 @@ scene = "res://scenes/map/dungeon/act_1_cache_warrens.tscn"
 spawn_id = &"warrens_in"
 dungeon_level = 3
 map_position = Vector2(0.56, 0.25)
-links = PackedStringArray("act1_spillway", "act1_map2")
+links = Array[String](["act1_spillway", "act1_map2"])
 note = "Level 3  -  Corrupted Enchanter"
 random_threats = Vector2i(1, 1)
 
@@ -56,9 +56,9 @@ spawn_id = &"map_2"
 dungeon_level = 4
 kind = 2
 map_position = Vector2(0.62, 0.48)
-links = PackedStringArray("act1_warrens", "act1_deadsector")
+links = Array[String](["act1_warrens", "act1_deadsector"])
 note = "Level 4  -  Glitchling Queen"
-threats = PackedStringArray("swarm")
+threats = Array[String](["swarm"])
 random_threats = Vector2i(0, 1)
 
 [sub_resource type="Resource" id="Waypoint_act1_deadsector"]
@@ -69,7 +69,7 @@ scene = "res://scenes/map/dungeon/act_1_dead_sector.tscn"
 spawn_id = &"deadsector_in"
 dungeon_level = 5
 map_position = Vector2(0.45, 0.62)
-links = PackedStringArray("act1_map2", "act1_relaytrench")
+links = Array[String](["act1_map2", "act1_relaytrench"])
 note = "Level 5  -  Null Husk warband"
 random_threats = Vector2i(1, 1)
 
@@ -81,7 +81,7 @@ scene = "res://scenes/map/dungeon/act_1_relay_trench.tscn"
 spawn_id = &"relaytrench_in"
 dungeon_level = 6
 map_position = Vector2(0.29, 0.8)
-links = PackedStringArray("act1_deadsector", "act1_coolant")
+links = Array[String](["act1_deadsector", "act1_coolant"])
 note = "Level 6  -  Relay Enchanter"
 random_threats = Vector2i(1, 2)
 
@@ -93,7 +93,7 @@ scene = "res://scenes/map/dungeon/act_1_coolant_vaults.tscn"
 spawn_id = &"coolant_in"
 dungeon_level = 7
 map_position = Vector2(0.49, 0.92)
-links = PackedStringArray("act1_relaytrench", "act1_foundry")
+links = Array[String](["act1_relaytrench", "act1_foundry"])
 note = "Level 7  -  Vault Raider"
 random_threats = Vector2i(1, 2)
 
@@ -105,7 +105,7 @@ scene = "res://scenes/map/dungeon/act_1_overclock_foundry.tscn"
 spawn_id = &"foundry_in"
 dungeon_level = 8
 map_position = Vector2(0.7, 0.8)
-links = PackedStringArray("act1_coolant", "act1_approach")
+links = Array[String](["act1_coolant", "act1_approach"])
 note = "Level 8  -  Overclocked Raider"
 random_threats = Vector2i(1, 2)
 
@@ -117,9 +117,9 @@ scene = "res://scenes/map/dungeon/act_1_firewall_approach.tscn"
 spawn_id = &"approach_in"
 dungeon_level = 9
 map_position = Vector2(0.82, 0.55)
-links = PackedStringArray("act1_foundry", "act1_map3")
+links = Array[String](["act1_foundry", "act1_map3"])
 note = "Level 9  -  Firewall Wardens"
-threats = PackedStringArray("firewalled")
+threats = Array[String](["firewalled"])
 random_threats = Vector2i(0, 1)
 
 [sub_resource type="Resource" id="Waypoint_act1_map3"]
@@ -131,7 +131,7 @@ spawn_id = &"from_map_2"
 dungeon_level = 10
 kind = 2
 map_position = Vector2(0.94, 0.28)
-links = PackedStringArray("act1_approach")
+links = Array[String](["act1_approach"])
 note = "Level 10  -  Corrupted Gate Guard"
 random_threats = Vector2i(2, 2)
 

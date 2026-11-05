@@ -96,6 +96,9 @@ func _add_waypoint_panel() -> void:
 	var threats := ThreatPanel.new()      # the dungeon's threats, top left
 	threats.name = "ThreatPanel"
 	stim_layer.add_child(threats)
+	var lock_banner: Control = preload("res://scenes/ui/player_ui/lock_banner/lock_banner.gd").new()   # boss locks, over the skill bar
+	lock_banner.name = "LockBanner"
+	stim_layer.add_child(lock_banner)
 	host.add_child.call_deferred(stim_layer)
 
 
@@ -145,6 +148,7 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 	area_container.add_child(area)
 	current_area = area
 	_current_path = scene_path
+	GraphicsQuality.apply(get_tree())       # GRAPHICS settings, on the new area's lights too
 
 	# GridMap / StaticBody collision is created deferred. Wait for it, or the
 	# player drops into a world with no floor yet.

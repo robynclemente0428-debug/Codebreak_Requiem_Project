@@ -6,7 +6,8 @@ extends Objective
 ##
 ## kind:   program_applied (target = skill gem id), program_applied_tag (target = gem tag),
 ##         program_condition (target = condition id), program_nested, program_branches,
-##         program_efficient (target = "lean" / "elegant", or "" for any tier)
+##         program_efficient (target = "lean" / "elegant", or "" for any tier),
+##         program_loop (target = "for" / "while", or "" for any loop)
 
 
 func already_met(player: Node) -> bool:
@@ -45,6 +46,12 @@ func _program_matches(s: SkillComponent.Socket) -> bool:
 				if not rule.is_always():
 					branches += 1
 			return branches >= 2
+		"program_loop":
+			for rule in s.program.rules:
+				if rule.loop != null:
+					var mode := "while" if rule.loop.mode == ProgramLoop.Mode.WHILE else "for"
+					if target == "" or mode == target:
+						return true
 		"program_efficient":
 			var tier := s.skill.program_validation.tier
 			return tier != null and (target == "" or tier.display_name.to_lower() == target)

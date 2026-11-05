@@ -66,7 +66,11 @@ func _bind_minimap() -> void:
 		_director.grid = g
 	var npcs: Array = find_children("*", "DialogueNPC", true, false)
 	var terminals: Array = find_children("*", "RouteTerminal", true, false)
-	mm.bind_dungeon(_director, _director.grid_map, null, {"town": true, "npcs": npcs, "terminals": terminals})
+	# The convoy's machines the Null go for in a breach (DeckSystem)
+	var systems: Array = find_children("*", "Area3D", true, false).filter(
+			func(n: Node) -> bool: return n.has_method("is_offline") and "map_glyph" in n)
+	mm.bind_dungeon(_director, _director.grid_map, null,
+			{"town": true, "npcs": npcs, "terminals": terminals, "systems": systems})
 
 
 ## Seeded by the scene's name, so the stains are in the same places every visit.

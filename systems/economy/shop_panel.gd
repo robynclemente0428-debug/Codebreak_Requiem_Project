@@ -20,6 +20,8 @@ extends Control
 var _reach := 0.0                               # opened from the NPC card: a longer leash
 
 const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
+## The convoy's power junction (a DeckSystem) shuts the shops while it's down. By path: see HullBreach.
+const DeckSystemScript := preload("res://scenes/map/town/convoy/deck_system.gd")
 const CHAMFER := 24.0
 const MIN_SHOP_CELLS := 10
 
@@ -108,6 +110,12 @@ func is_open() -> bool:
 ## reach: how far you may be from the shopkeeper before it closes (0 = max_distance).
 func open_shop(shop: ShopNPC, player: Node3D, reach: float = 0.0) -> void:
 	if _open or not _built:
+		return
+	# On the convoy: the Null knocked out the market row's power (a DeckSystem)
+	var power = DeckSystemScript.find(get_tree(), "power")
+	if power != null and power.is_offline():
+		QuestItems.toast(get_tree(), "NO POWER\n%s\n%s" % [power.offline_text, power.fix_hint()],
+				Color(1.0, 0.35, 0.35))
 		return
 	_reach = reach
 	if _inv == null or _wallet == null:

@@ -45,35 +45,70 @@ void fragment() {
 }
 """
 
+## A mesh has one material_overlay slot, and some models fill it themselves (Act II's Loop
+## Hound, Eye Drone and Trilobite: red_glitch_overlay). Those keep it: the silhouette is chained
+## after it as its next_pass, on a copy (shared by every mesh with that same overlay), and the
+## model's own overlay is kept in this meta so uncover() can put it back.
+const OWN_META := &"_own_overlay"
+
 static var _material: ShaderMaterial
+static var _chained: Dictionary = {}             # model's own overlay -> its copy + the silhouette
 
 
 static func cover(root: Node) -> void:
-	for n in root.find_children("*", "GeometryInstance3D", true, false):
-		var g := n as GeometryInstance3D
-		if g is GPUParticles3D or g is CPUParticles3D:
-			continue
-		g.material_overlay = _shared()
+	for g in _meshes(root):
+		_attach(g, _shared(), true)
 
 
 ## Like cover(), with a copy of the material only this enemy uses, returned so its
 ## "open_amount" can be set (ChecksumLock glows while its port is open).
 static func cover_own(root: Node) -> ShaderMaterial:
 	var own := _shared().duplicate() as ShaderMaterial
-	for n in root.find_children("*", "GeometryInstance3D", true, false):
-		var g := n as GeometryInstance3D
-		if g is GPUParticles3D or g is CPUParticles3D:
-			continue
-		g.material_overlay = own
+	for g in _meshes(root):
+		_attach(g, own, false)
 	return own
 
 
 static func uncover(root: Node) -> void:
-	for n in root.find_children("*", "GeometryInstance3D", true, false):
-		var g := n as GeometryInstance3D
+	for g in _meshes(root):
+		if g.has_meta(OWN_META):
+			g.material_overlay = g.get_meta(OWN_META)    # the model's own overlay, as it was
+			g.remove_meta(OWN_META)
+			continue
 		var m := g.material_overlay as ShaderMaterial
 		if m != null and m.shader == _shared().shader:
 			g.material_overlay = null
+
+
+static func _meshes(root: Node) -> Array[GeometryInstance3D]:
+	var out: Array[GeometryInstance3D] = []
+	for n in root.find_children("*", "GeometryInstance3D", true, false):
+		if not (n is GPUParticles3D or n is CPUParticles3D):
+			out.append(n as GeometryInstance3D)
+	return out
+
+
+## Puts `sil` on the mesh: alone in an empty overlay slot, or chained after the model's own.
+## shared: the chained copy is cached per own overlay (cover); otherwise a copy just for this
+## mesh (cover_own's material is this enemy's alone).
+static func _attach(g: GeometryInstance3D, sil: ShaderMaterial, shared: bool) -> void:
+	var own: Material = g.get_meta(OWN_META) if g.has_meta(OWN_META) else g.material_overlay
+	if own == null or (own is ShaderMaterial and (own as ShaderMaterial).shader == sil.shader):
+		g.material_overlay = sil                        # nothing of its own (or only ours)
+		return
+	g.set_meta(OWN_META, own)
+	var key := own.get_instance_id()
+	var chain: Material = _chained.get(key) if shared else null
+	if chain == null or not is_instance_valid(chain):
+		chain = own.duplicate()
+		var tail := chain
+		while tail.next_pass != null:                   # after any passes it already has
+			tail.next_pass = tail.next_pass.duplicate()
+			tail = tail.next_pass
+		tail.next_pass = sil
+		if shared:
+			_chained[key] = chain
+	g.material_overlay = chain
 
 
 static func _shared() -> ShaderMaterial:

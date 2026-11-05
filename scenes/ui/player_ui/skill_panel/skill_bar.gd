@@ -35,7 +35,7 @@ var _tip: PanelContainer
 var _tip_box: VBoxContainer
 var _hover_action: StringName = &""     # the hotkey whose slot the mouse is over
 var _set_label: RichTextLabel           # "SCRIPT SET  A  B  C  [X]" over the bar's left end
-var _set_msg: Label                     # "ENEMIES NEARBY..." / "SCRIPT SET B", fading
+var _set_msg: Label                     # "SCRIPT SET B" (or why it didn't swap), fading
 var _set_tween: Tween
 
 

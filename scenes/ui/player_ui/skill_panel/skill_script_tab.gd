@@ -851,7 +851,7 @@ func _update_set_buttons() -> void:
 		var b := _set_btns[i]
 		var label := sk.set_label(i)
 		b.text = ("SET " + label) if label == SkillComponent.SET_NAMES[i] else label
-		b.tooltip_text = "Script set %s. Every skill keeps one program per set; [%s] swaps sets in the field between fights. Each set starts empty. Double-click to rename it." % [label, GemText.key_label(&"script_set")]
+		b.tooltip_text = "Script set %s. Every skill keeps one program per set; [%s] swaps sets any time, even mid-fight. Each set starts empty. Double-click to rename it." % [label, GemText.key_label(&"script_set")]
 		b.visible = sk.set_unlocked(i) and _renaming != i
 		b.add_theme_color_override("font_color", panel.accent if active else COL_GUTTER)
 		b.add_theme_color_override("font_disabled_color", Color(COL_GUTTER, 0.35))

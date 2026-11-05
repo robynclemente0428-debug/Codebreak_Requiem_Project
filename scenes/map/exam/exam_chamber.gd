@@ -101,7 +101,7 @@ func on_player_arrived(player: Node3D) -> void:
 	_player = player
 	_enter_sandbox()
 	if spec != null and not spec.lends.is_empty():
-		Ranks.lent = spec.lends
+		Ranks.lent = PackedStringArray(spec.lends)
 		_refresh_skills()
 	_hud.show_brief()
 

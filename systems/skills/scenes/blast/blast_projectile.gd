@@ -23,6 +23,9 @@ var _shape := SphereShape3D.new()
 
 func _ready() -> void:
 	_shape.radius = hit_radius
+	var light := get_node_or_null("OmniLight3D") as OmniLight3D
+	if light != null and not GraphicsQuality.allow_effect_light(light):   # GRAPHICS > EFFECT LIGHTS
+		light.queue_free()
 
 func _physics_process(delta: float) -> void:
 	if _done:

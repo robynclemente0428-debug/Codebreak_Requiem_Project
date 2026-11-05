@@ -19,7 +19,7 @@ extends Node3D
 @export var enable_cursor_shift: bool = true
 ## The shift only follows the cursor with these weapon types equipped (WeaponTypeDefinition.id).
 ## Empty = every weapon. With another weapon the camera eases back to centre.
-@export var cursor_shift_weapon_types: PackedStringArray = ["sniper"]
+@export var cursor_shift_weapon_types: Array[String] = ["sniper"]
 ## How quickly the camera slides toward the cursor (and back). Higher = faster.
 ## The old tween felt like about 4.
 @export var cursor_shift_speed: float = 1.5

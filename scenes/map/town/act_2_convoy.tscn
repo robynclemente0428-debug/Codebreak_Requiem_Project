@@ -1,30 +1,27 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bmbps64nc75kg"]
 
-[ext_resource type="Script" path="res://scenes/map/town/town_area.gd" id="1_vu4ko"]
+[ext_resource type="Script" uid="uid://chcl1w027nx4n" path="res://scenes/map/town/town_area.gd" id="1_vu4ko"]
 [ext_resource type="Material" path="res://assets/shaders/convoy/act2_convoy_void.tres" id="2_7jwyw"]
-[ext_resource type="Script" path="res://dungeon_generation/dungeon_director.gd" id="3_k8dw8"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_k8dw8"]
 [ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/convoy_deck.tres" id="4_pt4un"]
-[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/convoy_deck_meshes.tres" id="5_a8gxe"]
-[ext_resource type="Script" path="res://dungeon_generation/layout/room_marker.gd" id="6_pb7ug"]
-[ext_resource type="Script" path="res://dungeon_generation/layout/spawn_marker.gd" id="7_wqvff"]
-[ext_resource type="Script" path="res://dungeon_generation/layout/portal_marker.gd" id="8_8a7s6"]
-[ext_resource type="Script" path="res://assets/shaders/convoy/convoy_motion.gd" id="9_iri4i"]
-[ext_resource type="Script" path="res://scenes/map/town/convoy/convoy_dressing.gd" id="10_imbut"]
-[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/general_vendor.tscn" id="11_hky0x"]
-[ext_resource type="Script" path="res://systems/economy/shop_npc.gd" id="12_l5764"]
-[ext_resource type="Resource" path="res://data/shops/general_vendor.tres" id="13_fnsnu"]
-[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="14_tnwyf"]
+[ext_resource type="MeshLibrary" uid="uid://bkn5qrbnlobd8" path="res://dungeon_generation/rendering/mesh_library/convoy_deck_meshes.tres" id="5_a8gxe"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="6_pb7ug"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="7_wqvff"]
+[ext_resource type="Script" uid="uid://bxl0q2xanps8j" path="res://assets/shaders/convoy/convoy_motion.gd" id="9_iri4i"]
+[ext_resource type="Script" uid="uid://c56dtw4d6ed67" path="res://scenes/map/town/convoy/convoy_dressing.gd" id="10_imbut"]
+[ext_resource type="PackedScene" uid="uid://c8xae3fagfdfj" path="res://scenes/loot/shop_npc/general_vendor.tscn" id="11_hky0x"]
+[ext_resource type="PackedScene" uid="uid://brcgbkbio4vce" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="14_tnwyf"]
 [ext_resource type="PackedScene" path="res://scenes/npc/warden_brack.tscn" id="15_brack"]
-[ext_resource type="PackedScene" path="res://scenes/npc/examiner_sudo.tscn" id="16_sudo"]
+[ext_resource type="PackedScene" uid="uid://dir4ecj6nb042" path="res://scenes/npc/examiner_sudo.tscn" id="16_sudo"]
 [ext_resource type="Resource" path="res://data/dialogue/hex.tres" id="17_hex"]
-[ext_resource type="PackedScene" path="res://scenes/props/route_terminal/route_terminal.tscn" id="18_route"]
+[ext_resource type="PackedScene" uid="uid://d0uml10ovqxip" path="res://scenes/props/route_terminal/route_terminal.tscn" id="18_route"]
 [ext_resource type="Resource" uid="uid://bw1olxgfgunn5" path="res://data/shops/weapon_vendor.tres" id="19_wshop"]
 [ext_resource type="PackedScene" uid="uid://cenh85fsfixuv" path="res://scenes/loot/shop_npc/weapon_vendor.tscn" id="20_wmodel"]
 [ext_resource type="Resource" uid="uid://wdprfnpkerqq" path="res://data/shops/armour_vendor.tres" id="21_ashop"]
 [ext_resource type="PackedScene" uid="uid://dmy5yaa517ms6" path="res://scenes/loot/shop_npc/armour_vendor.tscn" id="22_amodel"]
 [ext_resource type="Resource" uid="uid://c58lpqc0ep3fj" path="res://data/shops/gem_vendor.tres" id="23_gshop"]
 [ext_resource type="Resource" uid="uid://cj7ruy6fmca7e" path="res://data/dialogue/gem_vendor.tres" id="24_gdlg"]
-
+[ext_resource type="Script" uid="uid://ctj7jogsx2yid" path="res://scenes/map/town/convoy/deck_system.gd" id="ds_script"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/ammo.tscn" id="furn_ammo"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/ammo_closed.tscn" id="furn_ammo_closed"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/chair.tscn" id="furn_chair"]
@@ -41,14 +38,14 @@
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_thin_tall.tscn" id="furn_shelves_thin_tall"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_short.tscn" id="furn_shelves_wide_short"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_tall.tscn" id="furn_shelves_wide_tall"]
-[ext_resource type="Script" path="res://scenes/map/town/convoy/hull_breach.gd" id="hb_script"]
 [ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="hb_def"]
-[ext_resource type="Resource" path="res://data/enemies/loop_hound.tres" id="hb_hound"]
-[ext_resource type="Resource" path="res://data/enemies/quad_shell.tres" id="hb_shell"]
-[ext_resource type="Resource" path="res://data/enemies/trilobite.tres" id="hb_trilo"]
-[ext_resource type="Resource" path="res://data/enemies/eye_drone.tres" id="hb_drone"]
-[ext_resource type="Resource" path="res://data/enemies/raider_boss.tres" id="hb_raider"]
-[ext_resource type="Resource" path="res://data/enemies/enchanter_boss.tres" id="hb_enchanter"]
+[ext_resource type="Resource" uid="uid://yo5adppnm8wq" path="res://data/enemies/eye_drone.tres" id="hb_drone"]
+[ext_resource type="Resource" uid="uid://0snu8whe2s7u" path="res://data/enemies/enchanter_boss.tres" id="hb_enchanter"]
+[ext_resource type="Resource" uid="uid://6u4xrmsv0ii1" path="res://data/enemies/loop_hound.tres" id="hb_hound"]
+[ext_resource type="Resource" uid="uid://0romkytgua4l" path="res://data/enemies/raider_boss.tres" id="hb_raider"]
+[ext_resource type="Script" uid="uid://b40l67n8f1122" path="res://scenes/map/town/convoy/hull_breach.gd" id="hb_script"]
+[ext_resource type="Resource" uid="uid://dphsiomklvcyf" path="res://data/enemies/quad_shell.tres" id="hb_shell"]
+[ext_resource type="Resource" uid="uid://depmvkkww0w1u" path="res://data/enemies/trilobite.tres" id="hb_trilo"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_f6log"]
 
@@ -110,13 +107,12 @@ script = ExtResource("7_wqvff")
 spawn_id = &"from_route"
 create_room = false
 
-[node name="PortalToHardfault" type="Marker3D" parent="Layout" unique_id=661063287]
-transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 62, 0, 30)
-script = ExtResource("8_8a7s6")
-target_area = "res://scenes/map/town/act_1_town.tscn"
-target_spawn = &"from_convoy"
-arrival_spawn_id = &"act_2_convoy"
-room_size = Vector2i(3, 3)
+[node name="act_2_convoy" type="Marker3D" parent="Layout" unique_id=661063287]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60.5, 0, 30)
+script = ExtResource("7_wqvff")
+spawn_id = &"act_2_convoy"
+create_room = false
+metadata/_note = "Where you come aboard from the dock (its deckhouse door). The convoy has no portal back to Act I."
 
 [node name="ConvoyMotion" type="Node" parent="." unique_id=1071316048]
 script = ExtResource("9_iri4i")
@@ -124,27 +120,23 @@ script = ExtResource("9_iri4i")
 [node name="ConvoyDressing" type="Node3D" parent="." unique_id=505001253]
 script = ExtResource("10_imbut")
 
-[node name="Quartermaster" type="Area3D" parent="." unique_id=1385360680 instance=ExtResource("11_hky0x")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 1.1, 29)
-collision_mask = 3
-script = ExtResource("12_l5764")
-shop = ExtResource("13_fnsnu")
-model_scene = ExtResource("14_tnwyf")
-npc_id = "quartermaster"
+[node name="Quartermaster" parent="." unique_id=1385360680 instance=ExtResource("11_hky0x")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 37.51132, 1.1, 33.260796)
 salvage_magic_per = 0.04
 salvage_rare_per = 0.03
+model_scene = ExtResource("14_tnwyf")
+npc_id = "quartermaster"
 npc_name = "Quartermaster"
 info_title = "Convoy Supplies"
-info_description = "Keeps the outpost supplied. Buys what you drag back from the dungeons and sells what you need to go back in."
 
 [node name="WardenBrack" parent="." unique_id=730114521 instance=ExtResource("15_brack")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39, 1.1, 28.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39, 1.1, 27.1)
 
 [node name="ExaminerSudo" parent="." unique_id=730114522 instance=ExtResource("16_sudo")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 1.1, 28.6)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 1.1, 27.1)
 
 [node name="TinkerHex" parent="." unique_id=730114523 instance=ExtResource("11_hky0x")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 41, 1.1, 31.4)
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 41, 1.1, 32.9)
 stock_level = 20
 model_scene = ExtResource("14_tnwyf")
 npc_id = "hex"
@@ -153,7 +145,7 @@ dialogue = ExtResource("17_hex")
 info_title = "Trader"
 
 [node name="GemVendor" parent="." unique_id=730114526 instance=ExtResource("11_hky0x")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 44, 1.1, 32)
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 44, 1.1, 32.9)
 shop = ExtResource("23_gshop")
 stock_level = 20
 follow_act_level = false
@@ -164,7 +156,7 @@ dialogue = ExtResource("24_gdlg")
 info_title = "Gem Vendor"
 
 [node name="Weaponsmith" parent="." unique_id=730114524 instance=ExtResource("11_hky0x")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 47, 1.1, 32.6)
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 46.315598, 1.1, 32.9)
 shop = ExtResource("19_wshop")
 stock_level = 20
 model_scene = ExtResource("20_wmodel")
@@ -174,7 +166,7 @@ dialogue = null
 info_title = "Weapon Vendor"
 
 [node name="Armoursmith" parent="." unique_id=730114525 instance=ExtResource("11_hky0x")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 50.5, 1.1, 32.6)
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 48.05629, 1.1, 32.9)
 shop = ExtResource("21_ashop")
 stock_level = 20
 model_scene = ExtResource("22_amodel")
@@ -184,79 +176,107 @@ dialogue = null
 info_title = "Armour Vendor"
 
 [node name="RouteTerminal" parent="." unique_id=730114530 instance=ExtResource("18_route")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.5, 1.1, 27.0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.5, 1.1, 27)
 
-[node name="Furniture" type="Node3D" parent="."]
+[node name="Furniture" type="Node3D" parent="." unique_id=675951601]
 metadata/_note = "Sci-Fi Essentials Kit props (scenes/props/furniture/). Solid ones block the player and the navmesh bakes round them."
 
-[node name="HoldCrateLarge" parent="Furniture" instance=ExtResource("furn_crate_large")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 42.4, 1.1, 8.9)
+[node name="HoldCrateLarge" parent="Furniture" unique_id=1882105311 instance=ExtResource("furn_crate_large")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42.4, 1.1, 8.9)
 
-[node name="HoldCrate" parent="Furniture" instance=ExtResource("furn_crate")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 48.95, 1.1, 8.9)
+[node name="HoldCrate" parent="Furniture" unique_id=1949293490 instance=ExtResource("furn_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48.95, 1.1, 8.9)
 
-[node name="HoldAmmoCase" parent="Furniture" instance=ExtResource("furn_ammo_closed")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 45.6, 1.1, 8.6)
+[node name="HoldAmmoCase" parent="Furniture" unique_id=1075129653 instance=ExtResource("furn_ammo_closed")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45.6, 1.1, 8.6)
 
-[node name="HoldAmmo" parent="Furniture" instance=ExtResource("furn_ammo")]
+[node name="HoldAmmo" parent="Furniture" unique_id=78331971 instance=ExtResource("furn_ammo")]
 transform = Transform3D(0.984808, 0, 0.173648, 0, 1, 0, -0.173648, 0, 0.984808, 46.4, 1.1, 8.6)
 
-[node name="HoldTarpLarge" parent="Furniture" instance=ExtResource("furn_crate_tarp_large")]
+[node name="HoldTarpLarge" parent="Furniture" unique_id=476094973 instance=ExtResource("furn_crate_tarp_large")]
 transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 41, 1.1, 12.4)
 
-[node name="HoldTarp" parent="Furniture" instance=ExtResource("furn_crate_tarp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 49, 1.1, 13)
+[node name="HoldTarp" parent="Furniture" unique_id=1527561753 instance=ExtResource("furn_crate_tarp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 49, 1.1, 13)
 
-[node name="StockShelvesTall" parent="Furniture" instance=ExtResource("furn_shelves_wide_tall")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 48.6, 1.1, 26.3)
+[node name="StockShelvesTall" parent="Furniture" unique_id=978562655 instance=ExtResource("furn_shelves_wide_tall")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 48.6, 1.1, 26.3)
 
-[node name="StockShelves" parent="Furniture" instance=ExtResource("furn_shelves_wide_short")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 50.8, 1.1, 26.3)
+[node name="StockShelves" parent="Furniture" unique_id=256686801 instance=ExtResource("furn_shelves_wide_short")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50.8, 1.1, 26.3)
 
-[node name="StockCrate" parent="Furniture" instance=ExtResource("furn_crate")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 53.1, 1.1, 27)
+[node name="StockCrate" parent="Furniture" unique_id=1242595198 instance=ExtResource("furn_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53.1, 1.1, 27)
 
-[node name="BrackDesk" parent="Furniture" instance=ExtResource("furn_desk_medium")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 36.2, 1.1, 26.6)
+[node name="BrackDesk" parent="Furniture" unique_id=380042914 instance=ExtResource("furn_desk_medium")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.2, 1.1, 26.6)
 
-[node name="BrackChair" parent="Furniture" instance=ExtResource("furn_chair")]
+[node name="BrackChair" parent="Furniture" unique_id=1891654082 instance=ExtResource("furn_chair")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.2, 1.1, 27.9)
 
-[node name="BrackMug" parent="Furniture" instance=ExtResource("furn_mug")]
+[node name="BrackMug" parent="Furniture" unique_id=1258672368 instance=ExtResource("furn_mug")]
 transform = Transform3D(0.939693, 0, 0.34202, 0, 1, 0, -0.34202, 0, 0.939693, 35.6, 2.04, 26.5)
 
-[node name="BrackMedkit" parent="Furniture" instance=ExtResource("furn_health_pack_tube")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 36.9, 2.18, 26.6)
+[node name="BrackMedkit" parent="Furniture" unique_id=626354925 instance=ExtResource("furn_health_pack_tube")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36.9, 2.18, 26.6)
 
-[node name="BrackKeyCard" parent="Furniture" instance=ExtResource("furn_key_card")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 37.3, 2.19, 26.5)
+[node name="BrackKeyCard" parent="Furniture" unique_id=364636179 instance=ExtResource("furn_key_card")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 37.3, 2.19, 26.5)
 
-[node name="LockerA" parent="Furniture" instance=ExtResource("furn_locker")]
+[node name="LockerA" parent="Furniture" unique_id=862619298 instance=ExtResource("furn_locker")]
 transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 26.3, 1.1, 27.6)
 
-[node name="LockerB" parent="Furniture" instance=ExtResource("furn_locker")]
+[node name="LockerB" parent="Furniture" unique_id=1072289047 instance=ExtResource("furn_locker")]
 transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 26.3, 1.1, 28.65)
 
-[node name="SternCrate" parent="Furniture" instance=ExtResource("furn_crate_tarp")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 28.4, 1.1, 27.3)
+[node name="SternCrate" parent="Furniture" unique_id=1211172034 instance=ExtResource("furn_crate_tarp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.4, 1.1, 27.3)
 
-[node name="SternShelves" parent="Furniture" instance=ExtResource("furn_shelves_thin_tall")]
+[node name="SternShelves" parent="Furniture" unique_id=1427086276 instance=ExtResource("furn_shelves_thin_tall")]
 transform = Transform3D(6.12323e-17, 0, 1, 0, 1, 0, -1, 0, 6.12323e-17, 26.3, 1.1, 32)
 
-[node name="Dish" parent="Furniture" instance=ExtResource("furn_satellite_dish")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, -0, 0, 1, 57.6, 1.1, 27.7)
+[node name="Dish" parent="Furniture" unique_id=323322520 instance=ExtResource("furn_satellite_dish")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 57.6, 1.1, 27.7)
 
-[node name="BreachAfterScrapline" type="Node3D" parent="."]
+[node name="DeckSystems" type="Node3D" parent="." unique_id=1726004293]
+metadata/_note = "What the Null go for in a hull breach (DeckSystem). Each one down shuts something off until it's repaired."
+
+[node name="PowerJunction" type="Area3D" parent="DeckSystems" unique_id=91376793]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 52.6, 1.1, 33.1)
+script = ExtResource("ds_script")
+keeps = "Powers the market row: the deck's vendors trade while it runs."
+offline_text = "The market row has no power: the vendors can't trade."
+
+[node name="CargoLock" type="Area3D" parent="DeckSystems" unique_id=198982319]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 45, 1.1, 11.2)
+script = ExtResource("ds_script")
+system_id = "cargo"
+npc_name = "Cargo Lock"
+look = 1
+map_glyph = "C"
+keeps = "Seals the hold. Kept shut through a breach, the cargo pays a bonus."
+offline_text = "The hold is open: the cargo's gone, and a breach pays no cargo bonus."
+
+[node name="CommsRelay" type="Area3D" parent="DeckSystems" unique_id=1927377613]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60.2, 1.1, 27.3)
+script = ExtResource("ds_script")
+system_id = "comms"
+npc_name = "Comms Relay"
+look = 2
+map_glyph = "S"
+keeps = "The convoy's signal: the route terminal needs it to plot a course."
+offline_text = "No signal: the route terminal can't plot a course."
+
+[node name="BreachAfterScrapline" type="Node3D" parent="." unique_id=305242297]
 script = ExtResource("hb_script")
 after_stop = "act2_scrapline"
-reward_credits = 150
 quest_id = ""
 held_key = ""
 dock_target = ""
 hold_radius = 13.0
 load_time = 35.0
 wave_every = 8.0
-wave_sizes = PackedInt32Array(8, 12, 16)
+wave_sizes = Array[int]([8, 12, 16])
 enemy_level = 12
 wave_health_flat = 60.0
 wave_armour_flat = 40.0
@@ -276,7 +296,7 @@ count_text = "BOARDERS ON DECK: %d"
 done_toast = "DECK CLEAR
 The convoy rolls on."
 
-[node name="BreachAfterSignal" type="Node3D" parent="."]
+[node name="BreachAfterSignal" type="Node3D" parent="." unique_id=1394277739]
 script = ExtResource("hb_script")
 after_stop = "act2_signal"
 reward_credits = 200
@@ -286,7 +306,7 @@ dock_target = ""
 hold_radius = 13.0
 load_time = 40.0
 wave_every = 8.0
-wave_sizes = PackedInt32Array(10, 14, 18)
+wave_sizes = Array[int]([10, 14, 18])
 enemy_level = 16
 wave_health_flat = 80.0
 wave_armour_flat = 60.0

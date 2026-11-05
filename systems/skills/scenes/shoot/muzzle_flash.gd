@@ -63,7 +63,11 @@ func _ready() -> void:
 	_light.omni_range = LIGHT_RANGE
 	_light.shadow_enabled = false
 	_light.position = Vector3(0, 0, -0.2)
-	add_child(_light)
+	if GraphicsQuality.allow_effect_light(_light):     # GRAPHICS > EFFECT LIGHTS
+		add_child(_light)
+	else:
+		_light.free()
+		_light = null
 	_update(0.0)
 
 
@@ -84,7 +88,8 @@ func _update(k: float) -> void:
 	_core.transparency = 1.0 - fade
 	for s in _spikes.get_children():
 		(s as GeometryInstance3D).transparency = 1.0 - fade * fade
-	_light.light_energy = LIGHT_ENERGY * fade * fade
+	if _light != null:
+		_light.light_energy = LIGHT_ENERGY * fade * fade
 
 
 static func _make_shared() -> void:

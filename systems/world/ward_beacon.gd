@@ -28,7 +28,7 @@ const READOUT_HEIGHT := 2.7                # metres: where the readout sits over
 @export var boot_time := 20.0
 @export var hold_radius := 7.0
 @export var wave_every := 6.0
-@export var wave_sizes: PackedInt32Array = [8, 13, 18]
+@export var wave_sizes: Array[int] = [8, 13, 18]
 ## Every wave is tougher than the last, like DockDefense: wave n gets +100 x n health and
 ## armour (flat, on the base), then +25% x n of both, and +12% damage per wave after the first.
 ## All on top of the dungeon's level.

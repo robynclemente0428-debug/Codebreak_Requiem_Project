@@ -17,13 +17,13 @@ enum Kind { TOWN, DUNGEON, BOSS }
 ## Position on the act map, 0..1 across and down.
 @export var map_position: Vector2 = Vector2(0.5, 0.5)
 ## Ids of the waypoints this one is drawn connected to.
-@export var links: PackedStringArray = []
+@export var links: Array[String] = []
 ## Short line shown when hovered, e.g. "Glitchling Queen".
 @export var note: String = ""
 ## What fights here favour (DungeonThreats ids: "swarm", "firewalled", "reflector"): these
 ## are in every instance. The dungeon spawns accordingly, and its portals list them so
 ## players can swap scripts first.
-@export var threats: PackedStringArray = []
+@export var threats: Array[String] = []
 ## How many MORE threats each new instance rolls at random (from the ones not listed above),
 ## min to max. (0, 0) = always exactly `threats`.
 @export var random_threats := Vector2i.ZERO

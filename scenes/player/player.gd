@@ -60,10 +60,17 @@ func _add_light() -> void:
 	light.light_color = LIGHT_COLOR
 	light.omni_range = LIGHT_RANGE
 	light.omni_attenuation = LIGHT_ATTENUATION
-	light.shadow_enabled = true                  # walls and enemies throw shadows away from you
+	light.shadow_enabled = GraphicsQuality.player_shadows()   # walls and enemies throw shadows away from you
 	light.position = Vector3.UP * LIGHT_HEIGHT
 	add_child(light)
 	set_light_strength(AreaLighting.player_light)
+
+
+## GRAPHICS > SHADOWS: whether the player's light casts shadows (the costliest light there is).
+func set_light_shadows(on: bool) -> void:
+	var light := get_node_or_null(LIGHT_NAME) as OmniLight3D
+	if light != null:
+		light.shadow_enabled = on
 
 
 ## 0 = off, 1 = full (AreaLighting sets it for the area that's loaded).
@@ -379,7 +386,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 ## The script_set key: every skill swaps to its program in the next set (A -> B -> C -> A),
 ## among the sets the player's rank unlocks (Ranks.PERKS).
-## The skill bar shows the set, or why it can't swap (enemies nearby).
+## Works mid-fight too. The skill bar shows the new set, or why it can't swap.
 func _next_script_set() -> void:
 	var bar := get_tree().get_first_node_in_group("skill_bar") as SkillBar
 	if not skills.uses_scripts():

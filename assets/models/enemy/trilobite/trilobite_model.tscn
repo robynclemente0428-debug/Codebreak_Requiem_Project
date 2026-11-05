@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://dvwn2ejc8stnh" path="res://assets/models/enemy/trilobite/T_Enemies_Large_ORM.png" id="4_arnp6"]
 [ext_resource type="Texture2D" uid="uid://bhm7n84le1t0i" path="res://assets/models/enemy/trilobite/T_Enemies_Large_Normal.png" id="5_uud4x"]
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_seubf"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_dk468"]
 render_priority = 0
 shader = ExtResource("2_dk468")
 shader_parameter/glitch_color = Color(1, 0.08, 0.12, 1)
@@ -1881,7 +1881,7 @@ bones/19/rotation = Quaternion(0, 0, 0, 1)
 bones/19/scale = Vector3(1, 1, 1)
 
 [node name="Trilobite_Body" type="MeshInstance3D" parent="Mesh/Rig/Skeleton3D" unique_id=955380973]
-material_overlay = SubResource("ShaderMaterial_seubf")
+material_overlay = SubResource("ShaderMaterial_dk468")
 mesh = SubResource("ArrayMesh_p5r0a")
 skin = SubResource("Skin_o22x6")
 skeleton = NodePath("..")

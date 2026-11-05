@@ -7,6 +7,8 @@ extends Node
 ##   Reflector   zaps the attacker on every hit: fast attacks hurt the player
 ##   Swarmling   small and weak, but there are twice as many: area skills shine
 
+const LockBannerUI := preload("res://scenes/ui/player_ui/lock_banner/lock_banner.gd")   # LockBanner, by path
+
 var enemy: Node3D
 var _popped_at := -10.0
 
@@ -44,7 +46,8 @@ func pop(text: String, col: Color, gap := 0.6) -> void:
 	_popped_at = now
 	var numbers := get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
 	if numbers != null:
-		numbers.pop_text(enemy.global_position + Vector3.UP * 2.2, text, col, 0.8, HINT_SECONDS)
+		numbers.pop_text(enemy.global_position + Vector3.UP * 2.2, text, col, 1.0, HINT_SECONDS)
+	LockBannerUI.report(self, text, col)            # a boss lock: also on the lock banner (LockBanner)
 
 
 ## Floating text over the enemy, every time (for messages that must not be skipped).
@@ -53,7 +56,8 @@ func say(text: String, col: Color, size_mult := 1.0) -> void:
 		return
 	var numbers := get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
 	if numbers != null:
-		numbers.pop_text(enemy.global_position + Vector3.UP * 2.6, text, col, size_mult, HINT_SECONDS)
+		numbers.pop_text(enemy.global_position + Vector3.UP * 2.6, text, col, size_mult * 1.2, HINT_SECONDS)
+	LockBannerUI.report(self, text, col)            # a boss lock: also on the lock banner (LockBanner)
 
 
 func max_health() -> float:

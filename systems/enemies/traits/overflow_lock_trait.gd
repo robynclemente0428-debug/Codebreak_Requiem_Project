@@ -9,6 +9,10 @@ extends PortLock
 ##     "BUFFER OVERFLOW // PORT OPEN"       a player dropped to the line
 ##     "BUFFER STABLE // PORT CLOSED"       nobody is that low any more
 
+## Shown on the lock banner (LockBanner) and under the boss's quest objective.
+const LOCK_NAME := "OVERFLOW"
+const HINT := "Hits only land while you are at half life or lower. Script leech, barrier or guard to survive down there."
+
 ## Share of max life a player must be at (or under) for their hits to land.
 @export_range(0.1, 0.9, 0.05) var life_threshold := 0.5
 
@@ -23,6 +27,11 @@ func is_open() -> bool:
 		if hp != null and hp.current_health > 0.0 and life_ratio(hp) <= life_threshold:
 			return true
 	return false
+
+
+## Open for as long as someone stays low: the banner's bar stays full.
+func open_fraction() -> float:
+	return 1.0 if is_open() else 0.0
 
 
 func modify_incoming(info: HitInfo) -> void:
