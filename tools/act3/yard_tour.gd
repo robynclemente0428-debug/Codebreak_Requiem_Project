@@ -6,8 +6,8 @@ extends Node
 const MAIN := "res://scenes/map/main.tscn"
 const YARD := "res://scenes/map/town/act_3_quarantine_yard.tscn"
 
-@export var tour: Array[Vector3] = [Vector3(22.5, 1.2, 27), Vector3(36, 1.2, 34), Vector3(46, 1.2, 22),
-		Vector3(36, 1.2, 18), Vector3(30, 1.2, 40)]
+@export var tour: Array[Vector3] = [Vector3(28.5, 1.2, 30), Vector3(36, 1.2, 34), Vector3(42, 1.2, 29),
+		Vector3(36, 1.2, 25.5), Vector3(32, 1.2, 40)]
 @export var every := 6.0
 
 var _i := -1
