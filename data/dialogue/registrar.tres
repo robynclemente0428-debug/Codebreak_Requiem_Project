@@ -7,9 +7,18 @@ script = ExtResource("1_dlg")
 source = "# The Registrar: Checkpoint's records process, a loyal Custodian Remnant. Formal, literal.
 # Act III's quest point at the Quarantine Yard gate. Talking to it is THE LAST MILE's last step
 # (objective 'talk' registrar), reported before this dialogue opens, so the quest is READY here.
+# Gives ROOT ACCESS and MEMORY SHARDS, and reads the Guild shard once The Leak is turned in.
 
 ~ start
 @ quest_ready:q04c_the_last_mile -> first_meeting
+@ quest_ready:q06c_root_access -> ready_root
+@ quest_active:q06c_root_access -> restoring
+@ can_start:q06c_root_access -> offer_root
+@ quest_ready:memory_shards -> ready_shards
+@ quest_active:memory_shards -> remind_shards
+@ can_start:memory_shards -> offer_shards
+@ quest_done:q06c_root_access -> restored
+@ quest_done:q05_the_leak -> guild_log
 @ quest_done:q04c_the_last_mile -> idle
 -> greeting
 
@@ -29,4 +38,65 @@ Registrar: Your Warden is waiting by the convoy.
 Registrar: All records nominal. One duplicate pending.
 Registrar: Hardfault remains in quarantine. This is a courtesy. The last Hardfault was not offered one.
 -> end
+
+~ guild_log
+Registrar: Compiler Guild expedition, partial. Final entry: It is not eating them. It is copying them.
+Registrar: The district gate answers to your quarantine level. Level drops as you clear what the duplicate left behind.
+-> end
+
+~ offer_shards
+Registrar: The archive is damaged. Shards lie in the Registry, the Heap, Mirror Dock and the Dangling Quarter.
+Registrar: A shard restores if you hold its ring while it boots. I am told this is dangerous. I have no record of it being otherwise.
+* ACCEPT -> accept_shards
+* DECLINE -> end
+
+~ accept_shards
+> start_quest memory_shards
+Registrar: Noted. The Heap and the Registry are open to you now. The others open as your quarantine level drops.
+-> end
+
+~ remind_shards
+Registrar: Archive incomplete. Shards remain unrestored.
+-> end
+
+~ ready_shards
+Registrar: All four shards report in.
+* TURN IN -> turnin_shards
+* NOT YET -> end
+
+~ turnin_shards
+> turn_in memory_shards
+Registrar: Archive restored. The full expedition log: they reached the edge of the Null Zone. The route in starts past the Inward Gate.
+-> start
+
+~ offer_root
+Registrar: The root key. With it I can restore your records, and open what C-0 kept shut.
+* ACCEPT -> accept_root
+* DECLINE -> end
+
+~ accept_root
+> start_quest q06c_root_access
+Registrar: Bring it to me. I am not authorized to touch it. You are not a process I can authorize either.
+-> end
+
+~ restoring
+Registrar: Key received, in the sense that you are holding it near me. Restoring.
+Registrar: A process in C-0's quarantine has been released. It asked for you. Then speak with your Warden.
+-> end
+
+~ ready_root
+Registrar: Hardfault: restored. Executor: root.
+* TURN IN -> turnin_root
+* NOT YET -> end
+
+~ turnin_root
+> turn_in q06c_root_access
+> recover quarantine_lifted
+Registrar: The quarantine is lifted. The yard is Checkpoint's newest district. The Inward Gate answers to you now.
+-> end
+
+~ restored
+Registrar: Population: Hardfault, one. Correct.
+-> end
 "
+metadata/_custom_type_script = "uid://dd85gxidfhqxl"

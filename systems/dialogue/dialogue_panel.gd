@@ -341,6 +341,9 @@ func _do(e: Dictionary) -> String:
 		"report":
 			if args.size() > 0:
 				GameEvents.report(args[0], args[1] if args.size() > 1 else "")
+		"recover":                               # > recover quarantine_lifted: a QuestItems event
+			if _quests and args.size() > 0:
+				_quests.recover(args[0])
 		"exam":                                  # > exam operator: into Sudo's sandbox
 			if args.size() > 0:
 				close()

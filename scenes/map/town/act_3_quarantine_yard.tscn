@@ -30,6 +30,8 @@
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/crate_tarp_large.tscn" id="53_crate_tarp_large"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/desk_medium.tscn" id="54_desk"]
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_tall.tscn" id="55_shelves"]
+[ext_resource type="PackedScene" uid="uid://d0uml10ovqxip" path="res://scenes/props/route_terminal/route_terminal.tscn" id="60_route"]
+[ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="61_vesper"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_yard"]
 
@@ -167,6 +169,13 @@ spawn_id = &"from_approach"
 create_room = false
 metadata/_note = "Where THE LAST MILE docks you: just inside the gate from Checkpoint Approach."
 
+[node name="from_district" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 0, 29)
+script = ExtResource("6_spawn")
+spawn_id = &"from_district"
+create_room = false
+metadata/_note = "Where the districts' portals put you: by the District Gate."
+
 [node name="PortalToApproach" type="Marker3D" parent="Layout"]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 25.5, 0, 30)
 script = ExtResource("7_portalm")
@@ -183,9 +192,9 @@ collision_layer = 5
 collision_mask = 3
 script = ExtResource("13_he07q")
 target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
-sealed_by_key = "quarantine_lifted"
+sealed_by_key = "inward_gate"
 solid_while_sealed = true
-metadata/_note = "Into Checkpoint proper. Sealed while Hardfault is in quarantine (Act III opens it)."
+metadata/_note = "The Inward Gate: the far side of Checkpoint. Act IV starts past it, and it stays shut until Act IV exists."
 
 [node name="Registrar" parent="." instance=ExtResource("32_registrar")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 31.5, 1.1, 27.5)
@@ -315,3 +324,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 3.2, 23.6)
 light_color = Color(1, 0.3, 0.25, 1)
 light_energy = 1.6
 omni_range = 7.0
+
+[node name="DistrictGate" parent="." instance=ExtResource("60_route")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 1.1, 26)
+npc_name = "District Gate"
+required_exam = ""
+prompt_text = "OPEN DISTRICT"
+info_title = "District Gate"
+info_description = "Checkpoint's internal transit. It answers to your quarantine level: clear what the duplicate left behind and more districts open."
+
+[node name="Vesper" parent="." instance=ExtResource("61_vesper")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27, 1.1, 34)

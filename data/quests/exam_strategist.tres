@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Pass the Strategist exam in Sudo's sandbox"
+kind = "exam_passed"
+target = "strategist"
+
+[resource]
+script = ExtResource("2_quest")
+id = "exam_strategist"
+title = "RANK EXAM: STRATEGIST"
+description = "Examiner Sudo wants a plan: three problems, three scripts. The District Gate stays shut until you pass.
+Sit the exam in Sudo's sandbox, a sealed bay replaying Checkpoint's quarantine logs. Three waves of samples: leaked memory, copied processes and marker drones. A different script set has to do most of the damage in each. The sandbox lends you set C for the exam.
+Graded PASS, MERIT or DISTINCTION. A few well-timed swaps grade better than swapping constantly. You can retake it later."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
+ordered = false
+prerequisite_quest_ids = Array[String](["q04c_the_last_mile"])
+reward_credits = 0
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Sudo"
+metadata/act = "III"

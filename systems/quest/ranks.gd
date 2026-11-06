@@ -74,6 +74,8 @@ static var lent := PackedStringArray()
 static func perk(rank: int, key: String) -> Variant:
 	if key in FLAG_PERKS and key in lent:
 		return true
+	if key == "sets" and key in lent:                 # the Strategist exam lends set 3
+		return SkillComponent.SCRIPT_SETS
 	var out: Variant = null
 	for i in mini(rank + 1, PERKS.size()):
 		if not PERKS[i].has(key):

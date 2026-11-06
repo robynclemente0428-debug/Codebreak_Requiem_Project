@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="4_rec"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("4_rec")
+description = "Carry the root key"
+kind = "recover"
+target = "root_key"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("1_obj")
+description = "Bring the root key to the Registrar"
+kind = "talk"
+target = "registrar"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("1_obj")
+description = "Hear out Vesper, out of quarantine"
+kind = "talk"
+target = "vesper"
+
+[sub_resource type="Resource" id="Objective_3"]
+script = ExtResource("1_obj")
+description = "Say goodbye to Brack"
+kind = "talk"
+target = "brack"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q06c_root_access"
+title = "ROOT ACCESS"
+description = "The root key can restore Hardfault's records and open what C-0 kept shut. The Registrar can't touch it, so you'll have to hand it over yourself.
+Then say what needs saying. Vesper is out of quarantine. Brack is staying."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q06b_the_collector"])
+reward_credits = 350
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Registrar"
+metadata/act = "III"

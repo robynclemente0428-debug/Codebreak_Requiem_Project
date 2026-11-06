@@ -13,6 +13,34 @@ source = "# Tinker Hex: trader. Sarcastic, fair. Gives Salvage Rights (Act I) an
 @ quest_ready:q04_the_overflow -> ready_q04_the_overflow
 @ quest_active:q04_the_overflow -> remind_q04_the_overflow
 @ can_start:q04_the_overflow -> offer_q04_the_overflow
+@ quest_ready:copied_stock -> ready_copied_stock
+@ quest_active:copied_stock -> remind_copied_stock
+@ can_start:copied_stock -> offer_copied_stock
+-> idle
+
+~ offer_copied_stock
+Hex: Somebody copied my inventory. I want royalties.
+Hex: Four crates at Mirror Dock, carried round by those husks. Same scratches, same price tags. Mine, exactly.
+* ACCEPT -> accept_copied_stock
+* DECLINE -> idle
+
+~ accept_copied_stock
+> start_quest copied_stock
+Hex: They shrug off the same trick twice. Bring a script that can change its mind.
+-> end
+
+~ remind_copied_stock
+Hex: Four crates. I counted them before they existed.
+-> idle
+
+~ ready_copied_stock
+Hex: That's them. Don't tell me how they smell the same.
+* TURN IN -> turnin_copied_stock
+* NOT YET -> idle
+
+~ turnin_copied_stock
+> turn_in copied_stock
+Hex: Paid in full. Nobody sells anything past that gate, which is why I'm going.
 -> idle
 
 ~ offer_clear_hub

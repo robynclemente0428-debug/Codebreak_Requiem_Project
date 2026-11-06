@@ -115,13 +115,26 @@ func countdown() -> void:
 	for n in [3, 2, 1]:
 		_show_flash("RUN IN %d" % n, ACCENT, 0.8)
 		await get_tree().create_timer(1.0, false).timeout
-	_show_flash("EXECUTE", COL_GOOD, 0.8)
+	if chamber.spec.wave_name(0) == "":          # otherwise the first wave's name goes up here
+		_show_flash("EXECUTE", COL_GOOD, 0.8)
+
+
+## A named wave starts: its name in big letters, in its colour, with what it is under it.
+func announce_wave(index: int, spec: ExamSpec, tint: Color) -> void:
+	var text := "WAVE %d // %s" % [index + 1, spec.wave_name(index)]
+	if spec.wave_note(index) != "":
+		text += "\n" + spec.wave_note(index)
+	_show_flash(text, tint, 1.6)
 
 
 func update_run(wave: int, waves: int, t: float, limit: float, fires: int, need: int, lost: float) -> void:
 	if _run_labels.size() < 4:
 		return
 	_run_labels[0].text = "WAVE      %d / %d" % [wave, waves]
+	var name_now := chamber.spec.wave_name(wave - 1)
+	if name_now != "":
+		_run_labels[0].text += "  " + name_now
+		_run_labels[0].add_theme_color_override("font_color", chamber.spec.wave_tint(wave - 1))
 	_run_labels[1].text = "TIME      %s / %s" % [_clock(t), _clock(limit)]
 	_run_labels[1].add_theme_color_override("font_color", COL_WARN if limit - t < 10.0 else COL_TEXT)
 	_run_labels[2].text = "%s  %d / %d" % [chamber.spec.required_condition_label, fires, need]
@@ -149,7 +162,11 @@ func show_result(r: Dictionary) -> void:
 			"+1" if r["fast"] else "+0"))
 	_result_box.add_child(_stat("HEALTH LOST", "%d%%  (par %d%%)" % [roundi(r["damage"] * 100.0),
 			roundi(spec.par_damage * 100.0)], "+1" if r["unhurt"] else "+0"))
-	_result_box.add_child(_stat("RULE FIRED", "%d times in %d casts" % [r["fires"], r["casts"]], ""))
+	if spec.set_per_wave:
+		_result_box.add_child(_stat("SETS USED", "%d of %d, in %d swaps  (par %d)" % [r["fires"],
+				spec.required_fires, r["swaps"], spec.par_swaps], ""))
+	else:
+		_result_box.add_child(_stat("RULE FIRED", "%d times in %d casts" % [r["fires"], r["casts"]], ""))
 	_result_box.add_child(_rule())
 	_result_box.add_child(_label("EXAMINER SUDO:", 16, ACCENT))
 	for line in ExamDebrief.lines(spec, r):

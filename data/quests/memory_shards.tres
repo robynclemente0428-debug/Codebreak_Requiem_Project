@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="4_rec"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("4_rec")
+description = "Restore the shard in the Registry"
+kind = "recover"
+target = "shard_registry"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("4_rec")
+description = "Restore the shard in the Heap"
+kind = "recover"
+target = "shard_heap"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("4_rec")
+description = "Restore the shard at Mirror Dock"
+kind = "recover"
+target = "shard_mirror"
+
+[sub_resource type="Resource" id="Objective_3"]
+script = ExtResource("4_rec")
+description = "Restore the shard in the Dangling Quarter"
+kind = "recover"
+target = "shard_dangling"
+
+[resource]
+script = ExtResource("2_quest")
+id = "memory_shards"
+title = "MEMORY SHARDS"
+description = "The Leak ate parts of Checkpoint's archive, and they are still lying where it dropped them. Restore a shard by holding its ring until it boots, while the Null come for it.
+There's one in each of the Registry, the Heap, Mirror Dock and the Dangling Quarter."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3")])
+ordered = false
+prerequisite_quest_ids = Array[String](["q04c_the_last_mile"])
+reward_credits = 300
+reward_support_choice = true
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Registrar"
+metadata/act = "III"

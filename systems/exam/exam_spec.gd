@@ -33,12 +33,62 @@ extends Resource
 @export var fail_health: float = 0.25              # the sandbox ends the run below this
 @export var wave_enemy: EnemyDefinition
 @export var wave_sizes: Array[int] = [4, 6, 8]
+## A different enemy for each wave (empty = wave_enemy for all).
+@export var wave_enemies: Array[EnemyDefinition] = []
+## Comma-separated modifier ids for each wave: a file in data/enemy_modifiers, or a dungeon threat
+## ("firewalled"). Empty = none.
+@export var wave_mods: Array[String] = []
+## The Strategist exam: every set needs a script, each wave needs a different set doing most of
+## its damage (counted as the fires, against required_fires), and the time point also asks for no
+## more than par_swaps set swaps.
+@export var set_per_wave := false
+@export var par_swaps := 5
 @export var enemy_level: int = 1
 @export var spawn_radius: float = 8.5
+
+@export_group("Look")
+## Tiles for the sandbox floor and walls (Floor, Wall and Room_Floor items). Null = raw grid in the void.
+@export var arena_tiles: MeshLibrary
+## What each wave is called, on the HUD and in big letters as it starts. Empty = just its number.
+@export var wave_names: Array[String] = []
+## A short line under the name as the wave starts: what it is, so the player can plan the swap.
+@export var wave_notes: Array[String] = []
+## The hologram colour of each wave. A wave with none is cyan. With arena_tiles, each wave also has
+## a sample tank at the rim in its colour.
+@export var wave_tints: Array[Color] = []
 
 ## The quest event a first pass reports ("exam_passed", rank_id): the exam quest's objective.
 const PASS_EVENT := "exam_passed"
 const GRADES := ["PASS", "MERIT", "DISTINCTION"]
+const DEFAULT_TINT := Color(0.25, 0.95, 1.0)
+
+
+## The modifiers wave `index` (from 0) spawns with.
+func mods_for_wave(index: int) -> Array:
+	var out: Array = []
+	if index >= wave_mods.size():
+		return out
+	for id in wave_mods[index].split(",", false):
+		var path := "res://data/enemy_modifiers/%s.tres" % id.strip_edges()
+		if ResourceLoader.exists(path):
+			out.append(load(path))
+		else:
+			var threat := DungeonThreats.trait_def(id.strip_edges())
+			if threat != null:
+				out.append(threat)
+	return out
+
+
+func wave_name(index: int) -> String:
+	return wave_names[index] if index >= 0 and index < wave_names.size() else ""
+
+
+func wave_note(index: int) -> String:
+	return wave_notes[index] if index >= 0 and index < wave_notes.size() else ""
+
+
+func wave_tint(index: int) -> Color:
+	return wave_tints[index] if index >= 0 and index < wave_tints.size() else DEFAULT_TINT
 
 
 static func load_for(rank: String) -> ExamSpec:

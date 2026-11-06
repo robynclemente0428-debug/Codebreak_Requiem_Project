@@ -139,7 +139,7 @@ void fragment() {
 			col = mix(col, ice * 0.3, line);
 		} else {
 			float y = uv.y;                                          // -1 bottom .. 1 top of the block
-			bool upper = tile.y > 2.0;                               // second block of a 2-high wall
+			bool upper = tile.y > 1.5;                               // second block of a 2-high wall
 			float seam = step(0.96, abs(uv.x));
 			if (upper) {
 				col = ceramic * (0.8 + grain * 0.2);

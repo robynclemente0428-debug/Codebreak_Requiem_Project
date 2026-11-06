@@ -7,12 +7,15 @@ script = ExtResource("1_dlg")
 source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss quests (Acts I to III).
 # Lines marked NEW are not in the campaign doc yet.
 ~ start
+@ quest_done:q06c_root_access -> farewell_after
+@ quest_active:q06c_root_access -> farewell
 @ quest_ready:tut_basics -> ready_tut_basics
 @ quest_active:tut_basics -> remind_tut_basics
 @ can_start:tut_basics -> offer_tut_basics
 @ quest_ready:q00_proximity_trigger -> ready_q00_proximity_trigger
 @ quest_active:q00_proximity_trigger -> remind_q00_proximity_trigger
 @ can_start:q00_proximity_trigger -> offer_q00_proximity_trigger
+@ quest_ready:q06b_the_collector -> ready_q06b_the_collector
 @ quest_ready:q06_the_mimic -> ready_q06_the_mimic
 @ quest_ready:q05_the_leak -> ready_q05_the_leak
 @ quest_ready:q04c_the_last_mile -> ready_q04c_the_last_mile
@@ -30,6 +33,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 -> main
 
 ~ main
+@ quest_active:q06b_the_collector -> remind_q06b_the_collector
 @ quest_active:q06_the_mimic -> remind_q06_the_mimic
 @ quest_active:q05_the_leak -> remind_q05_the_leak
 @ quest_active:q04c_the_last_mile -> remind_q04c_the_last_mile
@@ -48,6 +52,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ can_start:q04c_the_last_mile -> offer_q04c_the_last_mile
 @ can_start:q05_the_leak -> offer_q05_the_leak
 @ can_start:q06_the_mimic -> offer_q06_the_mimic
+@ can_start:q06b_the_collector -> offer_q06b_the_collector
 @ quest_active:ward_beacons_inner -> remind_beacons_inner
 @ quest_active:ward_beacons_outer -> remind_beacons_outer
 -> idle
@@ -351,20 +356,24 @@ Brack: We're docked. Inside a fence, but docked. Hex and Sudo are setting up in 
 -> start
 
 ~ offer_q05_the_leak
-Brack: Something is eating Checkpoint’s memory. It splits every time we hit it.
+Brack: Something is eating Checkpoint's memory. It splits every time it's hit.
+Brack: The Registrar says it's what's left of the other us. I'm not asking how that works.
 * ACCEPT -> accept_q05_the_leak
 * DECLINE -> end
-
 ~ accept_q05_the_leak
 > start_quest q05_the_leak
-# NEW line below: matches the AREA script task
-Brack: Hit it hard and hit it wide. Script a Slam or a Blast, something that catches every piece.
+Brack: Script whatever you like. A Slam, a cleave, a chain, something fast. It just has to catch the pieces.
+Brack: Pieces you kill one at a time come back. Kill three inside a couple of seconds and they stay dead. Then hit the big one.
+Brack: The District Gate by the yard wall goes to the Heap, but quarantine won't open it for an unranked process.
+Brack: Pass Sudo's Strategist exam first. Then go.
 -> end
-
 ~ remind_q05_the_leak
-# NEW line below
-Brack: It's still splitting. Hit it wider.
-
+@ !quest_done:exam_strategist -> remind_q05_exam
+Brack: It's still splitting. Kill the pieces together.
+-> end
+~ remind_q05_exam
+Brack: The Gate won't open until Sudo passes you. Strategist exam. Go.
+-> end
 ~ ready_q05_the_leak
 Brack: Done?
 * TURN IN -> turnin_q05_the_leak
@@ -372,23 +381,21 @@ Brack: Done?
 
 ~ turnin_q05_the_leak
 > turn_in q05_the_leak
-Brack: The leak is sealed. We can finally rest.
+Brack: It's sealed. Something fell out of it. The Registrar wants to see.
 -> start
-
 ~ offer_q06_the_mimic
 Brack: A Null thing is copying everything we do. It copied my voice yesterday.
+Brack: It's in Mirror Dock, where the other convoy docked. It knows my name.
 * ACCEPT -> accept_q06_the_mimic
 * DECLINE -> end
-
 ~ accept_q06_the_mimic
 > start_quest q06_the_mimic
 Brack: Vary your pattern. A copied skill is a defeated skill.
+Brack: Swapping won't fool it; it copies the swap. Your script has to change its own mind. Two rules, one skill.
 -> end
-
 ~ remind_q06_the_mimic
-# NEW line below
 Brack: Change your pattern. It's learning.
-
+-> end
 ~ ready_q06_the_mimic
 Brack: Done?
 * TURN IN -> turnin_q06_the_mimic
@@ -396,8 +403,44 @@ Brack: Done?
 
 ~ turnin_q06_the_mimic
 > turn_in q06_the_mimic
-Brack: It’s gone. I never want to hear that voice again.
+Brack: It's gone. I never want to hear that voice again.
+Brack: It said my line. The one from the dock. It meant it, too.
 -> start
+~ offer_q06b_the_collector
+Brack: The thing that deleted us is still running. It's marking our crates now. Our people next.
+* ACCEPT -> accept_q06b_the_collector
+* DECLINE -> end
+
+~ accept_q06b_the_collector
+> start_quest q06b_the_collector
+Brack: Sudo says it sorts what it kills. Three kinds. Bring a script for each.
+Brack: Wrong script for the phase and it gets stronger. Watch the banner.
+-> end
+
+~ remind_q06b_the_collector
+Brack: It's still sweeping. End it.
+-> end
+
+~ ready_q06b_the_collector
+Brack: Done?
+* TURN IN -> turnin_q06b_the_collector
+* NOT YET -> end
+
+~ turnin_q06b_the_collector
+> turn_in q06b_the_collector
+Brack: It's done. First time since Hardfault there's nothing hunting us.
+Brack: Take that key to the Registrar. Let's find out what it opens.
+-> end
+
+~ farewell
+Brack: This is where I stop. Somebody has to keep them alive here.
+Brack: I saw what a copy of me looks like. It kept moving. I'd rather stay put and be real.
+Brack: Go. Come back if there's a back to come to.
+-> end
+
+~ farewell_after
+Brack: Still here. That's the point.
+-> end
 
 ~ offer_tut_basics
 Brack: Recruit. Before anything else, you learn the basics.

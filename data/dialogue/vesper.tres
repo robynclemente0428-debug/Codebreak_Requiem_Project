@@ -6,6 +6,7 @@
 script = ExtResource("1_dlg")
 source = "# Vesper: Null Speaker, guide to the Core (Acts IV and V). Calm, eerie.
 ~ start
+@ quest_active:q06c_root_access -> out_of_quarantine
 @ quest_ready:q08_null_gatekeeper -> ready_q08_null_gatekeeper
 @ quest_ready:q07_null_weaver_prime -> ready_q07_null_weaver_prime
 @ quest_active:q08_null_gatekeeper -> remind_q08_null_gatekeeper
@@ -13,6 +14,11 @@ source = "# Vesper: Null Speaker, guide to the Core (Acts IV and V). Calm, eerie
 @ can_start:q07_null_weaver_prime -> offer_q07_null_weaver_prime
 @ can_start:q08_null_gatekeeper -> offer_q08_null_gatekeeper
 -> idle
+
+~ out_of_quarantine
+Vesper: Eleven days of listening. It hasn't stopped calling. It's calling you.
+Vesper: The copy had no Executor in it. It can copy any process, but not one that rewrites itself.
+-> end
 
 ~ offer_q07_null_weaver_prime
 Vesper: You can hear it, can’t you? The Null speaks. You just never listened.

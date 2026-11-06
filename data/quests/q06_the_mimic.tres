@@ -4,30 +4,29 @@
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
 [ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
 
-[sub_resource type="Resource" id="Objective_1"]
+[sub_resource type="Resource" id="Objective_0"]
 script = ExtResource("3_prog")
 description = "Give one skill two WHEN rules"
 kind = "program_branches"
 
-
-[sub_resource type="Resource" id="Objective_2"]
+[sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
-description = "Defeat The Mimic"
+description = "Defeat The Mimic at Mirror Dock"
 kind = "kill"
 target = "the_mimic"
-metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 
 [resource]
 script = ExtResource("2_quest")
 id = "q06_the_mimic"
 title = "THE MIMIC"
-description = "A Null thing is copying everything we do.
-BOSS TRAIT: copies your equipped skill. Predictable scripts get used against you.
-SCRIPT TASK: give one skill two different WHEN rules, so its pattern changes."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+description = "One process escaped the deletion: the copy's Brack. It lives in Mirror Dock among the frozen copies, speaking in his voice.
+LOCK: DIFF. It copies what hits it. A cast where the same WHEN rule fired as last time does nothing. A cast where a different rule fired lands. Swapping skills or script sets doesn't help: it copies the swap.
+TIP: good pairs of rules are enemies_nearby and every_nth_cast, or target_life_below and hit_recently. Mirror Husks in the Dangling Quarter have the same lock, for practice.
+SCRIPT TASK: give one skill two different WHEN rules."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q05_the_leak"])
-reward_credits = 175
+reward_credits = 225
 metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "Brack"
 metadata/act = "III"

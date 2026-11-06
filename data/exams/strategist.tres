@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="ExamSpec" format=3]
+
+[ext_resource type="Script" path="res://systems/exam/exam_spec.gd" id="1_spec"]
+[ext_resource type="Resource" path="res://data/enemies/sample_copy.tres" id="2_copy"]
+[ext_resource type="Resource" path="res://data/enemies/sample_leak.tres" id="3_leak"]
+[ext_resource type="Resource" path="res://data/enemies/sample_marker.tres" id="5_marker"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act3_yard_meshes.tres" id="6_tiles"]
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="4_def"]
+
+[resource]
+script = ExtResource("1_spec")
+rank_id = "strategist"
+title = "STRATEGIST EXAM"
+brief = Array[String](["Three samples, replayed from Checkpoint's quarantine logs: a swarm of leaked memory, armoured copied processes, then fast marker drones that hit hard.", "A different script set has to do most of the damage in each wave. Write a script in each of sets A, B and C.", "The sandbox lends you set C for the exam. Swap on purpose: 5 swaps or fewer counts towards the grade."])
+required_condition = ""
+required_condition_label = "sets used"
+required_fires = 3
+lends = Array[String](["sets"])
+time_limit = 120.0
+par_time = 80.0
+par_damage = 0.35
+fail_health = 0.25
+wave_enemy = ExtResource("2_copy")
+wave_sizes = Array[int]([10, 3, 4])
+wave_enemies = Array[ExtResource("4_def")]([ExtResource("3_leak"), ExtResource("2_copy"), ExtResource("5_marker")])
+wave_mods = Array[String](["", "firewalled,ironclad", "rapid,swift"])
+set_per_wave = true
+par_swaps = 5
+enemy_level = 8
+spawn_radius = 8.5
+arena_tiles = ExtResource("6_tiles")
+wave_names = Array[String](["LEAKED MEMORY", "COPIED PROCESSES", "MARKER DRONES"])
+wave_notes = Array[String](["A swarm. Weak alone, never alone.", "Few and armoured. Hit hard.", "Fast, and they hit hard. Don't let them settle."])
+wave_tints = Array[Color]([Color(0.8, 0.3, 1, 1), Color(0.55, 0.9, 1, 1), Color(1, 0.22, 0.16, 1)])

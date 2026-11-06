@@ -18,7 +18,10 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 		"PROCESS TERMINATED":
 			out.append("I pulled you out before they did. A rule that fires earlier keeps them off you.")
 		"SPEC NOT MET":
-			if spec.required_stop_loop:
+			if spec.set_per_wave:
+				out.append("%d script sets did the work. I asked for %d. Each sample needs its own answer." \
+						% [fires, spec.required_fires])
+			elif spec.required_stop_loop:
 				out.append("Your loop repeated %d times. I asked for %d. Let it run longer before it stops, or raise its count." \
 						% [fires, spec.required_fires])
 			else:
@@ -28,7 +31,13 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 			out.append(["Passed. Barely, but passed.", "Solid work.", "Flawless. Nothing wasted."][r["grade"]])
 
 	# The rule against the casts (a loop: its repeats against the casts)
-	if spec.required_stop_loop:
+	if spec.set_per_wave:
+		var swaps: int = r.get("swaps", 0)
+		if swaps > spec.par_swaps:
+			out.append("%d swaps. A plan needs about %d. That wasn't a plan, it was a nervous habit." % [swaps, spec.par_swaps])
+		else:
+			out.append("%d swaps, each with a reason. That's a plan." % swaps)
+	elif spec.required_stop_loop:
 		if casts > 0 and fires == 0:
 			out.append("You cast %d times and your loop never repeated once." % casts)
 		elif casts > 0:
@@ -50,6 +59,9 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 	elif casts > 0 and fires == 0:
 		out.append("You cast %d times and %s never fired once." % [casts, cond])
 
+	if spec.set_per_wave and r["passed"] and r["grade"] < 2:
+		out.append("Those were recordings. The real ones are past the District Gate, and I can't pull you out of there.")
+
 	# The script itself
 	match r["tier"]:
 		"elegant":
@@ -62,7 +74,10 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 	# The points it missed
 	if r["passed"]:
 		if not r["fast"]:
-			out.append("Clear it within %d seconds for the time point." % int(spec.par_time))
+			if spec.set_per_wave:
+				out.append("Clear it within %d seconds, in %d swaps or fewer, for that point." % [int(spec.par_time), spec.par_swaps])
+			else:
+				out.append("Clear it within %d seconds for the time point." % int(spec.par_time))
 		if not r["unhurt"]:
 			out.append("You lost %d%% of your health. Keep it under %d%% for the last point." \
 					% [roundi(r["damage"] * 100.0), roundi(spec.par_damage * 100.0)])

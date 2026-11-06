@@ -11,7 +11,7 @@ code = "shader_type spatial;
 render_mode diffuse_burley, specular_schlick_ggx;
 
 uniform int piece = 0;
-uniform vec3 glass : source_color = vec3(0.21, 0.20, 0.30);
+uniform vec3 glass : source_color = vec3(0.30, 0.29, 0.40);
 uniform vec3 rack : source_color = vec3(0.30, 0.28, 0.40);
 uniform vec3 pit : source_color = vec3(0.05, 0.05, 0.08);
 uniform vec3 accent : source_color = vec3(0.62, 0.28, 1.0);      // Custodian violet
@@ -117,19 +117,19 @@ void fragment() {
 			vec2 f = fract(g) - 0.5;
 			float cell = step(max(abs(f.x), abs(f.y)), 0.43);
 			float r = hash(id + tile.xz * 0.37);
-			float bit = step(0.93, r);
+			float bit = step(0.975, r);
 			if (detail) {
 				float rate = 0.2 + r * 1.2;
-				bit = step(0.9, hash(id * 1.7 + vec2(floor(TIME * rate + r * 9.0) + th)));
+				bit = step(0.97, hash(id * 1.7 + vec2(floor(TIME * rate + r * 9.0) + th)));
 			}
-			col = mix(pit, glass * (0.9 + 0.5 * r) * (0.9 + grain * 0.2), cell);
+			col = mix(pit, glass * (0.95 + 0.2 * r) * (0.9 + grain * 0.2), cell);
 			vec3 lit = mix(accent, ice, step(0.5, r));
-			col = mix(col, lit * 0.3, bit * cell);
-			em += lit * glow * bit * cell * 0.4;
+			col = mix(col, lit * 0.16, bit * cell);
+			em += lit * glow * bit * cell * 0.14;
 			// the block's address line round the edge
 			float ring = step(0.93, m) * step(m, 0.97);
-			em += accent * glow * ring * 0.3;
-			col = mix(col, accent * 0.35, ring);
+			em += accent * glow * ring * 0.12;
+			col = mix(col, accent * 0.2, ring);
 			em += mark * glow * scan_line(wp, 0.09) * 0.18;
 		} else {
 			col = pit;

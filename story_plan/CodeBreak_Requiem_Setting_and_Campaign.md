@@ -75,7 +75,7 @@ Five acts, three endings. Each act is built around its boss fights. Every boss h
 | IV | Into the Null | The Null Zone | n/a | Null Weaver Prime, Null Gatekeeper | Engineer |
 | V | Final Execution | The Core | n/a | Core Sentinel, Root Process | Defragmenter |
 
-Status: Acts I and II are built, and so is the Act II → III transition (The Last Mile) with the Act III hub. The rest of Act III, and Acts IV and V, have their boss quests and dialogue stubbed but no zones or boss locks yet. The Act III plan is in `CodeBreak_Requiem_Act_III_Plan.md`.
+Status: Acts I, II and III are built, Act III through Root Access (details and differences in `CodeBreak_Requiem_Act_III_Plan.md`). Acts IV and V are still to come.
 
 ---
 
@@ -150,7 +150,7 @@ Status: Acts I and II are built, and so is the Act II → III transition (The La
 
 | Quest | Giver | Boss Trait | Script Task |
 |---|---|---|---|
-| The Leak | Brack | A mass of corrupted memory that splits into smaller blobs when hit. Use area attacks. | Script an AREA skill (Slam or Blast). |
+| The Leak | Brack | A mass of corrupted memory that splits into smaller blobs when hit. Kill them together, by any means. | Free 3 blobs by killing them within 2 seconds. |
 | The Mimic | Brack | Copies the player’s equipped skill, so predictable scripts get used against you. | Give one skill two different WHEN rules, so its pattern changes. |
 | Rank Exam: Strategist | Sudo | n/a | Not designed yet (planned: a sandbox exam that needs more than one script set). |
 
@@ -228,7 +228,7 @@ The block-based scripting system has no functions (`def`) or free variables. The
 ## Known Gaps
 
 - **Strategist, Defragmenter and Theorist exams** have no quests yet (`exam_strategist`, `exam_defragmenter`, `exam_theorist`).
-- **Act III** has its hub and transition, but no districts or boss locks yet. **Acts IV and V** have no zones, hub, transition quest or boss locks.
+- **Act III** has no Sweeps road event yet, and the Inward Gate stays shut until Act IV exists. **Acts IV and V** have no zones, hub, transition quest or boss locks yet.
 - **Naming:** the Architect rank shares its name with the Architects who built AXIOM. Keep it only if earning the creators' title is intentional.
 - **Convoy losses:** the v1 dialogue doc tied Act II losses to the endings (REQ025, REQ026). The game does not track convoy losses yet.
 

@@ -57,6 +57,19 @@ func setup(caster: Node3D, stats: StatComponent, gems: Array,
 				skill.supports.map(func(s: SupportGemDefinition) -> String: return s.id)])
 
 
+## The Mimic (DiffLock): from now on this is the only skill it has.
+func copy_skill(gem: SkillGemDefinition) -> void:
+	if gem == null or (_skills.size() == 1 and _skills[0].gem == gem):
+		return
+	var skill := SkillInstance.new()
+	skill.gem = gem
+	skill.rebuild()
+	_skills.clear()
+	_ready_at.clear()
+	_skills.append(skill)
+	_ready_at[skill] = Time.get_ticks_msec() + 1500
+
+
 ## A "for i in range(repeats)" program on the skill, run by the same loop code as the player's.
 ## Enemies have no rank or budget, so it gets the top rank and points to spare.
 func _give_loop(skill: SkillInstance, repeats: int) -> void:

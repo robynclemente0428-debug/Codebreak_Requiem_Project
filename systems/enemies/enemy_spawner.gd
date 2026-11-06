@@ -100,7 +100,7 @@ static func spawn_enemy(def: EnemyDefinition, rarity: String, parent: Node,
 		enemy.modifiers = mods                  # the hover plate reads this
 	enemy.rarity = rarity                       # needs `var rarity := "normal"` on enemy_base.gd
 	enemy.level = level                         # traits scale with it (Reflector's zap)
-	enemy.display_name = ("%s %s" % [" ".join(name_parts), def.display_name]).strip_edges()
+	enemy.display_name = _with_prefixes(def.display_name, name_parts)
 	if not def.skills.is_empty():               # needs `skills` on EnemyDefinition
 		var caster := EnemySkills.new()
 		caster.name = "EnemySkills"
@@ -152,6 +152,16 @@ static func empower(enemy: Node3D, health: float, armour: float, damage: float, 
 	var hp = enemy.get("health")
 	if hp is HealthComponent:
 		hp.revive(1.0)                          # full, at the new maximum
+
+
+## The modifiers' words before the name, after a leading "The": "The Brutal Leak", not "Brutal The Leak".
+static func _with_prefixes(base: String, prefixes: Array[String]) -> String:
+	var words := " ".join(prefixes)
+	if words == "":
+		return base
+	if base.begins_with("The "):
+		return "The %s %s" % [words, base.substr(4)]
+	return "%s %s" % [words, base]
 
 
 ## An EnemyTrait node from `script`, set up on the enemy and listed in enemy.traits.

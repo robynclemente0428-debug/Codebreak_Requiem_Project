@@ -138,12 +138,17 @@ static func route_open(w: Waypoint) -> bool:
 
 ## True when the stop needs no quest key (Waypoint.route_needs_key), or the player has it.
 static func route_key_ok(w: Waypoint) -> bool:
-	if w == null or w.route_needs_key == "":
+	if w == null or (w.route_needs_key == "" and w.route_needs_quests.is_empty()):
 		return true
 	var tree := Engine.get_main_loop() as SceneTree
 	var player := tree.get_first_node_in_group("players") if tree != null else null
 	var qm = player.get("quests") if player != null else null
-	return qm != null and qm.has_recovered(w.route_needs_key)
+	if qm == null or (w.route_needs_key != "" and not qm.has_recovered(w.route_needs_key)):
+		return false
+	for id in w.route_needs_quests:
+		if not qm.is_completed(id):
+			return false
+	return true
 
 
 ## Marks a convoy stop cleared (its exit portal was reached). Returns the stops this opened, so
@@ -207,7 +212,7 @@ static func blocked_reason(w: Waypoint, tree: SceneTree, new_instance := false) 
 	if not is_discovered(w):
 		return "UNDISCOVERED"
 	if is_convoy_stop(w):
-		return "BOARD THE CONVOY: USE ITS ROUTE TERMINAL"
+		return "USE THE ROUTE TERMINAL OR THE DISTRICT GATE"
 	var am := tree.get_first_node_in_group("area_manager") as AreaManager
 	if am == null:
 		return "NO AREA MANAGER"

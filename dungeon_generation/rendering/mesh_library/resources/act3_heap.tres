@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="DungeonTheme" format=3]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_y1pdq"]
+[ext_resource type="Script" uid="uid://s1hliskd6ob6" path="res://systems/equipment/item_definition.gd" id="2_2w6d7"]
+[ext_resource type="Script" uid="uid://ieg5mjinobvq" path="res://dungeon_generation/rendering/dungeon_theme.gd" id="3_0ds1j"]
+[ext_resource type="Resource" uid="uid://ds0o3urv735o3" path="res://data/items/weapons/sword/rusted_sword.tres" id="4_4y11d"]
+[ext_resource type="Resource" uid="uid://5wcc10hr6kfn" path="res://data/items/weapons/axe/hatchet.tres" id="5_u6yo1"]
+[ext_resource type="Resource" uid="uid://c5w0dbasi6aqc" path="res://data/items/equipment/shield/scrap_shield.tres" id="6_mywbb"]
+[ext_resource type="Resource" uid="uid://c6ba8tmmiqaah" path="res://data/items/weapons/assault_rifle/service_rifle.tres" id="7_jur4a"]
+[ext_resource type="Resource" uid="uid://bkrblaghcl1ep" path="res://data/items/weapons/sniper/hunting_rifle.tres" id="8_em106"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act3_district_meshes.tres" id="10_4y11d"]
+[ext_resource type="Resource" uid="uid://yo5adppnm8wq" path="res://data/enemies/eye_drone.tres" id="e_drone"]
+[ext_resource type="Resource" uid="uid://0snu8whe2s7u" path="res://data/enemies/enchanter_boss.tres" id="e_enchanter"]
+[ext_resource type="Resource" uid="uid://6u4xrmsv0ii1" path="res://data/enemies/loop_hound.tres" id="e_hound"]
+[ext_resource type="Resource" uid="uid://0romkytgua4l" path="res://data/enemies/raider_boss.tres" id="e_raider"]
+[ext_resource type="Resource" uid="uid://dphsiomklvcyf" path="res://data/enemies/quad_shell.tres" id="e_shell"]
+[ext_resource type="Resource" uid="uid://depmvkkww0w1u" path="res://data/enemies/trilobite.tres" id="e_trilo"]
+[ext_resource type="Resource" path="res://data/enemies/leak_blob.tres" id="x_0"]
+
+[resource]
+script = ExtResource("3_0ds1j")
+mesh_library = ExtResource("10_4y11d")
+enemy_pool = Array[ExtResource("1_y1pdq")]([ExtResource("e_drone"), ExtResource("e_shell"), ExtResource("e_trilo"), ExtResource("e_hound"), ExtResource("e_raider"), ExtResource("e_enchanter"), ExtResource("x_0")])
+enemies_per_room_min = 5
+enemies_per_room_max = 12
+room_rarity_weights = {
+"champion": 5,
+"magic": 35,
+"normal": 45,
+"rare": 15
+}
+branch_rarity_weights = {
+"champion": 5,
+"magic": 35,
+"normal": 45,
+"rare": 15
+}
+loot_pool = Array[ExtResource("2_2w6d7")]([ExtResource("4_4y11d"), ExtResource("5_u6yo1"), ExtResource("6_mywbb"), ExtResource("7_jur4a"), ExtResource("8_em106")])
+loot_include_gems = true
+loot_folders = Array[String]([])
+metadata/_custom_type_script = "uid://ieg5mjinobvq"

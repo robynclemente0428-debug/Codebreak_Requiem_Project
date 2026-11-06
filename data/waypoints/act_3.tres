@@ -10,11 +10,105 @@ display_name = "The Quarantine Yard"
 scene = "res://scenes/map/town/act_3_quarantine_yard.tscn"
 kind = 0
 map_position = Vector2(0.08, 0.5)
+links = Array[String](["act3_registry", "act3_heap"])
 note = "Brack, Sudo, Hex, the Registrar. Hardfault, docked and in quarantine"
+
+[sub_resource type="Resource" id="Waypoint_act3_registry"]
+script = ExtResource("2_wp")
+id = "act3_registry"
+display_name = "The Registry"
+scene = "res://scenes/map/dungeon/act_3_registry.tscn"
+spawn_id = &"registry_in"
+dungeon_level = 22
+kind = 1
+map_position = Vector2(0.26, 0.26)
+links = Array[String](["act3_yard", "act3_mirror_dock"])
+note = "Level 22  -  Custodian archive. Quarantine level 3"
+random_threats = Vector2i(1, 1)
+route_needs_quests = Array[String](["exam_strategist"])
+route_needs_text = "QUARANTINE: PASS SUDO'S STRATEGIST EXAM FIRST"
+
+[sub_resource type="Resource" id="Waypoint_act3_heap"]
+script = ExtResource("2_wp")
+id = "act3_heap"
+display_name = "The Heap"
+scene = "res://scenes/map/dungeon/act_3_heap.tscn"
+spawn_id = &"heap_in"
+dungeon_level = 23
+kind = 2
+map_position = Vector2(0.26, 0.74)
+links = Array[String](["act3_yard", "act3_dangling_quarter"])
+note = "Level 23  -  The Leak (REFCOUNT). Quarantine level 3"
+threats = Array[String](["swarm"])
+random_threats = Vector2i(0, 1)
+route_needs_quests = Array[String](["exam_strategist"])
+route_needs_text = "QUARANTINE: PASS SUDO'S STRATEGIST EXAM FIRST"
+
+[sub_resource type="Resource" id="Waypoint_act3_mirror_dock"]
+script = ExtResource("2_wp")
+id = "act3_mirror_dock"
+display_name = "Mirror Dock"
+scene = "res://scenes/map/dungeon/act_3_mirror_dock.tscn"
+spawn_id = &"mirror_in"
+dungeon_level = 25
+kind = 2
+map_position = Vector2(0.5, 0.26)
+links = Array[String](["act3_registry", "act3_mark_yards"])
+note = "Level 25  -  The Mimic (DIFF). Quarantine level 2"
+random_threats = Vector2i(1, 1)
+route_needs_quests = Array[String](["q05_the_leak"])
+route_needs_text = "QUARANTINE LEVEL 3: DEFEAT THE LEAK, THEN REPORT TO BRACK"
+
+[sub_resource type="Resource" id="Waypoint_act3_dangling_quarter"]
+script = ExtResource("2_wp")
+id = "act3_dangling_quarter"
+display_name = "Dangling Quarter"
+scene = "res://scenes/map/dungeon/act_3_dangling_quarter.tscn"
+spawn_id = &"dangling_in"
+dungeon_level = 25
+kind = 1
+map_position = Vector2(0.5, 0.74)
+links = Array[String](["act3_heap", "act3_mark_yards"])
+note = "Level 25  -  Pointers to nothing. Mirror Husks (DIFF). Quarantine level 2"
+random_threats = Vector2i(1, 1)
+route_needs_quests = Array[String](["q05_the_leak"])
+route_needs_text = "QUARANTINE LEVEL 3: DEFEAT THE LEAK, THEN REPORT TO BRACK"
+
+[sub_resource type="Resource" id="Waypoint_act3_mark_yards"]
+script = ExtResource("2_wp")
+id = "act3_mark_yards"
+display_name = "Mark Yards"
+scene = "res://scenes/map/dungeon/act_3_mark_yards.tscn"
+spawn_id = &"marks_in"
+dungeon_level = 27
+kind = 1
+map_position = Vector2(0.72, 0.5)
+links = Array[String](["act3_mirror_dock", "act3_dangling_quarter", "act3_sweep"])
+note = "Level 27  -  The Collector's marking floors. Quarantine level 1"
+threats = Array[String](["firewalled"])
+random_threats = Vector2i(0, 1)
+route_needs_quests = Array[String](["q06_the_mimic"])
+route_needs_text = "QUARANTINE LEVEL 2: DEFEAT THE MIMIC"
+
+[sub_resource type="Resource" id="Waypoint_act3_sweep"]
+script = ExtResource("2_wp")
+id = "act3_sweep"
+display_name = "The Sweep"
+scene = "res://scenes/map/dungeon/act_3_sweep.tscn"
+spawn_id = &"sweep_in"
+dungeon_level = 29
+kind = 2
+map_position = Vector2(0.92, 0.5)
+links = Array[String](["act3_mark_yards"])
+note = "Level 29  -  The Collector (GENERATIONS). Quarantine level 0"
+random_threats = Vector2i(1, 1)
+route_needs_quests = Array[String](["q06_the_mimic", "exam_strategist"])
+route_needs_text = "QUARANTINE LEVEL 1: DEFEAT THE MIMIC AND PASS THE STRATEGIST EXAM"
 
 [resource]
 script = ExtResource("1_act")
 act_number = 3
 title = "ACT III"
-subtitle = "CHECKPOINT  -  Root Access"
-waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act3_yard")])
+subtitle = "CHECKPOINT  -  Root Access  -  Levels 22-29"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act3_yard"), SubResource("Waypoint_act3_registry"), SubResource("Waypoint_act3_heap"), SubResource("Waypoint_act3_mirror_dock"), SubResource("Waypoint_act3_dangling_quarter"), SubResource("Waypoint_act3_mark_yards"), SubResource("Waypoint_act3_sweep")])
+convoy_route = true

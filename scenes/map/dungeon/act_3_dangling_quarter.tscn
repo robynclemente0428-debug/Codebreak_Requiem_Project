@@ -1,0 +1,107 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://blbsgtjt3mdxp" path="res://scenes/map/dungeon/dungeon.gd" id="1_dun"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_portal"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act3_dangling.tres" id="4_theme"]
+[ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act3_district_meshes.tres" id="6_mesh"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
+[ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="10_enemym"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_1"]
+agent_height = 1.8
+agent_radius = 0.3
+
+[node name="DanglingQuarter" type="Node3D"]
+script = ExtResource("1_dun")
+dungeon_level = 25
+respawn_spawn_id = &"dangling_in"
+portal_scene = ExtResource("2_portal")
+metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
+
+[node name="DungeonDirector" type="Node" parent="." node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("3_dir")
+grid_width = 100
+grid_height = 100
+corridor_width = 2
+min_room_size = 4
+max_room_size = 7
+room_interval = 6
+num_branch_rooms = 5
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_theme")
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+filler_rooms = true
+random_rooms = 7
+random_room_spread = 16
+metadata/_custom_type_script = "uid://b5gwgfu4bdnrx"
+
+[node name="DungeonPopulator" type="Node" parent="." node_paths=PackedStringArray("director", "enemies_root", "loot_root")]
+script = ExtResource("5_pop")
+director = NodePath("../DungeonDirector")
+enemies_root = NodePath("../Enemies")
+loot_root = NodePath("../Loot")
+ward_beacon_id = "shard_dangling"
+metadata/_custom_type_script = "uid://gvonfu37eay0"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_1")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D"]
+mesh_library = ExtResource("6_mesh")
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Loot" type="Node3D" parent="."]
+
+[node name="Layout" type="Node3D" parent="."]
+
+[node name="PortalBack" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 100, 1, 180)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
+target_spawn = &"from_district"
+arrival_spawn_id = &"dangling_in"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnIn" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 102.5, 0, 180)
+script = ExtResource("8_spawnm")
+spawn_id = &"dangling_in"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="PortalNext" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 100, 1, 20)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
+target_spawn = &"from_district"
+arrival_spawn_id = &"dangling_out"
+clears_stop = "act3_dangling_quarter"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnOut" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 99, 0, 20)
+script = ExtResource("8_spawnm")
+spawn_id = &"dangling_out"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="Room1" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 50, 0, 130)
+script = ExtResource("9_roomm")
+room_size = Vector2i(6, 6)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="Room2" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 150, 0, 70)
+script = ExtResource("9_roomm")
+room_size = Vector2i(6, 6)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"

@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/enemy/trilobite/trilobite_model.tscn" id="1_base"]
+[ext_resource type="Shader" path="res://assets/shaders/materials/game_shaders/orb_void.gdshader" id="9_body"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_body"]
+render_priority = 0
+shader = ExtResource("9_body")
+shader_parameter/rim_color = Color(0.8, 0.3, 1, 1)
+shader_parameter/vein_color = Color(1, 0.6, 1, 1)
+shader_parameter/rim_power = 2.4
+shader_parameter/vein_width = 0.05
+shader_parameter/speed = 1.1
+
+[node name="TheLeak" instance=ExtResource("1_base")]
+transform = Transform3D(2.2, 0, 0, 0, 2.2, 0, 0, 0, 2.2, 0, 0, 0)
+metadata/_note = "The copy convoy's memory, pooled and crawling."
+
+[node name="Trilobite_Body" parent="Mesh/Rig/Skeleton3D" index="0"]
+material_override = SubResource("ShaderMaterial_body")
+material_overlay = null
+
+[node name="Trilobite_Legs" parent="Mesh/Rig/Skeleton3D" index="1"]
+material_override = SubResource("ShaderMaterial_body")
+material_overlay = null

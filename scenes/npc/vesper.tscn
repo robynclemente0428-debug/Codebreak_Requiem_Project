@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://systems/dialogue/dialogue_npc.gd" id="1_npc"]
+[ext_resource type="PackedScene" path="res://scenes/player/models/rogue_model.tscn" id="2_model"]
+[ext_resource type="Script" path="res://scenes/loot/shop_npc/model_anchor.gd" id="3_anchor"]
+[ext_resource type="Resource" path="res://data/dialogue/vesper.tres" id="4_dlg"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_talk"]
+radius = 2.1
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_body"]
+radius = 0.4
+
+[node name="Vesper" type="Area3D"]
+collision_mask = 3
+script = ExtResource("1_npc")
+npc_id = "vesper"
+npc_name = "VESPER"
+info_title = "Null Speaker"
+info_description = "A Null Speaker, held in C-0's quarantine for eleven days. She has been listening to the Core through the cell wall."
+dialogue = ExtResource("4_dlg")
+shown_after_quest = "q06b_the_collector"
+
+[node name="InteractionShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("SphereShape3D_talk")
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CylinderShape3D_body")
+
+[node name="ModelAnchor" type="Node3D" parent="."]
+script = ExtResource("3_anchor")
+
+[node name="Model" parent="ModelAnchor" instance=ExtResource("2_model")]
+transform = Transform3D(1.0, 0, 0, 0, 1.0, 0, 0, 0, 1.0, 0, 0, 0)

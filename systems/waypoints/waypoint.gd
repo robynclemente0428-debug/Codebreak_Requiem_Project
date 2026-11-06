@@ -33,5 +33,8 @@ enum Kind { TOWN, DUNGEON, BOSS }
 ## Convoy routes only: a QuestItems id the player must have recovered too before the route
 ## terminal opens this stop (Checkpoint Approach waits for "iff_patched"). Empty = none.
 @export var route_needs_key: String = ""
-## Shown on the route map while route_needs_key is missing.
+## Convoy routes only: quests that must be turned in before the route terminal opens this stop
+## (Act III's quarantine levels: the Sweep waits for The Mimic and the Strategist exam).
+@export var route_needs_quests: Array[String] = []
+## Shown on the route map while route_needs_key or route_needs_quests is missing.
 @export var route_needs_text: String = ""

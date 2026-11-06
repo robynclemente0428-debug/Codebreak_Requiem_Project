@@ -1,6 +1,6 @@
 # CodeBreak Requiem: Act III Plan (Root Access)
 
-*Proposal. **Built so far: The Last Mile (section 6) and the Quarantine Yard hub**, as `q04c_the_last_mile`. The rest is still a plan. Builds on `CodeBreak_Requiem_Setting_and_Campaign.md` (the source of truth) and on what is built in the game for Acts I and II. It keeps the ideas in that doc's "Proposed (not built)" section (The Last Mile, The Collector, Memory Shards) and ties them to the stubbed Act III quests (`q05_the_leak`, `q06_the_mimic`). Once approved, this replaces the Act III section and the proposal section of the source-of-truth doc.*
+*Built: the Quarantine Yard hub, all six districts, the REFCOUNT, DIFF and GENERATIONS locks, the Strategist exam, every main quest through Root Access, and both side quests. Differences from the plan below: **Memory Shards** has four shards, one per district, because a district holds one beacon. **The Mimic** copies the skill that hits it but not the script. **Blobs** feed The Leak while alive instead of crawling back to it. **The Collector** sweeps its adds once five are alive rather than as it reaches them. **Not built: the Sweeps road event, Hex's new stock tier, the DOCKED state on the convoy's own route terminal, and the far side of the Inward Gate**, which stays shut until Act IV exists. Builds on `CodeBreak_Requiem_Setting_and_Campaign.md`, the source of truth.*
 
 ---
 
@@ -43,7 +43,7 @@ Act I taught reacting (`when`). Act II taught repeating (loops) and switching pa
 
 | Step | Where | Concept |
 |---|---|---|
-| 1 | The Leak | Skill tags: an AREA skill (Slam or Blast) for crowds. Optional: a second set with Strike for the core. |
+| 1 | The Leak | Killing several enemies at once, by any means (AREA, Cleave, chains, a fast script). Optional: a second set with big hits for the core. |
 | 2 | The Mimic | One skill with two WHEN rules, so the script itself changes pattern (`program_branches`). |
 | 3 | Strategist exam | Three different waves, three script sets (set 3 lent for the exam). |
 | 4 | The Collector | Three phases, three sets, each built for one phase. Swapping at the right moment, not every hit. |
@@ -56,18 +56,18 @@ No functions or free variables are needed. If they are added later, the Mimic is
 
 **Hub: The Quarantine Yard.** The convoy stays docked in the yard and is still walkable, so the move from Act II is physical: the same deck, now parked, with Checkpoint's walls around it. Brack, Hex, Sudo and the vendors stay on or beside the deck. The Registrar stands at the yard gate. Hull breaches stop; **Sweeps** replace them (see Road Events).
 
-**Look:** Act III has its own tile sets. The yard (`act3_yard_meshes`, built and in use) is Custodian intake: glazed ceramic pavers, slate lanes, printed bay codes, red quarantine tape, ice-blue status slots and a slow scan line. The districts (`act3_district_meshes` with the `act3_districts` theme, built, waiting for the first district scene) are the inside of the node: dark glass, circuit traces, flickering memory cells, server-rack walls, and racks the Collector has marked in red. The theme's enemy and loot lists are Act II's stand-ins until Act III's own exist. `tools/act3/tile_preview` shows both.
+**Look:** Act III has its own tile sets. The yard (`act3_yard_meshes`, built and in use) is Custodian intake: glazed ceramic pavers, slate lanes, printed bay codes, red quarantine tape, ice-blue status slots and a slow scan line. The districts (`act3_district_meshes` with the `act3_districts` theme, built, used by every district, with a theme for each kind: `act3_heap`, `act3_dangling`, `act3_marks`) are the inside of the node: dark glass, circuit traces, flickering memory cells, server-rack walls, and racks the Collector has marked in red. The theme's enemy and loot lists are Act II's stand-ins until Act III's own exist. `tools/act3/tile_preview` shows both.
 
-**Travel:** the route terminal is retired once the convoy docks (it reads *DOCKED*). The Registrar's gate sends you to districts instead. Districts open by **quarantine level**, which drops as you earn clearance: the Act III version of Act I's keys and Act II's route stops.
+**Travel:** the **District Gate** in the yard (a route terminal) sends you to districts. Districts open by **quarantine level**, which drops as you earn clearance: the Act III version of Act I's keys and Act II's route stops.
 
 | Zone | Opens at | What is there |
 |---|---|---|
 | Checkpoint Approach | The Last Mile (convoy route stop) | The road to the gate; the Perimeter Warden (CHALLENGE lock) |
-| The Registry | Docking (level 3) | Custodian archive, shards, the Registrar's records |
-| The Heap | Docking (level 3) | Memory allocation sprawl, Leak blobs. **The Leak** |
+| The Registry | After the Strategist exam (level 3) | Custodian archive, shards, the Registrar's records |
+| The Heap | After the Strategist exam (level 3) | Memory allocation sprawl, Leak blobs. **The Leak** |
 | Mirror Dock | After The Leak (level 2) | Where the copy convoy docked and was deleted. Copied crates, frozen copies of Hardfault's people. **The Mimic** |
 | Dangling Quarter | After The Leak (level 2) | Pointers to things that no longer exist. Side content, Echo Wisp variants |
-| Mark Yards | After the Strategist exam (level 1) | The Collector's marking floors. Red-tagged processes waiting for deletion |
+| Mark Yards | After the Mimic (level 1) | The Collector's marking floors. Red-tagged processes waiting for deletion |
 | The Sweep | After the Mimic and the exam (level 0) | The Collector's furnace. **The Collector** |
 | Inward Gate | Root Access | The far side of Checkpoint; leads to Act IV |
 
@@ -76,16 +76,15 @@ No functions or free variables are needed. If they are added later, the Mimic is
 The structure mirrors Act II: one boss, then two quests in parallel, then a finale.
 
 ```
-q04b Hollow Choir ─► q04c The Last Mile ─► q05 The Leak ─┬─► q06 The Mimic ─────────┬─► q06b The Collector ─► q06c Root Access ─► q07 (Act IV)
-                                                          └─► exam_strategist ───────┘
+q04b Hollow Choir ─► q04c The Last Mile ─► exam_strategist ─► q05 The Leak ─► q06 The Mimic ─► q06b The Collector ─► q06c Root Access ─► q07 (Act IV)
 ```
 
 | ID | Quest | Giver | Objectives | Script Task | Prerequisites | Act |
 |---|---|---|---|---|---|---|
 | `q04c_the_last_mile` | THE LAST MILE | Brack | Set course for Checkpoint Approach; defend the deck; patch the IFF Transponder; answer the Perimeter Warden's challenges; dock in the Quarantine Yard | n/a (transition) | `q04b_hollow_choir` | II |
-| `q05_the_leak` | THE LEAK | Brack | Script an AREA skill; defeat The Leak in the Heap | Script an AREA skill (existing) | `q04c_the_last_mile` (was `q04b`) | III |
+| `q05_the_leak` | THE LEAK | Brack | Pass the Strategist exam; free 3 blobs by killing them together; defeat The Leak in the Heap | None: the task is in the fight | `q04c_the_last_mile` (was `q04b`) | III |
 | `q06_the_mimic` | THE MIMIC | Brack | Give one skill two WHEN rules; defeat The Mimic at Mirror Dock | Two WHEN rules (existing) | `q05_the_leak` | III |
-| `exam_strategist` | RANK EXAM: STRATEGIST | Sudo | Pass the exam in Sudo's sandbox | Three waves, three sets (below) | `q05_the_leak` | III |
+| `exam_strategist` | RANK EXAM: STRATEGIST | Sudo | Pass the exam in Sudo's sandbox | Three waves, three sets (below) | `q04c_the_last_mile` | III |
 | `q06b_the_collector` | THE COLLECTOR | Brack | Pass the Strategist exam; defeat The Collector in the Sweep | Pass the Strategist exam | `q06_the_mimic`, `exam_strategist` | III |
 | `q06c_root_access` | ROOT ACCESS | Registrar | Take the root key to the Registrar; open the Inward Gate | n/a (transition) | `q06b_the_collector` | III |
 
@@ -109,10 +108,10 @@ Built like The Road Out: a transition quest that still belongs to the act it lea
 
 - **Story:** the copy's memory was never freed. It pooled in the Heap and is eating Checkpoint's archive.
 - **Boss Trait:** splits into smaller blobs when hit.
-- **Boss Lock: REFCOUNT.** Blobs crawl back into the Leak and heal it. A blob killed by a single-target hit leaks again (it respawns as a new blob a few seconds later). A blob killed by an AREA cast that hits three or more at once is **freed** and stays dead. The Leak's core only takes full damage while its refcount (blobs alive, shown over it) is 0. The next split starts the count again, like the Glitchling Queen's brood but faster: Act I's lock grown up.
-- **Tip:** Slam or Blast for the blobs. Strike in another set for the core, if you want it faster.
+- **Boss Lock: REFCOUNT.** Blobs crawl back into the Leak and heal it. A blob killed on its own leaks again (it respawns as a new blob a few seconds later). Three or more killed within 2 seconds, by any skill, are **freed** and stay dead. The Leak's core only takes full damage while its refcount (blobs alive, shown over it) is 0. The next split starts the count again, like the Glitchling Queen's brood but faster: Act I's lock grown up.
+- **Tip:** Slam or Blast catch them all at once, Cleave or a chain can sweep them, and a fast script can pick them off. Big hits in another set for the core, if you want it faster.
 - **Drops:** the Compiler Guild data shard (quest item, shown in the quest items tab). It plays the Act's key revelation through the Registrar on turn-in.
-- **Why it fits:** "memory leak" taken literally, and it gives the AREA tag a reason to exist.
+- **Why it fits:** "memory leak" taken literally. AREA is the easy answer here, not the only one.
 
 ### The Mimic
 
@@ -126,12 +125,12 @@ Built like The Road Out: a transition quest that still belongs to the act it lea
 
 ### Rank Exam: Strategist
 
-Sat in Sudo's sandbox like the Operator and Architect exams, graded on efficiency, and retakeable.
+Sat in Sudo's sandbox like the Operator and Architect exams, graded on efficiency, and retakeable. For this one the sandbox is a sealed quarantine bay built from the yard's tiles, replaying Checkpoint's quarantine logs (the Registrar lets Sudo use them). Each wave drains its own sample tank at the rim, and the rim takes that wave's colour.
 
-- **Spec:** three waves, each of a different kind:
-  1. **Swarm:** many weak test processes closing in.
-  2. **Armoured:** a few heavy processes (Firewalled trait).
-  3. **Burst:** fast processes that hit hard and often.
+- **Spec:** three waves of holographic samples of what's past the District Gate, with the same numbers as plain test processes (`sample_leak`, `sample_copy`, `sample_marker`; no locks):
+  1. **Leaked Memory (swarm):** many weak blobs closing in.
+  2. **Copied Processes (armoured):** a few heavy copies (Firewalled trait).
+  3. **Marker Drones (burst):** fast drones that hit hard and often, in melee rather than shooting as the real ones do.
 - **Pass:** clear all three within the time limit, with a different script set doing most of the damage in each wave. Set 3 is lent for the exam, the way loops are lent for the Architect exam.
 - **Grade:** fewer set swaps that land at the right moment grade better than swapping every few seconds. This is planning, not Echo spam.
 - **Unlocks:** script set 3 (already in `Ranks.PERKS`).
@@ -200,8 +199,8 @@ Same writing rules as the other acts: the Executor is silent, lines are one or t
 
 **Offer — Brack:** Something is eating Checkpoint's memory. It splits every time it's hit. *(existing)*
 **Offer — Brack (new):** The Registrar says it's what's left of the other us. I'm not asking how that works.
-**Accept — Brack:** Hit it hard and hit it wide. Script a Slam or a Blast, something that catches every piece. *(existing)*
-**Accept — Brack (new, lock):** Pieces you kill one at a time come back. Kill them together and they stay dead. Then hit the big one.
+**Accept — Brack:** Script whatever you like. A Slam, a cleave, a chain, something fast. It just has to catch the pieces.
+**Accept — Brack (new, lock):** Pieces you kill one at a time come back. Kill three inside a couple of seconds and they stay dead. Then hit the big one.
 **Reminder — Brack:** It's still splitting. Hit it wider. *(existing)*
 **Complete — Brack:** It's sealed. Something fell out of it. The Registrar wants to see.
 *(replaces "We can finally rest", which no longer fits mid-act)*
@@ -221,8 +220,9 @@ Same writing rules as the other acts: the Executor is silent, lines are one or t
 ### Rank Exam: Strategist
 
 **Offer — Sudo:** You've been swapping scripts like a nervous habit. Now do it on purpose.
-**Offer — Sudo:** The Strategist exam. Three problems, three scripts.
-**Accept — Sudo:** I'll lend you a third set. Each wave needs a different answer. Plan, then run.
+**Offer — Sudo:** The Strategist exam. The Registrar let me replay Checkpoint's quarantine logs into a sealed bay.
+**Offer — Sudo:** Three samples from out there. Three problems, three scripts.
+**Accept — Sudo:** I'll lend you a third set. Each sample needs a different answer. Plan, then run.
 **Pass — Sudo:** Right tool, right moment. Rank up. Strategist.
 **Idle — Sudo:** A plan is just a loop you haven't run yet.
 

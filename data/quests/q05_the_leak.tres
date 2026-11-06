@@ -2,33 +2,44 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
-[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="4_rec"]
+
+[sub_resource type="Resource" id="Objective_exam"]
+script = ExtResource("1_obj")
+description = "Pass Sudo's Strategist exam"
+kind = "quest_done"
+target = "exam_strategist"
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Free 3 blobs of The Leak by killing them together"
+kind = "blobs_freed"
+target = "the_leak"
+required = 3
 
 [sub_resource type="Resource" id="Objective_1"]
-script = ExtResource("3_prog")
-description = "Script an AREA skill"
-kind = "program_applied_tag"
-target = "area"
-
-
-[sub_resource type="Resource" id="Objective_2"]
 script = ExtResource("1_obj")
-description = "Defeat The Leak"
+description = "Defeat The Leak in the Heap"
 kind = "kill"
 target = "the_leak"
-metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("4_rec")
+description = "Pick up what fell out of it"
+kind = "recover"
+target = "guild_shard"
 
 [resource]
 script = ExtResource("2_quest")
 id = "q05_the_leak"
 title = "THE LEAK"
-description = "Something is eating Checkpoint's memory. It splits every time it is hit.
-BOSS TRAIT: splits into smaller blobs when hit. Use area attacks.
-SCRIPT TASK: script an AREA skill (Slam or Blast)."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+description = "The copy's memory was never freed. It pooled in the Heap and is eating Checkpoint's archive. Quarantine holds the District Gate shut until you pass Sudo's Strategist exam, so start there.
+LOCK: REFCOUNT. It splits into blobs, and it can't be hurt while any are out there. Blobs killed one at a time leak back. Kill three or more within 2 seconds and they stay dead. Refcount 0 opens the port.
+TIP: how is up to you. Slam or Blast catch them all at once, Cleave or a chain can sweep them, and a fast enough script can pick them off. Put a big hit in another script set for the core, if you want it faster."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_exam"), SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q04c_the_last_mile"])
-reward_credits = 150
+reward_credits = 200
 metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "Brack"
 metadata/act = "III"

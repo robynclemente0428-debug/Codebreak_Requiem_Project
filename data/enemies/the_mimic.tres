@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/boss/the_mimic_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_gem"]
+[ext_resource type="Resource" uid="uid://dklpmq4u6k78e" path="res://data/skill_gems/strike.tres" id="5_0"]
+[ext_resource type="Script" path="res://systems/enemies/traits/diff_lock_trait.gd" id="6_0"]
+
+[resource]
+script = ExtResource("1_def")
+id = "the_mimic"
+display_name = "The Mimic"
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+allowed_modifier_tags = Array[int]([1, 2, 6])
+capsule_radius = 0.4
+capsule_height = 1.8
+max_health = 340.0
+armour = 80.0
+move_speed = 3.0
+aggro_range = 16.0
+attack_range = 1.5
+min_attack_damage = 16.0
+max_attack_damage = 30.0
+attack_speed = 0.8
+skill_cooldown = 3.5
+cooldown_jitter = 1.0
+act_boss = true
+basic_attack_enabled = true
+skills = Array[ExtResource("4_gem")]([ExtResource("5_0")])
+innate_traits = Array[Script]([ExtResource("6_0")])
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

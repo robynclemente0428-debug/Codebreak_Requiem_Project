@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="4_rec"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("4_rec")
+description = "Recover the scratched crate"
+kind = "recover"
+target = "copied_crate_a"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("4_rec")
+description = "Recover the dented crate"
+kind = "recover"
+target = "copied_crate_b"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("4_rec")
+description = "Recover the relabelled crate"
+kind = "recover"
+target = "copied_crate_c"
+
+[sub_resource type="Resource" id="Objective_3"]
+script = ExtResource("4_rec")
+description = "Recover the sealed crate"
+kind = "recover"
+target = "copied_crate_d"
+
+[resource]
+script = ExtResource("2_quest")
+id = "copied_stock"
+title = "COPIED STOCK"
+description = "The copy convoy carried a copy of Hex's stock, and Mirror Husks at Mirror Dock are carrying it about. Hex wants it back, on principle.
+Each husk has the DIFF lock, so bring a script with two WHEN rules."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3")])
+ordered = false
+prerequisite_quest_ids = Array[String](["q05_the_leak"])
+reward_credits = 275
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Hex"
+metadata/act = "III"
