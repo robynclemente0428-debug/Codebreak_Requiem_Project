@@ -1,16 +1,17 @@
 class_name HullBreach
 extends DockDefense
 ## A convoy road event: the Null board the deck. Put one in the convoy (a TownArea) per event.
-## The first time the player is aboard after `after_stop` is cleared, it starts on its own a
-## moment after they arrive: hold the route terminal (the convoy's navigation) while the waves
-## come over the rails, then clear the deck. Only once per stop (deed "hull_breach:<stop>").
+## Every time the party finishes a run through `after_stop` (walks out of its exit) and comes
+## back aboard, it starts on its own a moment after they arrive: hold the route terminal (the
+## convoy's navigation) while the waves come over the rails, then clear the deck. One breach per
+## finished run (is_due: deeds "stop_finished:<stop>" against "hull_breach:<stop>").
 ## Won: credits, and it counts as an area cleared for the script budget (ScriptBudget). The
 ## convoy can't sail on (route terminal, Waypoints.sail) while a breach is on or due (blocks_route()).
 ## Dying calls it off like any DockDefense: it starts again when you come back aboard.
 ## The waves, enemies and growth are DockDefense's exports.
 ##
 ## The deck's systems (DeckSystem: power junction, cargo lock, comms relay) are what's at stake.
-## Every `saboteur_every`-th boarder of a wave is a SABOTEUR (tagged over its head): it ignores
+## Every `saboteur_every`-th boarder of a wave (by default all of them) is a SABOTEUR (tagged over its head): it ignores
 ## you and makes for the working system with the fewest saboteurs on it, and drains it while it
 ## stands there. It only turns on you once you come within `saboteur_leash` or hurt it. So you
 ## choose: stay at the terminal (the hold only runs there) or run to save a system. A system
@@ -25,8 +26,9 @@ extends DockDefense
 @export var reward_credits := 150
 ## Seconds after arriving on deck before the Null board (the area's fade-in, a breath).
 @export var arrival_delay := 4.0
-## Every this-many-th boarder of a wave (the first, the fourth...) is a saboteur. 0 = none.
-@export var saboteur_every := 4
+## Every this-many-th boarder of a wave is a saboteur: 1 = all of them (they go for the
+## systems first and only fight you when you come close or hurt them), 2 = every other... 0 = none.
+@export var saboteur_every := 1
 ## Metres: a saboteur turns on a player this close (or one that hurts it).
 @export var saboteur_leash := 5.0
 ## Credits on top of reward_credits when the cargo lock held (the cargo you kept).
@@ -39,7 +41,7 @@ const DEED := "hull_breach"
 const DeckSystemScript := preload("res://scenes/map/town/convoy/deck_system.gd")
 const COL_SABOTEUR := Color(1.0, 0.45, 0.2)
 const COL_HIT := Color(1.0, 0.6, 0.2)
-const SHORT_NAMES := {"power": "POWER", "cargo": "CARGO", "comms": "COMMS"}
+const SHORT_NAMES := {"power": "POWER", "cargo": "CARGO", "comms": "COMMS", "iff": "IFF"}
 
 var _saboteurs: Dictionary = {}          # enemy -> the DeckSystem it's after
 var _systems: Array = []                # this deck's DeckSystems
@@ -70,11 +72,18 @@ func blocks_route() -> bool:
 		return true
 	if state != State.WAITING:
 		return false
+	return is_due()
+
+
+## True while a run through `after_stop` hasn't been answered by a breach yet: every time the
+## party walks out of its exit (Waypoints.FINISH_DEED) one more breach is owed, and each one won
+## (DEED) pays one off. Only runs counted since runs were counted: stops cleared before that
+## don't all come due at once.
+func is_due() -> bool:
 	var qm := _qm()
-	if qm == null or after_stop == "" or qm.deed_count(DEED, after_stop) > 0:
+	if qm == null or after_stop == "":
 		return false
-	var stop := _stop()
-	return stop != null and Waypoints.is_cleared(stop)
+	return qm.deed_count(Waypoints.FINISH_DEED, after_stop) > qm.deed_count(DEED, after_stop)
 
 
 ## The breach is held at the route terminal, not a portal.
@@ -87,12 +96,11 @@ func _find_portal() -> Node3D:
 
 
 func _wants_to_start() -> bool:
-	var qm := _qm()
-	if qm == null or after_stop == "" or qm.deed_count(DEED, after_stop) > 0:
+	if not is_due():
 		return false
-	var stop := _stop()
-	if stop == null or not Waypoints.is_cleared(stop):
-		return false
+	for b in get_tree().get_nodes_in_group("hull_breach"):
+		if b != self and b.is_running():
+			return false                          # one breach at a time
 	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
 	if dialogue != null and dialogue.is_open():
 		return false
@@ -215,7 +223,7 @@ func _pick_system():
 	var best = null
 	var best_n := 1 << 30
 	for sys in _systems:
-		if not is_instance_valid(sys) or sys.is_offline():
+		if not is_instance_valid(sys) or sys.is_offline() or not sys.sabotage_target:
 			continue
 		var n := 0
 		for s in _saboteurs.values():
@@ -283,9 +291,11 @@ func _on_system_down(sys) -> void:
 func _update_systems_hud() -> void:
 	for sys in _sys_labels:
 		var l := _sys_labels[sys] as Label
-		if not is_instance_valid(sys):
+		# A system the Null leave alone (the IFF) is only listed once something knocked it out
+		if not is_instance_valid(sys) or not (sys.sabotage_target or sys.is_offline()):
 			l.visible = false
 			continue
+		l.visible = true
 		var short: String = SHORT_NAMES.get(sys.system_id, String(sys.npc_name).to_upper())
 		var col := Color(0.85, 0.96, 1.0)
 		if sys.is_offline():
@@ -321,7 +331,7 @@ func _held() -> void:
 	_hud.visible = false
 	_set_alert(false)
 	_end_contest()
-	GameEvents.report(DEED, after_stop)                          # never again for this stop
+	GameEvents.report(DEED, after_stop)                          # this run's breach is paid off
 	GameEvents.report(ScriptBudget.CLEAR_DEED, "breach_" + after_stop)   # +script points, like a cleared area
 	var cargo = _system("cargo")
 	var kept_cargo: bool = cargo != null and cargo.is_online()

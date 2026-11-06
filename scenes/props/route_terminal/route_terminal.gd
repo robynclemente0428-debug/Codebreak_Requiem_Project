@@ -20,9 +20,92 @@ var _prompt: ConfirmationDialog
 const DeckSystemScript := preload("res://scenes/map/town/convoy/deck_system.gd")
 
 
+## False while the comms relay is down (DeckOutages): the screen fills with static, the glow
+## goes red and a NO SIGNAL tag hangs over it.
+var signal_ok := true
+var _static_mat: StandardMaterial3D
+var _no_signal_tag: Label3D
+var _base_title := ""
+var _base_glow := 1.0
+var _base_glow_col := Color.WHITE
+var _ticker: Node
+var _t := 0.0
+
+
 func _ready() -> void:
 	super._ready()
 	face_player = false                           # a console doesn't turn round
+	_base_title = info_title
+	var glow := get_node_or_null("Glow") as OmniLight3D
+	if glow != null:
+		_base_glow = glow.light_energy
+		_base_glow_col = glow.light_color
+
+
+## The comms relay's state, shown on the console itself (DeckOutages calls it).
+func set_signal(ok: bool) -> void:
+	signal_ok = ok
+	var screen := get_node_or_null("Screen") as MeshInstance3D
+	var glow := get_node_or_null("Glow") as OmniLight3D
+	if not ok and _static_mat == null:
+		_static_mat = StandardMaterial3D.new()
+		_static_mat.emission_enabled = true
+		_static_mat.albedo_color = Color(0.08, 0.08, 0.09)
+		_no_signal_tag = Label3D.new()
+		_no_signal_tag.text = "NO SIGNAL"
+		_no_signal_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_no_signal_tag.pixel_size = 0.006
+		_no_signal_tag.font_size = 40
+		_no_signal_tag.outline_size = 10
+		_no_signal_tag.modulate = Color(1.0, 0.3, 0.25)
+		_no_signal_tag.position = Vector3(0, prompt_height - 0.15, 0.3)
+		var font_path := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
+		if ResourceLoader.exists(font_path):
+			_no_signal_tag.font = load(font_path)
+		add_child(_no_signal_tag)
+	if screen != null:
+		screen.material_override = null if ok else _static_mat
+	if glow != null:
+		glow.light_color = _base_glow_col if ok else Color(1.0, 0.25, 0.2)
+		if ok:
+			glow.light_energy = _base_glow
+	if _no_signal_tag != null:
+		_no_signal_tag.visible = not ok
+	info_title = _base_title if ok else "NO SIGNAL"
+	prompt_text = "SET COURSE" if ok else "NO SIGNAL"
+	if not ok and _ticker == null:
+		var tk := _Ticker.new()
+		tk.tick = _static_tick
+		_ticker = tk
+		add_child(tk)
+	if _ticker != null:
+		_ticker.set_process(not ok)
+
+
+## No signal: the screen crawls with static and now and then a red flash.
+## (Its own ticker: Interactable's _process turns itself off when the console is at rest.)
+func _static_tick(delta: float) -> void:
+	_t += delta
+	if _static_mat == null:
+		return
+	var n := randf()
+	var flash := fposmod(_t, 2.4) < 0.18
+	var col := Color(1.0, 0.2, 0.15) if flash else Color(0.55, 0.6, 0.62)
+	_static_mat.emission = col
+	_static_mat.emission_energy_multiplier = (1.4 if flash else 0.25 + n * 0.9)
+	var glow := get_node_or_null("Glow") as OmniLight3D
+	if glow != null:
+		glow.light_energy = 0.3 + n * 0.4 + (0.8 if flash else 0.0)
+	if _no_signal_tag != null:
+		_no_signal_tag.modulate.a = 1.0 if fposmod(_t, 1.0) < 0.7 else 0.35
+
+
+class _Ticker extends Node:
+	var tick: Callable
+
+	func _process(delta: float) -> void:
+		if tick.is_valid():
+			tick.call(delta)
 
 
 func interact(player: Node3D) -> void:

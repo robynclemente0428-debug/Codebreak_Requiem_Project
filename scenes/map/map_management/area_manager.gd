@@ -105,6 +105,11 @@ func _add_waypoint_panel() -> void:
 ## Called by portals. Safe to call from anywhere.
 ## dungeon_level > 0 marks the trip as going into a dungeon instance (see WorldState):
 ## instance_id 0 rejoins that dungeon's open instance or opens one, -1 always opens a new one.
+## True when go_to would go now (not mid-trip, not in the arrival cooldown).
+func can_go() -> bool:
+	return not _busy and Time.get_ticks_msec() >= _ignore_until_ms
+
+
 func go_to(scene_path: String, spawn_id: StringName = &"default",
 		dungeon_level: int = 0, instance_id: int = 0) -> void:
 	if _busy or scene_path.is_empty():

@@ -5,11 +5,19 @@ extends CanvasLayer
 ##   power   breaker.prog   a condition the Null flipped: it cuts the power on a normal day
 ##   cargo   seal.prog      a loop with the wrong count: it drives bolts the door doesn't have
 ##   comms   relay.prog     its steps in the wrong order: it transmits before it's switched on
+##   iff     iff.prog       a comparison turned round: it answers with the wrong (deleted) record
 ## Click a number or operator to change it (right-click / wheel: the other way); move lines
 ## with the arrows. RUN TESTS runs the program against the system's test cases and prints what
 ## happened in OUTPUT. When every test passes the patch deploys and the system is back online.
 ## Nothing is kept between attempts: closing (ESC) leaves the system offline.
 ## Open with PatchPanel.open(system, player). By path (preload), like DeckSystem.
+##
+## CHALLENGE mode (open_challenge): a boss asks the question instead (ChallengeLock, the Perimeter
+## Warden). The fight pauses while it's open, a countdown runs, and the panel reports back to its
+## `handler` instead of repairing anything:
+##   handler.challenge_solved()          every test passed
+##   handler.challenge_failed() -> bool  a RUN with a failing test (true = the player died: close)
+##   handler.challenge_abandoned()       closed (ESC) or out of time, unsolved
 
 const FONT_PATH := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 const GROUP := "patch_panel"
@@ -38,6 +46,12 @@ var _code: VBoxContainer
 var _out: RichTextLabel
 var _run: Button
 var _done := false
+## CHALLENGE mode (see open_challenge): who to tell, the title, and the countdown.
+var _handler: Object
+var _title := ""
+var time_limit := 0.0
+var _time_left := 0.0
+var _clock: Label
 
 
 ## Opens the patch for `system` (one at a time).
@@ -53,9 +67,33 @@ static func open(system_: Node3D, player: Node) -> void:
 	tree.root.add_child(p)
 
 
+## Opens `puzzle_` as a boss's challenge (CHALLENGE mode, see the top). Returns false when a
+## panel is already open.
+static func open_challenge(tree: SceneTree, puzzle_: Puzzle, player: Node, title: String,
+		handler: Object, seconds: float) -> bool:
+	if tree.get_first_node_in_group(GROUP) != null:
+		return false
+	var p = load("res://scenes/map/town/convoy/patch_panel.gd").new()
+	p.puzzle = puzzle_
+	p._player = player
+	p._title = title
+	p._handler = handler
+	p.time_limit = seconds
+	tree.root.add_child(p)
+	return true
+
+
+func is_challenge() -> bool:
+	return _handler != null
+
+
 func _ready() -> void:
 	layer = 21
 	add_to_group(GROUP)
+	if is_challenge():
+		process_mode = Node.PROCESS_MODE_ALWAYS          # runs while the fight is paused
+		get_tree().paused = true
+		_time_left = time_limit
 	_font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else null
 	_build()
 	_lock(true)
@@ -65,6 +103,21 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_lock(false)
+	if is_challenge():
+		get_tree().paused = false
+
+
+## CHALLENGE mode: the countdown. Out of time counts as no answer.
+func _process(delta: float) -> void:
+	if not is_challenge() or _done or time_limit <= 0.0:
+		return
+	_time_left -= delta
+	if _clock != null:
+		_clock.text = "TIME  %ds" % maxi(ceili(_time_left), 0)
+		_clock.add_theme_color_override("font_color", COL_BAD if _time_left < 10.0 else COL_GUTTER)
+	if _time_left <= 0.0:
+		_done = true
+		_close_unsolved()
 
 
 func _lock(on: bool) -> void:
@@ -79,7 +132,18 @@ func _input(event: InputEvent) -> void:
 
 
 func close() -> void:
+	if is_challenge() and not _done:
+		_done = true
+		_close_unsolved()
+		return
 	queue_free()
+
+
+func _close_unsolved() -> void:
+	var h := _handler
+	queue_free()
+	if h != null and is_instance_valid(h) and h.has_method("challenge_abandoned"):
+		h.challenge_abandoned()
 
 
 # ---------- LAYOUT ----------
@@ -106,7 +170,13 @@ func _build() -> void:
 	v.add_theme_constant_override("separation", 10)
 	frame.add_child(v)
 	var name_ := str(system.get("npc_name")).to_upper() if system != null else "SYSTEM"
-	v.add_child(_label("// PATCH // %s // %s" % [name_, puzzle.file], 20, ACCENT))
+	if is_challenge():
+		v.add_child(_label("// CHALLENGE // %s // %s" % [_title.to_upper(), puzzle.file], 20, COL_BAD))
+		if time_limit > 0.0:
+			_clock = _label("TIME  %ds" % ceili(time_limit), 15, COL_GUTTER)
+			v.add_child(_clock)
+	else:
+		v.add_child(_label("// PATCH // %s // %s" % [name_, puzzle.file], 20, ACCENT))
 	var brief := _label(puzzle.brief, 16, Color(0.82, 0.92, 0.96))
 	brief.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	brief.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -122,7 +192,7 @@ func _build() -> void:
 	_code = VBoxContainer.new()
 	_code.add_theme_constant_override("separation", 2)
 	code_frame.add_child(_code)
-	var hint := _label("click a number or operator: change it   right-click / wheel: the other way   arrows: move a line",
+	var hint := _label("click a number or operator: change it   right-click / wheel: the other way   drag a :: line: move it",
 			13, COL_GUTTER)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	v.add_child(hint)
@@ -142,7 +212,7 @@ func _build() -> void:
 	buttons.alignment = BoxContainer.ALIGNMENT_END
 	buttons.add_theme_constant_override("separation", 12)
 	v.add_child(buttons)
-	var close_b := _button("CLOSE (ESC)")
+	var close_b := _button("WALK AWAY (ESC)" if is_challenge() else "CLOSE (ESC)")
 	close_b.pressed.connect(close)
 	buttons.add_child(close_b)
 	_run = _button("RUN TESTS")
@@ -159,24 +229,21 @@ func _rebuild() -> void:
 		var line: Dictionary = lines[i]
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 0)
-		_code.add_child(row)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var slot: int = line.get("move", -1)
+		if slot >= 0 and not _done:
+			_code.add_child(_drag_holder(row, slot, line))  # a line that can be dragged to a new place
+		else:
+			_code.add_child(row)
 		var num := _tok(str(i + 1), COL_GUTTER)
 		num.custom_minimum_size.x = 30
 		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(num)
-		# The move arrows (lines that can be reordered), or a gap the same width
-		var mover := HBoxContainer.new()
-		mover.custom_minimum_size.x = 52
-		mover.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_child(mover)
-		var slot: int = line.get("move", -1)
-		if slot >= 0 and not _done:
-			for dir in [-1, 1]:
-				var b := _arrow("^" if dir < 0 else "v")
-				b.pressed.connect(func() -> void:
-					puzzle.move(slot, dir)
-					_edited())
-				mover.add_child(b)
+		# The drag handle (lines that can be reordered), or a gap the same width
+		var grip := _tok(" :: " if slot >= 0 and not _done else "", COLS["num"])
+		grip.custom_minimum_size.x = 52
+		grip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		row.add_child(grip)
 		row.add_child(_tok("    ".repeat(int(line.get("indent", 0))), COL_GUTTER))
 		for t in line["tokens"]:
 			if t is Dictionary:
@@ -190,6 +257,90 @@ func _edited() -> void:
 	_print([["Changed. RUN TESTS to check it.", true]], false)
 
 
+# ---------- DRAGGING LINES ----------
+## Wraps a movable line: grab it anywhere (the :: handle shows which ones move), drag it over
+## another movable line, and let go to put it there; the lines between shift to make room.
+func _drag_holder(row: HBoxContainer, slot: int, line: Dictionary) -> PanelContainer:
+	var holder := PanelContainer.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_STOP
+	holder.mouse_default_cursor_shape = Control.CURSOR_DRAG
+	holder.tooltip_text = "drag to move this line"
+	holder.add_theme_stylebox_override("panel", _line_style(false))
+	holder.set_meta(&"slot", slot)
+	holder.add_child(row)
+	holder.set_drag_forwarding(_drag_line.bind(holder, slot, line), _can_drop_line.bind(holder, slot),
+			_drop_line.bind(slot))
+	holder.mouse_entered.connect(func() -> void:
+		if not get_viewport().gui_is_dragging():
+			holder.add_theme_stylebox_override("panel", _line_style(false, true)))
+	holder.mouse_exited.connect(func() -> void:
+		if not get_viewport().gui_is_dragging():
+			holder.add_theme_stylebox_override("panel", _line_style(false)))
+	return holder
+
+
+## Normal: clear. hover: a faint band (it can be grabbed). target: where a dragged line would go.
+func _line_style(target: bool, hover := false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(ACCENT, 0.16 if target else (0.06 if hover else 0.0))
+	sb.border_color = ACCENT
+	sb.border_width_top = 2 if target else 0
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
+	return sb
+
+
+func _drag_line(_at: Vector2, holder: PanelContainer, slot: int, line: Dictionary) -> Variant:
+	var text := ""
+	for t in line["tokens"]:
+		text += str(t["text"]) if t is Dictionary else str(t[0])
+	var preview := PanelContainer.new()
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(COL_BG, 0.95)
+	sb.border_color = ACCENT
+	sb.set_border_width_all(1)
+	sb.set_content_margin_all(6)
+	preview.add_theme_stylebox_override("panel", sb)
+	preview.add_child(_tok(text, COLS["fn"]))
+	holder.set_drag_preview(preview)
+	holder.modulate.a = 0.35                          # where it's coming from
+	return {"patch_line": slot}
+
+
+func _can_drop_line(_at: Vector2, data: Variant, holder: PanelContainer, _slot: int) -> bool:
+	var ok := data is Dictionary and (data as Dictionary).has("patch_line") and not _done
+	_mark_target(holder if ok else null)
+	return ok
+
+
+func _drop_line(_at: Vector2, data: Variant, slot: int) -> void:
+	var from := int((data as Dictionary).get("patch_line", slot))
+	_mark_target(null)
+	if from == slot:
+		_rebuild()
+		return
+	puzzle.move_to(from, slot)
+	_edited()
+
+
+## Highlights the line a dragged one would land on (null: none).
+func _mark_target(target: PanelContainer) -> void:
+	if _code == null:
+		return
+	for c in _code.get_children():
+		if c is PanelContainer and c.has_meta(&"slot"):
+			c.add_theme_stylebox_override("panel", _line_style(c == target))
+
+
+## A drag let go outside any line: put the lines back as they were.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAG_END and _code != null:
+		_mark_target(null)
+		for c in _code.get_children():
+			if c is PanelContainer:
+				c.modulate.a = 1.0
+
+
 func _on_run() -> void:
 	if _done:
 		return
@@ -201,12 +352,24 @@ func _on_run() -> void:
 	if all_ok:
 		_done = true
 		_run.disabled = true
-		_out.append_text("\n[color=#%s]ALL TESTS PASS // DEPLOYING PATCH...[/color]" % COL_OK.to_html(false))
+		_out.append_text("\n[color=#%s]ALL TESTS PASS // %s[/color]" % [COL_OK.to_html(false),
+				"RESPONSE ACCEPTED..." if is_challenge() else "DEPLOYING PATCH..."])
 		_rebuild()
 		await get_tree().create_timer(1.2).timeout
+		if is_challenge():
+			var h := _handler
+			queue_free()
+			if h != null and is_instance_valid(h) and h.has_method("challenge_solved"):
+				h.challenge_solved()
+			return
 		if system != null and is_instance_valid(system) and system.has_method("repair"):
 			system.repair()
 		close()
+	elif is_challenge() and _handler != null and is_instance_valid(_handler):
+		_out.append_text("\n[color=#%s]WRONG RESPONSE // THE WARDEN PUNISHES IT[/color]" % COL_BAD.to_html(false))
+		if _handler.challenge_failed():
+			_done = true                                   # it killed them: the death menu takes over
+			queue_free()
 
 
 func _print(lines: Array, verdicts: bool) -> void:
@@ -291,19 +454,6 @@ func _button(text: String) -> Button:
 	return b
 
 
-func _arrow(text: String) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.flat = true
-	b.custom_minimum_size = Vector2(22, 22)
-	if _font:
-		b.add_theme_font_override("font", _font)
-	b.add_theme_font_size_override("font_size", 15)
-	b.add_theme_color_override("font_color", COLS["num"])
-	b.add_theme_color_override("font_hover_color", Color.WHITE)
-	return b
-
-
 # ---------- THE PUZZLES ----------
 ## A system's corrupted program. lines(): what to show, each {"tokens": [...], "indent": n,
 ## "move": slot or -1}; a token is [text, colour key] or {"edit": id, "text": shown} (editable).
@@ -322,6 +472,16 @@ class Puzzle extends RefCounted:
 	func move(_slot: int, _dir: int) -> void:
 		pass
 
+	## Moves the line in slot `from` to slot `to`, the lines between shifting up or down (a drag
+	## and drop). Built from move(), so every puzzle with movable lines gets it.
+	func move_to(from: int, to: int) -> void:
+		while from < to:
+			move(from, 1)
+			from += 1
+		while from > to:
+			move(from, -1)
+			from -= 1
+
 	func run() -> Array:
 		return []
 
@@ -331,6 +491,8 @@ class Puzzle extends RefCounted:
 				return CargoPuzzle.new()
 			"comms":
 				return CommsPuzzle.new()
+			"iff":
+				return IffPuzzle.new()
 		return PowerPuzzle.new()
 
 
@@ -466,3 +628,295 @@ class CommsPuzzle extends Puzzle:
 					else:
 						out.append(["transmit(): signal out, the convoy is back on the net", true])
 		return out
+
+
+## IFF: Checkpoint's challenge is answered with the wrong record. Its registry holds TWO
+## Hardfaults (THE LAST MILE's twist, shown in the code before any NPC says it): one already
+## arrived and was deleted as Null, one inbound. The transponder picks the record with the
+## comparison the guns' bad list turned round, so it answers as the deleted one, and they fire.
+## Fixed when the lookup matches exactly the inbound record.
+class IffPuzzle extends Puzzle:
+	const OPS := ["==", "!="]
+	const STATUSES := ["INBOUND", "DELETED", "DOCKED"]
+	## Checkpoint's registry, as it came back with the challenge.
+	const RECORDS := [
+		{"n": 1, "status": "DELETED", "note": "arrived 11 days ago, flagged NULL, deleted"},
+		{"n": 2, "status": "INBOUND", "note": "the convoy on approach"},
+	]
+	var op := 1                          # "!=": turned round (should be "==")
+	var status := 0                      # INBOUND
+
+	func _init() -> void:
+		file = "iff.prog"
+		brief = "Checkpoint's guns challenged us and the transponder answered with the wrong record, " \
+				+ "so they read us as Null. Its registry has two Hardfaults. Make it answer as ours."
+
+	func lines() -> Array:
+		return [
+			{"tokens": [["# Checkpoint's registry, sent with the challenge:", "cm"]]},
+			{"tokens": [["#   record 1  HARDFAULT  DELETED   arrived 11 days ago, flagged NULL", "cm"]]},
+			{"tokens": [["#   record 2  HARDFAULT  INBOUND", "cm"]]},
+			{"tokens": [["when ", "kw"], ["challenged", "fn"], ["():", "op"]]},
+			{"indent": 1, "tokens": [["rec", "var"], [" = ", "op"], ["registry", "var"], [".", "op"],
+					["find", "fn"], ["(", "op"], ["name", "var"], [" == ", "op"], ["\"HARDFAULT\"", "num"],
+					[", ", "op"], ["status", "var"], [" ", "op"], {"edit": "op", "text": OPS[op]},
+					[" ", "op"], {"edit": "status", "text": STATUSES[status]}, [")", "op"]]},
+			{"indent": 1, "tokens": [["answer", "fn"], ["(", "op"], ["rec", "var"], [")", "op"],
+					["      # the guns hold fire for a live record", "cm"]]},
+		]
+
+	func step(id: String, dir: int) -> void:
+		if id == "op":
+			op = posmod(op + dir, OPS.size())
+		else:
+			status = posmod(status + dir, STATUSES.size())
+
+	func run() -> Array:
+		var found := []
+		for r in RECORDS:
+			var same: bool = r["status"] == STATUSES[status]
+			if same == (OPS[op] == "=="):
+				found.append(r)
+		var out := [["registry.find(): %d record%s match%s" % [found.size(),
+				"" if found.size() == 1 else "s", "es" if found.size() == 1 else ""], found.size() == 1]]
+		if found.is_empty():
+			out.append(["answer(nothing): no answer, the guns read silence as Null -> FIRE", false])
+		elif found.size() > 1:
+			out.append(["answer(records 1 and 2): two of us at once, the guns read a copy -> FIRE", false])
+		elif int(found[0]["n"]) == 1:
+			out.append(["answer(record 1): HARDFAULT, %s -> FIRE" % found[0]["note"], false])
+		else:
+			out.append(["answer(record 2): HARDFAULT, INBOUND -> HOLD FIRE", true])
+		return out
+
+
+# ---------- THE PERIMETER WARDEN'S CHALLENGES (ChallengeLock, CHALLENGE mode) ----------
+## Checkpoint asks who you are, and you answer in code. Each is built on something Acts I and
+## II taught: a crowd condition, a loop count, a life check, steps in order, and the IFF's record.
+const WARDEN_PUZZLES := ["w_crowd", "w_ping", "w_vitals", "w_handshake", "w_identify"]
+
+
+static func warden_puzzle(id: String) -> Puzzle:
+	match id:
+		"w_crowd":
+			return WardenCrowdPuzzle.new()
+		"w_ping":
+			return WardenPingPuzzle.new()
+		"w_vitals":
+			return WardenVitalsPuzzle.new()
+		"w_handshake":
+			return WardenHandshakePuzzle.new()
+	return WardenIdentifyPuzzle.new()
+
+
+## CROWD: answer the challenge when 3 or more are closing in (Act I's enemies_nearby).
+class WardenCrowdPuzzle extends Puzzle:
+	const OPS := ["<", ">", "<=", ">=", "==", "!="]
+	var op := 0                          # "<": turned round
+	var count := 3
+
+	func _init() -> void:
+		file = "crowd.prog"
+		brief = "CHALLENGE: prove you read a crowd. Answer when 3 or more enemies are close, " \
+				+ "and stay silent when fewer are."
+
+	func lines() -> Array:
+		return [
+			{"tokens": [["# the Warden sends 2, then 3, then 5 drones at you", "cm"]]},
+			{"tokens": [["when ", "kw"], ["enemies_nearby", "fn"], ["() ", "op"], {"edit": "op", "text": OPS[op]},
+					[" ", "op"], {"edit": "count", "text": str(count)}, [":", "op"]]},
+			{"indent": 1, "tokens": [["answer", "fn"], ["()", "op"]]},
+		]
+
+	func step(id: String, dir: int) -> void:
+		if id == "op":
+			op = posmod(op + dir, OPS.size())
+		else:
+			count = clampi(count + dir, 1, 6)
+
+	func run() -> Array:
+		var out := []
+		for n in [2, 3, 5]:
+			var fired := _cmp(n, OPS[op], count)
+			var want: bool = n >= 3
+			out.append(["%d drones close: %s (should %s)" % [n, "ANSWER" if fired else "silent",
+					"answer" if want else "stay silent"], fired == want])
+		return out
+
+	static func _cmp(a: int, o: String, b: int) -> bool:
+		match o:
+			"<": return a < b
+			">": return a > b
+			"<=": return a <= b
+			">=": return a >= b
+			"==": return a == b
+		return a != b
+
+
+## PING: the challenge is 4 pings; reply to each once (Act II's loops).
+class WardenPingPuzzle extends Puzzle:
+	const PINGS := 4
+	var count := 2
+
+	func _init() -> void:
+		file = "ping.prog"
+		brief = "CHALLENGE: the Warden sends 4 pings and waits for a reply to each one. " \
+				+ "Reply to every ping, and to nothing that wasn't sent."
+
+	func lines() -> Array:
+		return [
+			{"tokens": [["# pings 0, 1, 2 and 3 are waiting", "cm"]]},
+			{"tokens": [["when ", "kw"], ["challenged", "fn"], ["():", "op"]]},
+			{"indent": 1, "tokens": [["for ", "kw"], ["i", "var"], [" in ", "kw"], ["range", "fn"], ["(", "op"],
+					{"edit": "count", "text": str(count)}, ["):", "op"]]},
+			{"indent": 2, "tokens": [["reply", "fn"], ["(", "op"], ["ping", "var"], ["[", "op"], ["i", "var"], ["])", "op"]]},
+		]
+
+	func step(_id: String, dir: int) -> void:
+		count = clampi(count + dir, 1, 7)
+
+	func run() -> Array:
+		var answered := mini(count, PINGS)
+		var out := [["reply(ping[0..%d]): %d of %d pings answered" % [answered - 1, answered, PINGS],
+				answered == PINGS]]
+		if count > PINGS:
+			out.append(["reply(ping[%d]): NO SUCH PING, the Warden reads a forged reply" % PINGS, false])
+		else:
+			out.append(["no replies to pings that weren't sent", true])
+		return out
+
+
+## VITALS: guard when life drops below half, and not above it (Act II's my_life_below).
+class WardenVitalsPuzzle extends Puzzle:
+	const OPS := ["<", ">", "<=", ">=", "==", "!="]
+	const LIMITS := [25, 40, 50, 65, 80]
+	var op := 1                          # ">": turned round
+	var limit := 2                       # 50
+
+	func _init() -> void:
+		file = "vitals.prog"
+		brief = "CHALLENGE: show you know when you're hurt. Raise a guard below half life, " \
+				+ "and only then."
+
+	func lines() -> Array:
+		return [
+			{"tokens": [["# half life is 50%", "cm"]]},
+			{"tokens": [["when ", "kw"], ["my_life", "fn"], ["() ", "op"], {"edit": "op", "text": OPS[op]},
+					[" ", "op"], {"edit": "limit", "text": str(LIMITS[limit])}, ["%:", "op"]]},
+			{"indent": 1, "tokens": [["guard", "fn"], ["()", "op"]]},
+		]
+
+	func step(id: String, dir: int) -> void:
+		if id == "op":
+			op = posmod(op + dir, OPS.size())
+		else:
+			limit = posmod(limit + dir, LIMITS.size())
+
+	func run() -> Array:
+		var out := []
+		for life in [30, 60, 90]:
+			var fired := _cmp(life, OPS[op], LIMITS[limit])
+			var want: bool = life < 50
+			out.append(["life %d%%: %s (should %s)" % [life, "GUARD" if fired else "no guard",
+					"guard" if want else "not guard"], fired == want])
+		return out
+
+	static func _cmp(a: int, o: String, b: int) -> bool:
+		match o:
+			"<": return a < b
+			">": return a > b
+			"<=": return a <= b
+			">=": return a >= b
+			"==": return a == b
+		return a != b
+
+
+## HANDSHAKE: receive the challenge, sign it, then reply (steps in order).
+class WardenHandshakePuzzle extends Puzzle:
+	const TEXT := {"receive": [["receive", "fn"], ["(", "op"], ["challenge", "var"], [")", "op"]],
+			"sign": [["sign", "fn"], ["(", "op"], ["challenge", "var"], [", ", "op"], ["our_key", "var"], [")", "op"]],
+			"reply": [["reply", "fn"], ["(", "op"], ["signature", "var"], [")", "op"]]}
+	var order := ["reply", "sign", "receive"]
+
+	func _init() -> void:
+		file = "handshake.prog"
+		brief = "CHALLENGE: a handshake has an order. Take the challenge in, sign it with our key, " \
+				+ "then send the signature back."
+
+	func lines() -> Array:
+		var out := [{"tokens": [["when ", "kw"], ["challenged", "fn"], ["():", "op"]]}]
+		for i in order.size():
+			out.append({"indent": 1, "move": i, "tokens": TEXT[order[i]]})
+		return out
+
+	func move(slot: int, dir: int) -> void:
+		var to := slot + dir
+		if to < 0 or to >= order.size():
+			return
+		var a = order[slot]
+		order[slot] = order[to]
+		order[to] = a
+
+	func run() -> Array:
+		var got := false
+		var signed := false
+		var out := []
+		for s in order:
+			match s:
+				"receive":
+					got = true
+					out.append(["receive(): challenge in", true])
+				"sign":
+					if got:
+						signed = true
+						out.append(["sign(): signed with our key", true])
+					else:
+						out.append(["sign(): nothing to sign yet", false])
+				"reply":
+					if signed:
+						out.append(["reply(): signature sent, the Warden checks it", true])
+					else:
+						out.append(["reply(): an unsigned reply, read as forged", false])
+		return out
+
+
+## IDENTIFY: which Hardfault are you? (The IFF Transponder's lesson, back again.)
+class WardenIdentifyPuzzle extends Puzzle:
+	const OPS := ["==", "!="]
+	const STATUSES := ["DELETED", "INBOUND", "DOCKED"]
+	var op := 0
+	var status := 0                      # == DELETED: the record that got shot at
+
+	func _init() -> void:
+		file = "identify.prog"
+		brief = "CHALLENGE: identify yourself. The registry still holds both Hardfaults. " \
+				+ "Name the one that is you."
+
+	func lines() -> Array:
+		return [
+			{"tokens": [["#   record 1  HARDFAULT  DELETED   flagged NULL", "cm"]]},
+			{"tokens": [["#   record 2  HARDFAULT  INBOUND", "cm"]]},
+			{"tokens": [["when ", "kw"], ["challenged", "fn"], ["():", "op"]]},
+			{"indent": 1, "tokens": [["identify", "fn"], ["(", "op"], ["status", "var"], [" ", "op"],
+					{"edit": "op", "text": OPS[op]}, [" ", "op"], {"edit": "status", "text": STATUSES[status]}, [")", "op"]]},
+		]
+
+	func step(id: String, dir: int) -> void:
+		if id == "op":
+			op = posmod(op + dir, OPS.size())
+		else:
+			status = posmod(status + dir, STATUSES.size())
+
+	func run() -> Array:
+		var records := [[1, "DELETED"], [2, "INBOUND"]]
+		var found := []
+		for r in records:
+			if (r[1] == STATUSES[status]) == (OPS[op] == "=="):
+				found.append(r[0])
+		if found.size() == 1 and found[0] == 2:
+			return [["identify(): record 2, HARDFAULT, INBOUND", true]]
+		if found.is_empty():
+			return [["identify(): no record. The Warden reads silence as Null", false]]
+		if found.size() > 1:
+			return [["identify(): both records at once. The Warden reads a copy", false]]
+		return [["identify(): record 1, HARDFAULT, DELETED. The Warden reads Null", false]]

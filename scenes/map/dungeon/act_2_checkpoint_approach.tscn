@@ -1,0 +1,111 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://blbsgtjt3mdxp" path="res://scenes/map/dungeon/dungeon.gd" id="1_dun"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_portal"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act2_stops.tres" id="4_theme"]
+[ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act2_road_meshes.tres" id="6_mesh"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
+[ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="10_enemym"]
+[ext_resource type="Resource" path="res://data/enemies/perimeter_warden.tres" id="e_warden"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_1"]
+agent_height = 1.8
+agent_radius = 0.3
+
+[node name="CheckpointApproach" type="Node3D"]
+script = ExtResource("1_dun")
+dungeon_level = 21
+respawn_spawn_id = &"approach_in"
+portal_scene = ExtResource("2_portal")
+metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
+
+[node name="DungeonDirector" type="Node" parent="." node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("3_dir")
+grid_width = 100
+grid_height = 100
+corridor_width = 2
+min_room_size = 6
+max_room_size = 9
+room_interval = 8
+num_branch_rooms = 2
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_theme")
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+filler_rooms = true
+random_rooms = 3
+random_room_spread = 12
+metadata/_custom_type_script = "uid://b5gwgfu4bdnrx"
+
+[node name="DungeonPopulator" type="Node" parent="." node_paths=PackedStringArray("director", "enemies_root", "loot_root")]
+script = ExtResource("5_pop")
+director = NodePath("../DungeonDirector")
+enemies_root = NodePath("../Enemies")
+loot_root = NodePath("../Loot")
+metadata/_custom_type_script = "uid://gvonfu37eay0"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_1")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D"]
+mesh_library = ExtResource("6_mesh")
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Loot" type="Node3D" parent="."]
+
+[node name="Layout" type="Node3D" parent="."]
+
+[node name="PortalBack" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 100)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/town/act_2_convoy.tscn"
+target_spawn = &"from_route"
+arrival_spawn_id = &"approach_in"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnIn" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 100)
+script = ExtResource("8_spawnm")
+spawn_id = &"approach_in"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="PortalGate" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 190, 1, 60)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
+target_spawn = &"from_approach"
+arrival_spawn_id = &"approach_out"
+sealed_by_key = "checkpoint_clearance"
+open_after_quest = "q04c_the_last_mile"
+clears_stop = "act2_approach"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnOut" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 189, 0, 60)
+script = ExtResource("8_spawnm")
+spawn_id = &"approach_out"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="GateArena" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 160, 0, 60)
+script = ExtResource("9_roomm")
+room_size = Vector2i(10, 9)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="PerimeterWarden" type="Marker3D" parent="Layout/GateArena"]
+script = ExtResource("10_enemym")
+enemy = ExtResource("e_warden")
+threat_traits = false
+rarity = "champion"
+drops_key = "checkpoint_clearance"
+metadata/_custom_type_script = "uid://bri1ph1ms875r"

@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3]
+
+[ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
+
+[resource]
+script = ExtResource("1_dlg")
+source = "# The Registrar: Checkpoint's records process, a loyal Custodian Remnant. Formal, literal.
+# Act III's quest point at the Quarantine Yard gate. Talking to it is THE LAST MILE's last step
+# (objective 'talk' registrar), reported before this dialogue opens, so the quest is READY here.
+
+~ start
+@ quest_ready:q04c_the_last_mile -> first_meeting
+@ quest_done:q04c_the_last_mile -> idle
+-> greeting
+
+~ greeting
+Registrar: Convoy, remain in the yard. Your Warden will be informed.
+-> end
+
+~ first_meeting
+Registrar: Identity received. Hardfault.
+Registrar: Hardfault. You already arrived. Eleven days ago.
+Registrar: Record one: Hardfault, arrived, flagged Null, deleted. Record two: Hardfault, inbound. That is you.
+Registrar: Two records cannot be one convoy. Please remain in quarantine while I resolve the duplicate.
+Registrar: Your Warden is waiting by the convoy.
+-> end
+
+~ idle
+Registrar: All records nominal. One duplicate pending.
+Registrar: Hardfault remains in quarantine. This is a courtesy. The last Hardfault was not offered one.
+-> end
+"

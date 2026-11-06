@@ -21,6 +21,9 @@ var speed := 0.0
 var _travel := 0.0
 var _stretch := 0.0
 var _mat: ShaderMaterial
+var _tween: Tween
+## Dead in the void (stall): no power, nothing moves until it's lifted.
+var stalled := false
 
 
 func _ready() -> void:
@@ -37,7 +40,7 @@ func _ready() -> void:
 	if arrive_from_warp:
 		speed = warp_speed
 		_stretch = 1.0
-		var t := create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE)
+		var t := _new_tween()
 		t.tween_property(self, "speed", cruise_speed, warp_time * 2.0).set_delay(0.4)
 		t.tween_property(self, "_stretch", 0.0, warp_time * 2.0).set_delay(0.4)
 
@@ -68,12 +71,39 @@ func screen_heading() -> Vector2:
 
 ## Jump on / off: speeds up and streaks the stars, or settles back to cruising.
 func warp(on: bool) -> void:
-	var t := create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE)
+	if stalled:
+		return
+	var t := _new_tween()
 	t.tween_property(self, "speed", warp_speed if on else cruise_speed, warp_time)
 	t.tween_property(self, "_stretch", 1.0 if on else 0.0, warp_time)
 
 
 ## Docked: slow to a stop (or back to cruising when `docked` is false).
 func dock(docked: bool) -> void:
-	create_tween().set_trans(Tween.TRANS_SINE).tween_property(self, "speed",
-		0.0 if docked else cruise_speed, warp_time * 2.0)
+	if stalled:
+		return
+	_new_tween().tween_property(self, "speed", 0.0 if docked else cruise_speed, warp_time * 2.0)
+
+
+## Dead in the void (ConvoyBlackout: every deck system down): drift to a halt over `time`
+## seconds (0 = at once), or spin back up to cruising when `on` is false.
+func stall(on: bool, time := 3.0) -> void:
+	stalled = on
+	var target := 0.0 if on else cruise_speed
+	if time <= 0.0:
+		if _tween != null:
+			_tween.kill()
+		speed = target
+		_stretch = 0.0
+		return
+	var t := _new_tween()
+	t.tween_property(self, "speed", target, time).set_ease(Tween.EASE_OUT if on else Tween.EASE_IN_OUT)
+	t.tween_property(self, "_stretch", 0.0, time * 0.5)
+
+
+## One tween at a time on speed: a new one (stall, warp, dock) replaces whatever was running.
+func _new_tween() -> Tween:
+	if _tween != null:
+		_tween.kill()
+	_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE)
+	return _tween

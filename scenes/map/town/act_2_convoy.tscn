@@ -46,8 +46,27 @@
 [ext_resource type="Script" uid="uid://b40l67n8f1122" path="res://scenes/map/town/convoy/hull_breach.gd" id="hb_script"]
 [ext_resource type="Resource" uid="uid://dphsiomklvcyf" path="res://data/enemies/quad_shell.tres" id="hb_shell"]
 [ext_resource type="Resource" uid="uid://depmvkkww0w1u" path="res://data/enemies/trilobite.tres" id="hb_trilo"]
+[ext_resource type="Resource" path="res://data/enemies/echo_wisp.tres" id="hb_wisp"]
+[ext_resource type="Script" path="res://scenes/map/town/convoy/convoy_blackout.gd" id="cb_script"]
+[ext_resource type="Script" path="res://scenes/map/town/convoy/deck_outages.gd" id="do_script"]
+[ext_resource type="Script" path="res://scenes/map/town/convoy/guns_breach.gd" id="gb_script"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_f6log"]
+
+[sub_resource type="SphereShape3D" id="DeckReach"]
+radius = 2.2
+
+[sub_resource type="BoxShape3D" id="DeckBody_junction"]
+size = Vector3(1.4, 2.2, 0.7)
+
+[sub_resource type="BoxShape3D" id="DeckBody_cargo"]
+size = Vector3(1.2, 1.1, 0.95)
+
+[sub_resource type="BoxShape3D" id="DeckBody_comms"]
+size = Vector3(1.0, 1.0, 0.75)
+
+[sub_resource type="BoxShape3D" id="DeckBody_iff"]
+size = Vector3(1.1, 1.0, 0.8)
 
 [node name="Act2Convoy" type="Node3D" unique_id=106002020]
 script = ExtResource("1_vu4ko")
@@ -267,6 +286,79 @@ map_glyph = "S"
 keeps = "The convoy's signal: the route terminal needs it to plot a course."
 offline_text = "No signal: the route terminal can't plot a course."
 
+[node name="IffTransponder" type="Area3D" parent="DeckSystems"]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 57.4, 1.1, 33.1)
+script = ExtResource("ds_script")
+system_id = "iff"
+npc_name = "IFF Transponder"
+look = 3
+map_glyph = "I"
+keeps = "Answers when a node's guns challenge the convoy: friend or foe. Nobody has challenged us since Hardfault."
+offline_text = "No answer to a challenge: any node's guns read the convoy as Null."
+sabotage_target = false
+recovers_on_repair = "iff_patched"
+metadata/_note = "THE LAST MILE: Checkpoint's guns knock it out (GunsBreach). The Null leave it alone in every other breach."
+
+[node name="InteractionShape" type="CollisionShape3D" parent="DeckSystems/PowerJunction"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.6)
+shape = SubResource("DeckReach")
+
+[node name="Body" type="StaticBody3D" parent="DeckSystems/PowerJunction"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeckSystems/PowerJunction/Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0.0)
+shape = SubResource("DeckBody_junction")
+
+[node name="InteractionShape" type="CollisionShape3D" parent="DeckSystems/CargoLock"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.6)
+shape = SubResource("DeckReach")
+
+[node name="Body" type="StaticBody3D" parent="DeckSystems/CargoLock"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeckSystems/CargoLock/Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0.05)
+shape = SubResource("DeckBody_cargo")
+
+[node name="InteractionShape" type="CollisionShape3D" parent="DeckSystems/CommsRelay"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.6)
+shape = SubResource("DeckReach")
+
+[node name="Body" type="StaticBody3D" parent="DeckSystems/CommsRelay"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeckSystems/CommsRelay/Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.0)
+shape = SubResource("DeckBody_comms")
+
+[node name="BreachAfterGate" type="Node3D" parent="." unique_id=1747302661]
+script = ExtResource("hb_script")
+after_stop = "act2_gate"
+reward_credits = 100
+quest_id = ""
+held_key = ""
+dock_target = ""
+hold_radius = 13.0
+load_time = 30.0
+wave_every = 8.0
+wave_sizes = Array[int]([6, 9, 12])
+enemy_level = 11
+wave_health_flat = 40.0
+wave_armour_flat = 20.0
+mini_bosses = Array[ExtResource("hb_def")]([ExtResource("hb_raider")])
+spawn_min = 8.0
+spawn_max = 16.0
+swarm = ExtResource("hb_hound")
+brute = ExtResource("hb_shell")
+shooter = ExtResource("hb_trilo")
+title_text = "// HULL BREACH //"
+start_toast = "HULL BREACH
+The hounds tracked us from the Gate. Hold the route terminal."
+progress_text = "HOLDING THE NAVIGATION  %d%%"
+away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
+clear_text = "THEY'RE FALLING BACK. CLEAR THE DECK."
+count_text = "BOARDERS ON DECK: %d"
+done_toast = "DECK CLEAR
+The convoy rolls on."
+
 [node name="BreachAfterScrapline" type="Node3D" parent="." unique_id=305242297]
 script = ExtResource("hb_script")
 after_stop = "act2_scrapline"
@@ -289,6 +381,36 @@ shooter = ExtResource("hb_trilo")
 title_text = "// HULL BREACH //"
 start_toast = "HULL BREACH
 Raiders and hounds are over the rails. Hold the route terminal."
+progress_text = "HOLDING THE NAVIGATION  %d%%"
+away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
+clear_text = "THEY'RE FALLING BACK. CLEAR THE DECK."
+count_text = "BOARDERS ON DECK: %d"
+done_toast = "DECK CLEAR
+The convoy rolls on."
+
+[node name="BreachAfterRust" type="Node3D" parent="." unique_id=902731558]
+script = ExtResource("hb_script")
+after_stop = "act2_rust"
+reward_credits = 175
+quest_id = ""
+held_key = ""
+dock_target = ""
+hold_radius = 13.0
+load_time = 38.0
+wave_every = 8.0
+wave_sizes = Array[int]([9, 13, 17])
+enemy_level = 14
+wave_health_flat = 70.0
+wave_armour_flat = 70.0
+mini_bosses = Array[ExtResource("hb_def")]([ExtResource("hb_raider")])
+spawn_min = 8.0
+spawn_max = 16.0
+swarm = ExtResource("hb_hound")
+brute = ExtResource("hb_shell")
+shooter = ExtResource("hb_trilo")
+title_text = "// HULL BREACH //"
+start_toast = "HULL BREACH
+Raiders out of the Choke, armoured to the teeth. Hold the route terminal."
 progress_text = "HOLDING THE NAVIGATION  %d%%"
 away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
 clear_text = "THEY'RE FALLING BACK. CLEAR THE DECK."
@@ -325,3 +447,112 @@ clear_text = "THE SIGNAL'S FADING. CLEAR THE DECK."
 count_text = "DRONES ON DECK: %d"
 done_toast = "DECK CLEAR
 The convoy rolls on."
+
+[node name="BreachAfterMire" type="Node3D" parent="." unique_id=1580913467]
+script = ExtResource("hb_script")
+after_stop = "act2_mire"
+reward_credits = 250
+quest_id = ""
+held_key = ""
+dock_target = ""
+hold_radius = 13.0
+load_time = 45.0
+wave_every = 8.0
+wave_sizes = Array[int]([12, 16, 20])
+enemy_level = 19
+wave_health_flat = 100.0
+wave_armour_flat = 80.0
+mini_bosses = Array[ExtResource("hb_def")]([ExtResource("hb_raider")])
+spawn_min = 8.0
+spawn_max = 16.0
+swarm = ExtResource("hb_hound")
+brute = ExtResource("hb_shell")
+shooter = ExtResource("hb_wisp")
+title_text = "// HULL BREACH //"
+start_toast = "HULL BREACH
+The Mire's static clung to the hull. Wisps on the deck: hold the route terminal."
+progress_text = "HOLDING THE NAVIGATION  %d%%"
+away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
+clear_text = "THE STATIC'S BREAKING. CLEAR THE DECK."
+count_text = "BOARDERS ON DECK: %d"
+done_toast = "DECK CLEAR
+The convoy rolls on to the Relay."
+
+[node name="BreachAfterRelay" type="Node3D" parent="." unique_id=1163849027]
+script = ExtResource("hb_script")
+after_stop = "act2_relay"
+reward_credits = 300
+quest_id = ""
+held_key = ""
+dock_target = ""
+hold_radius = 13.0
+load_time = 45.0
+wave_every = 8.0
+wave_sizes = Array[int]([14, 18, 22])
+enemy_level = 21
+wave_health_flat = 120.0
+wave_armour_flat = 90.0
+mini_bosses = Array[ExtResource("hb_def")]([ExtResource("hb_enchanter")])
+spawn_min = 8.0
+spawn_max = 16.0
+swarm = ExtResource("hb_drone")
+brute = ExtResource("hb_shell")
+shooter = ExtResource("hb_wisp")
+title_text = "// HULL BREACH //"
+start_toast = "HULL BREACH
+The Relay's echo followed us home. Hold the route terminal."
+progress_text = "HOLDING THE NAVIGATION  %d%%"
+away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
+clear_text = "THE ECHO'S FADING. CLEAR THE DECK."
+count_text = "BOARDERS ON DECK: %d"
+done_toast = "DECK CLEAR
+The convoy rolls on."
+
+[node name="InteractionShape" type="CollisionShape3D" parent="DeckSystems/IffTransponder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0.6)
+shape = SubResource("DeckReach")
+
+[node name="Body" type="StaticBody3D" parent="DeckSystems/IffTransponder"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DeckSystems/IffTransponder/Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0.0)
+shape = SubResource("DeckBody_iff")
+
+[node name="GunsBreach" type="Node3D" parent="."]
+script = ExtResource("gb_script")
+after_stop = "checkpoint_guns"
+reward_credits = 250
+quest_id = "q04c_the_last_mile"
+held_key = "checkpoint_guns_held"
+dock_target = ""
+hold_radius = 13.0
+load_time = 40.0
+wave_every = 8.0
+wave_sizes = Array[int]([12, 16, 20])
+enemy_level = 21
+wave_health_flat = 120.0
+wave_armour_flat = 90.0
+mini_bosses = Array[ExtResource("hb_def")]([ExtResource("hb_raider")])
+spawn_min = 8.0
+spawn_max = 16.0
+swarm = ExtResource("hb_drone")
+brute = ExtResource("hb_shell")
+shooter = ExtResource("hb_trilo")
+title_text = "// UNDER FIRE //"
+start_toast = "HULL BREACH
+The Null are using the guns for cover. Hold the route terminal."
+progress_text = "HOLDING THE NAVIGATION  %d%%"
+away_text = "BACK TO THE ROUTE TERMINAL: THEY'RE AT THE CONTROLS (%d%%)"
+clear_text = "THEY'RE FALLING BACK. CLEAR THE DECK."
+count_text = "BOARDERS ON DECK: %d"
+done_toast = "DECK CLEAR
+The guns are still tracking us. Patch the IFF Transponder."
+metadata/_note = "THE LAST MILE (q04c): due while the quest is on, not after a stop. Knocks out the IFF; Checkpoint's guns fire tracers until it's patched."
+
+[node name="ConvoyBlackout" type="Node" parent="." unique_id=748215903]
+script = ExtResource("cb_script")
+metadata/_note = "Every deck system down: the convoy stalls and goes dark like a dungeon, until one is patched."
+
+[node name="DeckOutages" type="Node" parent="." unique_id=1296640577]
+script = ExtResource("do_script")
+metadata/_note = "What each downed deck system looks like: market lamps out (power), hold emptied (cargo), terminal static (comms), and a badge."

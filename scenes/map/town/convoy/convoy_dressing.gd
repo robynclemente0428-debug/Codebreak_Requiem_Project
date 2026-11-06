@@ -34,6 +34,10 @@ var _streak: QuadMesh
 var _dust: GPUParticles3D
 var _motion: ConvoyMotion
 var _t := 0.0
+## 1 = engines running; 0 = dead (ConvoyBlackout): plumes and engine lights out, no streaks,
+## running lights dark. Tweened by set_powered, with a stutter on the way down.
+var _power := 1.0
+var _power_tween: Tween
 
 
 func _ready() -> void:
@@ -221,19 +225,51 @@ func _blinker(at: Vector3, col: Color) -> void:
 	_blinkers.append(m)
 
 
+## Engines on or off (ConvoyBlackout). Off: they sputter and die over `time` seconds and the
+## streaks stop blowing (the ones in the air drift out); on: they cough back to life.
+func set_powered(on: bool, time := 2.5) -> void:
+	if _power_tween != null:
+		_power_tween.kill()
+	if _dust != null:
+		_dust.emitting = on and not docked
+	if time <= 0.0:
+		_power = 1.0 if on else 0.0
+		return
+	_power_tween = create_tween().set_trans(Tween.TRANS_SINE)
+	if on:
+		_power_tween.tween_property(self, "_power", 0.35, time * 0.3)
+		_power_tween.tween_property(self, "_power", 0.1, time * 0.15)        # a cough
+		_power_tween.tween_property(self, "_power", 1.0, time * 0.55)
+	else:
+		_power_tween.tween_property(self, "_power", 0.4, time * 0.35)
+		_power_tween.tween_property(self, "_power", 0.7, time * 0.1)         # one last surge
+		_power_tween.tween_property(self, "_power", 0.0, time * 0.55)
+
+
+func is_powered() -> bool:
+	return _power > 0.0
+
+
 func _process(delta: float) -> void:
 	_t += delta
+	# A failing engine stutters: below full power it cuts out now and then
+	var stutter := 1.0
+	if _power < 1.0 and _power > 0.0 and fposmod(_t * 6.3, 1.0) < 0.35 * (1.0 - _power):
+		stutter = 0.2
+	var p := _power * stutter
 	for i in _plumes.size():
 		# Each engine flickers on its own
 		var f := 0.9 + 0.1 * sin(_t * 23.0 + i * 1.7) + 0.05 * sin(_t * 41.0 + i)
 		if docked:
 			f = 0.45 + 0.08 * sin(_t * 9.0 + i * 1.7)     # idling at the dock: short, dim, slow
-		_plumes[i].scale = Vector3(f, 0.85 + 0.15 * f, f) if not docked else Vector3(f, f * 0.6, f)
-		_lights[i].light_energy = 1.6 + 0.6 * f
+		_plumes[i].visible = p > 0.01
+		_plumes[i].scale = (Vector3(f, 0.85 + 0.15 * f, f) if not docked else Vector3(f, f * 0.6, f)) * maxf(p, 0.01)
+		_lights[i].light_energy = (1.6 + 0.6 * f) * p
+		_lights[i].visible = p > 0.01
 	# Streaks stretch and speed up with the convoy (a warp jump)
 	if _motion != null and _streak != null:
 		var w := clampf(inverse_lerp(_motion.cruise_speed, _motion.warp_speed, _motion.speed), 0.0, 1.0)
 		_streak.size.x = lerpf(streak_length, warp_streak_length, w)
 		_dust.speed_scale = lerpf(1.0, 3.0, w)
 	for i in _blinkers.size():
-		_blinkers[i].visible = fmod(_t + i * 0.5, 1.6) < 0.25
+		_blinkers[i].visible = _power > 0.5 and fmod(_t + i * 0.5, 1.6) < 0.25

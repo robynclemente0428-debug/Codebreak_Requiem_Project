@@ -1,0 +1,56 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/player/models/gladiator_model.tscn" id="1_glad"]
+[ext_resource type="Script" path="res://scenes/enemy/enemy_model.gd" id="2_model"]
+[ext_resource type="Shader" path="res://assets/shaders/materials/game_shaders/orb_void.gdshader" id="3_body"]
+[ext_resource type="Shader" path="res://assets/shaders/materials/shader/red_glitch_overlay.gdshader" id="4_glitch"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_body"]
+render_priority = 0
+shader = ExtResource("3_body")
+shader_parameter/rim_color = Color(0.1, 0.8, 1, 1)
+shader_parameter/vein_color = Color(0.8, 1, 1, 1)
+shader_parameter/rim_power = 2.4
+shader_parameter/vein_width = 0.05
+shader_parameter/speed = 0.5
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_corrupt"]
+render_priority = 1
+shader = ExtResource("4_glitch")
+shader_parameter/glitch_color = Color(1, 0.16, 0.12, 1)
+shader_parameter/accent_color = Color(1, 0.55, 0.1, 1)
+shader_parameter/strength = 0.75
+shader_parameter/rim_power = 2.6
+shader_parameter/rim_strength = 0.6
+shader_parameter/glitch_speed = 10.0
+shader_parameter/burst_chance = 0.22
+shader_parameter/idle_glitch = 0.08
+shader_parameter/slice_count = 22.0
+shader_parameter/slice_shift = 0.12
+shader_parameter/slice_chance = 0.25
+shader_parameter/slice_glow = 2.0
+shader_parameter/scan_density = 48.0
+shader_parameter/scan_strength = 0.3
+shader_parameter/scan_speed = -1.5
+shader_parameter/block_size = 0.16
+shader_parameter/block_chance = 0.05
+
+[node name="PerimeterWarden" node_paths=PackedStringArray("animation_player") instance=ExtResource("1_glad")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 0, 0, 0)
+script = ExtResource("2_model")
+animation_player = NodePath("AnimationPlayer")
+idle_anim = &"Idle"
+move_anim = &"Jog_F"
+attack_anim = &"Sword_Slash_R"
+death_anim = &"Death_small_impact"
+skill_anims = Dictionary[String, String]({
+"slam": "Slam_attack01"
+})
+skill_hit_points = Dictionary[String, float]({
+"slam": 0.4
+})
+metadata/_note = "THE LAST MILE's gate boss: Act I's Gladiator as a Custodian process (cyan) running Checkpoint's corrupted friend/foe list (the red glitch)."
+
+[node name="tripo_node_051484d1-700e-4fce-9cbd-c2779292edf1" parent="Armature/Skeleton3D" index="0"]
+material_override = SubResource("ShaderMaterial_body")
+material_overlay = SubResource("ShaderMaterial_corrupt")

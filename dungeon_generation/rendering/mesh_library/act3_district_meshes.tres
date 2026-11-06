@@ -1,0 +1,250 @@
+[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="Shader" id="Shader_jb42q"]
+code = "shader_type spatial;
+// CodeBreak Requiem - Act III district tiles: inside Checkpoint, the last Custodian node. Black glass
+// and server racks: circuit traces wandering through the corridors (each tile joins its neighbours
+// at the edge midpoints, whichever way it turned), memory cells flickering in the room floors,
+// racks of blinking lights for walls, and now and then a rack the Collector has marked in red.
+// `piece`: 0 Floor, 1 Room_Floor, 2 Wall (the same pieces as the other libraries, so a district
+// can swap its colours with the uniforms below).
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform int piece = 0;
+uniform vec3 glass : source_color = vec3(0.21, 0.20, 0.30);
+uniform vec3 rack : source_color = vec3(0.30, 0.28, 0.40);
+uniform vec3 pit : source_color = vec3(0.05, 0.05, 0.08);
+uniform vec3 accent : source_color = vec3(0.62, 0.28, 1.0);      // Custodian violet
+uniform vec3 ice : source_color = vec3(0.35, 0.9, 1.0);
+uniform vec3 mark : source_color = vec3(1.0, 0.14, 0.2);         // the Collector's red
+uniform float glow = 1.1;
+
+// Wall cutaway (as Act II's tiles): wall pixels between the camera and the player dither away.
+global uniform vec3 player_world_pos;
+// GRAPHICS > TILE DETAIL (GraphicsQuality): 0 = simple (no fine grain, stains or flicker)
+global uniform float gfx_detail;
+uniform float cutaway_radius = 3.2;
+uniform float cutaway_keep = 0.12;
+
+varying vec3 lp;
+varying vec3 ln;
+varying flat vec3 tile;      // world position of this tile's centre: one random pick per tile
+
+void vertex() {
+	lp = VERTEX;
+	ln = NORMAL;
+	tile = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+}
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = x + y * 4;
+	float m[16] = { 0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0 };
+	return (m[i] + 0.5) / 16.0;
+}
+// Bars of a printed code: x runs along the label, seed picks the code.
+float barcode(float x, float seed) { return step(0.45, hash(vec2(floor(x), seed))); }
+// The slow scan line crossing the floors. Moves with the world, not the tile.
+float scan_line(vec3 wp, float speed) {
+	return smoothstep(0.993, 1.0, fract(dot(wp.xz, vec2(0.7, 0.7)) * 0.035 - TIME * speed));
+}
+
+void fragment() {
+	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (piece == 2 && !IN_SHADOW_PASS) {
+		vec3 pv = (VIEW_MATRIX * vec4(player_world_pos + vec3(0.0, 1.0, 0.0), 1.0)).xyz;
+		if (VERTEX.z > pv.z + 0.3) {
+			float d = length(VERTEX.xy - pv.xy);
+			float fade = 1.0 - smoothstep(cutaway_radius * 0.55, cutaway_radius, d);
+			if (bayer4(FRAGCOORD.xy) < fade * (1.0 - cutaway_keep)) {
+				discard;
+			}
+		}
+	}
+	vec3 an = abs(ln);
+	bool top = an.y > 0.5;
+	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
+	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
+	float th = hash(tile.xz * 0.37 + vec2(tile.y * 0.11));       // this tile's random number
+	bool detail = gfx_detail > 0.5;
+	float grain = detail ? noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5 : 0.5;
+
+	vec3 col = glass;
+	vec3 em = vec3(0.0);
+	float metal = 0.1;
+	float rough = 0.42;
+	float m = max(abs(uv.x), abs(uv.y));
+
+	if (piece == 0) {
+		// Corridor: a trace turning through every tile (two quarter circles, flipped by the tile)
+		if (top) {
+			col = glass * (0.85 + grain * 0.3);
+			col = mix(col, pit, step(0.975, m));
+			vec2 p = th > 0.5 ? uv : vec2(uv.x, -uv.y);
+			float d1 = length(p - vec2(1.0));
+			float d2 = length(p + vec2(1.0));
+			float d = min(abs(d1 - 1.0), abs(d2 - 1.0));
+			float trace = 1.0 - smoothstep(0.03, 0.055, d);
+			float halo = 1.0 - smoothstep(0.05, 0.22, d);
+			float ang = d1 < d2 ? atan(p.y - 1.0, p.x - 1.0) : atan(p.y + 1.0, p.x + 1.0);
+			float pulse = detail ? smoothstep(0.75, 1.0, sin(ang * 8.0 - TIME * 3.0 + th * 6.28)) : 0.0;
+			col = mix(col, accent * 0.25, halo * 0.35);
+			col = mix(col, accent * 0.6, trace);
+			em += mix(accent, ice, pulse) * glow * trace * (0.5 + pulse * 1.2);
+			// solder pads where the trace leaves the tile
+			vec2 a = abs(uv);
+			float pad = 1.0 - smoothstep(0.075, 0.1, min(length(a - vec2(1.0, 0.0)), length(a - vec2(0.0, 1.0))));
+			col = mix(col, rack * 2.2, pad);
+			metal = mix(metal, 0.9, pad);
+			em += mark * glow * scan_line(wp, 0.09) * 0.22;
+		} else {
+			col = pit;
+		}
+	} else if (piece == 1) {
+		// Room floor: an 8x8 block of memory cells; a few are lit and change as you watch
+		if (top) {
+			vec2 g = uv * 4.0;
+			vec2 id = floor(g);
+			vec2 f = fract(g) - 0.5;
+			float cell = step(max(abs(f.x), abs(f.y)), 0.43);
+			float r = hash(id + tile.xz * 0.37);
+			float bit = step(0.93, r);
+			if (detail) {
+				float rate = 0.2 + r * 1.2;
+				bit = step(0.9, hash(id * 1.7 + vec2(floor(TIME * rate + r * 9.0) + th)));
+			}
+			col = mix(pit, glass * (0.9 + 0.5 * r) * (0.9 + grain * 0.2), cell);
+			vec3 lit = mix(accent, ice, step(0.5, r));
+			col = mix(col, lit * 0.3, bit * cell);
+			em += lit * glow * bit * cell * 0.4;
+			// the block's address line round the edge
+			float ring = step(0.93, m) * step(m, 0.97);
+			em += accent * glow * ring * 0.3;
+			col = mix(col, accent * 0.35, ring);
+			em += mark * glow * scan_line(wp, 0.09) * 0.18;
+		} else {
+			col = pit;
+		}
+	} else {
+		// Wall: server racks. Slatted units, two columns of lights, a violet seam down the upright
+		if (top) {
+			col = rack * (0.55 + grain * 0.2);
+			float line = step(0.84, m) * step(m, 0.9);
+			em += accent * glow * line * 0.4;
+			col = mix(col, accent * 0.35, line);
+		} else {
+			float y = uv.y;                                          // -1 bottom .. 1 top of the block
+			bool upper = tile.y > 2.0;                               // second block of a 2-high wall
+			float rows = floor((y + 1.0) * 6.0);
+			float fr = fract((y + 1.0) * 6.0);
+			col = mix(pit, rack * (0.85 + grain * 0.3), step(0.14, fr));
+			// vents on the rack's face
+			float vent = step(abs(uv.x + 0.12), 0.56) * step(0.32, fr) * step(fr, 0.8);
+			float slots = step(0.5, fract(uv.x * 16.0));
+			col = mix(col, mix(pit, rack * 0.6, slots), vent);
+			// two columns of status lights, each blinking at its own rate
+			float side = step(0.79, uv.x);
+			float lx = min(abs(uv.x - 0.71), abs(uv.x - 0.87));
+			float led = step(lx, 0.035) * step(abs(fr - 0.55), 0.17);
+			float blink = step(0.5, th);
+			if (detail) {
+				blink = step(0.5, hash(vec2(rows + side * 7.0, floor(TIME * (1.0 + th * 2.0) + rows * 0.3)) + tile.xz * 0.37));
+			}
+			vec3 lamp = mix(ice, accent, step(0.5, hash(vec2(rows, th + side))));
+			col = mix(col, lamp * 0.25, led);
+			em += lamp * glow * led * blink * 0.9;
+			// the upright between racks
+			float post = step(0.93, abs(uv.x));
+			col = mix(col, pit, post);
+			float seam = step(abs(uv.x + 0.84), 0.022);
+			em += accent * glow * seam * 0.7;
+			col = mix(col, accent * 0.4, seam);
+			// the Collector's mark on some upper racks: a red frame, pulsing
+			if (upper && th > 0.84) {
+				float box = max(abs(uv.x + 0.12) / 0.62, abs(y) / 0.62);
+				float frame = step(0.9, box) * step(box, 1.0);
+				float beat = 0.55 + 0.45 * sin(TIME * 3.0 + th * 50.0);
+				em += mark * glow * frame * beat * 1.1;
+				col = mix(col, mark * 0.5, frame);
+			}
+			col = mix(col, pit, step(y, -0.9));                      // plinth
+		}
+	}
+
+	ALBEDO = col;
+	METALLIC = metal;
+	ROUGHNESS = rough;
+	EMISSION = em;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nqxis"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 0
+shader_parameter/glow = 1.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
+material = SubResource("ShaderMaterial_nqxis")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_1c3s2"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_j70o3"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 2
+shader_parameter/glow = 1.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
+material = SubResource("ShaderMaterial_j70o3")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_52fan"]
+data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bcrlo"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 1
+shader_parameter/glow = 1.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
+material = SubResource("ShaderMaterial_bcrlo")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_fjas6"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[resource]
+item/0/name = "Floor"
+item/0/mesh = SubResource("BoxMesh_thlkj")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = [SubResource("ConcavePolygonShape3D_1c3s2"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1
+item/1/name = "Wall"
+item/1/mesh = SubResource("BoxMesh_okwpl")
+item/1/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/mesh_cast_shadow = 1
+item/1/shapes = [SubResource("ConcavePolygonShape3D_52fan"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/1/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/navigation_layers = 1
+item/2/name = "Room_Floor"
+item/2/mesh = SubResource("BoxMesh_gs8hm")
+item/2/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/mesh_cast_shadow = 1
+item/2/shapes = [SubResource("ConcavePolygonShape3D_fjas6"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/2/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/navigation_layers = 1

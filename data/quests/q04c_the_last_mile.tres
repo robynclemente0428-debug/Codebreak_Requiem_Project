@@ -1,0 +1,53 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+
+[sub_resource type="Resource" id="Objective_guns"]
+script = ExtResource("3_rec")
+description = "Hold the deck under Checkpoint's guns"
+kind = "recover"
+target = "checkpoint_guns_held"
+
+[sub_resource type="Resource" id="Objective_iff"]
+script = ExtResource("3_rec")
+description = "Patch the IFF Transponder"
+kind = "recover"
+target = "iff_patched"
+
+[sub_resource type="Resource" id="Objective_gate"]
+script = ExtResource("3_rec")
+description = "Take Checkpoint's clearance from the Perimeter Warden"
+kind = "recover"
+target = "checkpoint_clearance"
+
+[sub_resource type="Resource" id="Objective_dock"]
+script = ExtResource("1_obj")
+description = "Dock in the Quarantine Yard"
+kind = "enter_area"
+target = "act_3_quarantine_yard"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Objective_registrar"]
+script = ExtResource("1_obj")
+description = "Report to the Registrar"
+kind = "talk"
+target = "registrar"
+metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[resource]
+script = ExtResource("2_quest")
+id = "q04c_the_last_mile"
+title = "THE LAST MILE"
+description = "Checkpoint is two stops out, and it answered the relay. Its guns cover the approach.
+Hold the deck if anything comes aboard, keep the IFF Transponder answering, then get the convoy through Checkpoint's gate.
+LOCK: CHALLENGE. The gate's Perimeter Warden asks who you are, in code. It stops the fight and hands you a challenge program to fix. Solve it and its port opens for a few seconds. Every wrong answer hurts, and so does walking away.
+TIP: read the comment at the top of each challenge, then the OUTPUT. The challenges are built on what you already know: crowds, loops, life checks, and steps in order."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_guns"), SubResource("Objective_iff"), SubResource("Objective_gate"), SubResource("Objective_dock"), SubResource("Objective_registrar")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q04b_hollow_choir"])
+reward_credits = 150
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Brack"
+metadata/act = "II"

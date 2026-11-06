@@ -88,15 +88,31 @@ spawn_id = &"relay_in"
 dungeon_level = 20
 kind = 2
 map_position = Vector2(0.9, 0.6)
-links = Array[String](["act2_mire"])
+links = Array[String](["act2_mire", "act2_approach"])
 note = "Level 20  -  The Hollow Choir (ECHO)"
 random_threats = Vector2i(1, 2)
 route_after = "act2_mire"
+
+[sub_resource type="Resource" id="Waypoint_act2_approach"]
+script = ExtResource("2_wp")
+id = "act2_approach"
+display_name = "Checkpoint Approach"
+scene = "res://scenes/map/dungeon/act_2_checkpoint_approach.tscn"
+spawn_id = &"approach_in"
+dungeon_level = 21
+kind = 2
+map_position = Vector2(0.96, 0.3)
+links = Array[String](["act2_relay"])
+note = "Level 21  -  Checkpoint's gate. Perimeter Warden (CHALLENGE)"
+random_threats = Vector2i(1, 1)
+route_after = "act2_relay"
+route_needs_key = "iff_patched"
+route_needs_text = "LOCKED: CHECKPOINT'S GUNS ARE TRACKING US"
 
 [resource]
 script = ExtResource("1_act")
 act_number = 2
 title = "ACT II"
-subtitle = "THE CONVOY  -  Stops along the route, levels 10 to 20"
-waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act2_convoy"), SubResource("Waypoint_act2_gate"), SubResource("Waypoint_act2_scrapline"), SubResource("Waypoint_act2_rust"), SubResource("Waypoint_act2_signal"), SubResource("Waypoint_act2_mire"), SubResource("Waypoint_act2_relay")])
+subtitle = "THE CONVOY  -  Stops along the route, levels 10 to 21"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act2_convoy"), SubResource("Waypoint_act2_gate"), SubResource("Waypoint_act2_scrapline"), SubResource("Waypoint_act2_rust"), SubResource("Waypoint_act2_signal"), SubResource("Waypoint_act2_mire"), SubResource("Waypoint_act2_relay"), SubResource("Waypoint_act2_approach")])
 convoy_route = true

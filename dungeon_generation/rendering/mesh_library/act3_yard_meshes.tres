@@ -1,0 +1,248 @@
+[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="Shader" id="Shader_jb42q"]
+code = "shader_type spatial;
+// CodeBreak Requiem - Act III Quarantine Yard tiles: Checkpoint's intake floor, where the convoy
+// is held. Clean Custodian ceramic and slate, not lived in: printed bay codes, red quarantine
+// tape, tiles tagged for inspection, ice-blue status slots, and a slow scan line over the floor.
+// `piece`: 0 Floor, 1 Room_Floor, 2 Wall (the same pieces as the other libraries).
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform int piece = 0;
+uniform vec3 ceramic : source_color = vec3(0.50, 0.52, 0.53);
+uniform vec3 slate : source_color = vec3(0.13, 0.15, 0.19);
+uniform vec3 grout : source_color = vec3(0.05, 0.055, 0.07);
+uniform vec3 stain : source_color = vec3(0.26, 0.25, 0.25);
+uniform vec3 quarantine : source_color = vec3(1.0, 0.18, 0.14);
+uniform vec3 ice : source_color = vec3(0.40, 0.85, 1.0);
+uniform float glow = 1.1;
+
+// Wall cutaway (as Act II's tiles): wall pixels between the camera and the player dither away.
+global uniform vec3 player_world_pos;
+// GRAPHICS > TILE DETAIL (GraphicsQuality): 0 = simple (no fine grain, stains or flicker)
+global uniform float gfx_detail;
+uniform float cutaway_radius = 3.2;
+uniform float cutaway_keep = 0.12;
+
+varying vec3 lp;
+varying vec3 ln;
+varying flat vec3 tile;      // world position of this tile's centre: one random pick per tile
+
+void vertex() {
+	lp = VERTEX;
+	ln = NORMAL;
+	tile = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+}
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = x + y * 4;
+	float m[16] = { 0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0 };
+	return (m[i] + 0.5) / 16.0;
+}
+// Bars of a printed code: x runs along the label, seed picks the code.
+float barcode(float x, float seed) { return step(0.45, hash(vec2(floor(x), seed))); }
+// The slow scan line crossing the floors. Moves with the world, not the tile.
+float scan_line(vec3 wp, float speed) {
+	return smoothstep(0.993, 1.0, fract(dot(wp.xz, vec2(0.7, 0.7)) * 0.035 - TIME * speed));
+}
+
+void fragment() {
+	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (piece == 2 && !IN_SHADOW_PASS) {
+		vec3 pv = (VIEW_MATRIX * vec4(player_world_pos + vec3(0.0, 1.0, 0.0), 1.0)).xyz;
+		if (VERTEX.z > pv.z + 0.3) {
+			float d = length(VERTEX.xy - pv.xy);
+			float fade = 1.0 - smoothstep(cutaway_radius * 0.55, cutaway_radius, d);
+			if (bayer4(FRAGCOORD.xy) < fade * (1.0 - cutaway_keep)) {
+				discard;
+			}
+		}
+	}
+	vec3 an = abs(ln);
+	bool top = an.y > 0.5;
+	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
+	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
+	float th = hash(tile.xz * 0.37 + vec2(tile.y * 0.11));       // this tile's random number
+	bool detail = gfx_detail > 0.5;
+	float grain = detail ? noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5 : 0.5;
+
+	vec3 col = slate;
+	vec3 em = vec3(0.0);
+	float metal = 0.1;
+	float rough = 0.45;
+	float m = max(abs(uv.x), abs(uv.y));
+
+	if (piece == 0) {
+		// Lane: poured slate, a seam at the tile's edge, an ice-blue registration cross in the middle
+		if (top) {
+			col = slate * (0.85 + grain * 0.3);
+			col = mix(col, grout, step(0.97, m));
+			float cross_m = step(min(abs(uv.x), abs(uv.y)), 0.018) * step(m, 0.16);
+			em += ice * glow * cross_m * 0.8;
+			col = mix(col, ice * 0.4, cross_m);
+			// painted corner ticks
+			vec2 c = abs(uv);
+			float tick = step(0.74, m) * step(m, 0.8) * step(0.55, min(c.x, c.y));
+			col = mix(col, ceramic * 0.8, tick);
+			em += ice * glow * scan_line(wp, 0.04) * 0.25;
+			rough = 0.55;
+		} else {
+			col = grout;
+		}
+	} else if (piece == 1) {
+		// Yard floor: 2x2 ceramic pavers, printed bay codes, some tiles tagged for inspection
+		if (top) {
+			vec2 q = floor(uv + 1.0);
+			float tone = hash(q + tile.xz * 0.37);
+			col = ceramic * (0.84 + 0.16 * tone) * (0.92 + grain * 0.16);
+			vec2 sub = fract(uv + 1.0) * 2.0 - 1.0;
+			col = mix(col, grout, step(0.95, max(abs(sub.x), abs(sub.y))) * 0.85);
+			if (detail) {
+				col = mix(col, stain, smoothstep(0.6, 0.85, noise(wuv * 0.7 + 4.0)) * 0.22);
+			}
+			// a printed bay code along one edge of some tiles
+			if (th > 0.7) {
+				float strip = step(abs(uv.y + 0.72), 0.1) * step(abs(uv.x), 0.68);
+				col = mix(col, slate * 0.7, strip * barcode(uv.x * 14.0, th * 91.0));
+			}
+			// tagged for inspection: dull painted corners, no pulse, so they never read as an enemy's telegraph
+			if (th < 0.05) {
+				float box = step(0.6, m) * step(m, 0.68);
+				float corner = step(0.32, min(abs(uv.x), abs(uv.y)));
+				float tag = box * corner;
+				em += quarantine * glow * tag * 0.06;
+				col = mix(col, quarantine * 0.4, tag * 0.8);
+			}
+			em += ice * glow * scan_line(wp, 0.04) * 0.2;
+			metal = 0.05;
+			rough = 0.32;                                            // glazed: it catches the floodlights
+		} else {
+			col = grout;
+		}
+	} else {
+		// Containment wall: slate below with red quarantine tape, ceramic above with a status slot
+		if (top) {
+			col = slate;
+			col = mix(col, ceramic * 0.7, step(0.8, m));
+			float line = step(0.88, m) * step(m, 0.92);
+			em += ice * glow * line * 0.25;
+			col = mix(col, ice * 0.3, line);
+		} else {
+			float y = uv.y;                                          // -1 bottom .. 1 top of the block
+			bool upper = tile.y > 2.0;                               // second block of a 2-high wall
+			float seam = step(0.96, abs(uv.x));
+			if (upper) {
+				col = ceramic * (0.8 + grain * 0.2);
+				// the recessed status slot: one in six has gone red
+				float frame = step(abs(uv.x), 0.13) * step(abs(y), 0.74);
+				float slot = step(abs(uv.x), 0.055) * step(abs(y), 0.66);
+				vec3 light = mix(ice, quarantine, step(0.83, th));
+				float pulse = 0.75 + 0.25 * sin(TIME * 1.2 + th * 30.0);
+				col = mix(col, grout, frame);
+				col = mix(col, light * 0.5, slot);
+				em += light * glow * slot * pulse * 0.9;
+				// a printed label beside the slot
+				float label = step(abs(uv.x - 0.55), 0.26) * step(abs(y - 0.5), 0.07);
+				col = mix(col, slate, label * barcode(uv.x * 20.0, th * 57.0 + an.x));
+				// rain marks under the cap, a Custodian wall nobody has cleaned in years
+				if (detail) {
+					float streak = smoothstep(0.62, 0.9, noise(vec2(wuv.x * 5.0, wuv.y * 0.4)));
+					col = mix(col, stain, streak * 0.4);
+				}
+				col = mix(col, slate, step(0.86, y));                // cap
+			} else {
+				col = slate * (0.85 + grain * 0.3);
+				// quarantine tape: red and pale diagonal stripes
+				float band = step(abs(y + 0.3), 0.2);
+				float stripe = step(0.5, fract((uv.x + y) * 1.5));
+				col = mix(col, mix(ceramic * 0.85, quarantine * 0.7, stripe), band);
+				em += quarantine * glow * band * stripe * 0.1;
+				// a thin red strip above it, the boundary of the yard
+				float strip = step(abs(y - 0.45), 0.03);
+				float pulse = 0.7 + 0.3 * sin(TIME * 1.6 + wp.x * 0.4 + wp.z * 0.4);
+				em += quarantine * glow * strip * pulse * 0.7;
+				col = mix(col, quarantine * 0.45, strip);
+				col = mix(col, grout, step(y, -0.88));               // kick plate
+			}
+			col = mix(col, grout, seam);
+		}
+	}
+
+	ALBEDO = col;
+	METALLIC = metal;
+	ROUGHNESS = rough;
+	EMISSION = em;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nqxis"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 0
+shader_parameter/glow = 1.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
+material = SubResource("ShaderMaterial_nqxis")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_1c3s2"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_j70o3"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 2
+shader_parameter/glow = 1.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
+material = SubResource("ShaderMaterial_j70o3")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_52fan"]
+data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bcrlo"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 1
+shader_parameter/glow = 1.1
+
+[sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
+material = SubResource("ShaderMaterial_bcrlo")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_fjas6"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[resource]
+item/0/name = "Floor"
+item/0/mesh = SubResource("BoxMesh_thlkj")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = [SubResource("ConcavePolygonShape3D_1c3s2"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1
+item/1/name = "Wall"
+item/1/mesh = SubResource("BoxMesh_okwpl")
+item/1/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/mesh_cast_shadow = 1
+item/1/shapes = [SubResource("ConcavePolygonShape3D_52fan"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/1/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/navigation_layers = 1
+item/2/name = "Room_Floor"
+item/2/mesh = SubResource("BoxMesh_gs8hm")
+item/2/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/mesh_cast_shadow = 1
+item/2/shapes = [SubResource("ConcavePolygonShape3D_fjas6"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/2/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/navigation_layers = 1

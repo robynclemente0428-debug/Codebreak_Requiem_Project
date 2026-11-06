@@ -30,3 +30,8 @@ enum Kind { TOWN, DUNGEON, BOSS }
 ## Convoy routes only (WaypointAct.convoy_route): the stop whose exit opens this one on the
 ## convoy's route terminal. Empty = open from the start.
 @export var route_after: String = ""
+## Convoy routes only: a QuestItems id the player must have recovered too before the route
+## terminal opens this stop (Checkpoint Approach waits for "iff_patched"). Empty = none.
+@export var route_needs_key: String = ""
+## Shown on the route map while route_needs_key is missing.
+@export var route_needs_text: String = ""

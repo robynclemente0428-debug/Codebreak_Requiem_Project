@@ -33,6 +33,17 @@ const ITEMS := {
 		"hint": "Hold the portal until everyone in Hardfault is through."},
 	"dock_held": {"name": "DOCK HELD", "sealed": "THE CONVOY IS STILL LOADING",
 		"hint": "Hold the dock until the convoy is loaded."},
+	# THE LAST MILE (q04c): the guns breach, the IFF patch, and Checkpoint's gate
+	"checkpoint_guns_held": {"name": "DECK HELD UNDER FIRE", "sealed": "THE NULL ARE ON THE DECK",
+		"hint": "Hold the route terminal and clear the deck while Checkpoint's guns fire."},
+	"iff_patched": {"name": "IFF TRANSPONDER PATCHED", "sealed": "CHECKPOINT'S GUNS ARE TRACKING US",
+		"hint": "Patch the IFF Transponder on the convoy's deck."},
+	"checkpoint_clearance": {"name": "CHECKPOINT CLEARANCE", "item": true,
+		"hint": "The Perimeter Warden at Checkpoint's gate carries it.",
+		"desc": "A Custodian gate credential, issued for a challenge answered in code. It says HARDFAULT: INBOUND.",
+		"opens": "The Quarantine Yard"},
+	"quarantine_lifted": {"name": "QUARANTINE LIFTED", "sealed": "THE YARD IS IN QUARANTINE",
+		"hint": "The Registrar keeps Hardfault in the yard until the duplicate is resolved."},
 }
 
 

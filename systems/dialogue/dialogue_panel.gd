@@ -315,6 +315,8 @@ func _check(cond: String) -> bool:
 				result = _quests.is_completed(arg)
 			"can_start":
 				result = _quests.can_start(_quests.get_def(arg))
+			"recovered":                          # a quest item or event (QuestItems id)
+				result = _quests.has_recovered(arg)
 	if parts[0] == "has_credits" and _wallet != null:
 		result = _wallet.amount >= int(arg)
 	return result != negate

@@ -9,6 +9,9 @@ const CAST_NUMBER_KEY := "program_cast_number"
 const REPEAT_UNDO_KEY := "program_repeat_undo"
 ## The ProgramLoopRunner running this cast's loops (only on casts that loop).
 const LOOP_KEY := "program_loop"
+## The condition ids of every WHEN rule that fired for this cast ("enemies_nearby", ...), so
+## something it hits can tell which rules answered (ChallengeLock). See fired_conditions().
+const FIRED_KEY := "program_fired"
 
 var program: SkillProgram
 var limits: SkillProgramLimits
@@ -128,6 +131,7 @@ static func _is_repeat_rule(rule: ProgramRule) -> bool:
 
 ## A WHEN (or loop) rule fired: quests, class trait, and conditions that spend something.
 func announce(cast: SkillCast, rule: ProgramRule) -> void:
+	_mark_fired(cast, rule)
 	_report_triggered(rule, cast)
 	_trait_fired(cast, rule)
 	for c in rule.conditions:
@@ -179,6 +183,7 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 			continue
 		if not rule.all_true(cast, target):
 			continue
+		_mark_fired(cast, rule)
 		_report_triggered(rule, cast)
 		_trait_fired(cast, rule)
 		var mult := limits.rule_effect_mult(rule)
@@ -207,6 +212,29 @@ func speed_mult(_skill: SkillInstance) -> float:
 	if _hit_speed == 0.0 or (Time.get_ticks_msec() - _hit_speed_msec) / 1000.0 > HIT_SPEED_WINDOW:
 		return 1.0
 	return maxf(1.0 + _hit_speed, 0.1)
+
+
+## Notes on the cast which conditions this rule fired on (FIRED_KEY).
+static func _mark_fired(cast: SkillCast, rule: ProgramRule) -> void:
+	var fired: Array = cast.extra.get(FIRED_KEY, [])
+	for c in rule.conditions:
+		if not c.type_id() in fired:
+			fired.append(c.type_id())
+	cast.extra[FIRED_KEY] = fired
+
+
+## The condition ids whose WHEN rules fired for `cast`: its own, and those of the cast that
+## started its loop (a loop's repeats answer for the rule that started them).
+static func fired_conditions(cast: SkillCast) -> Array:
+	if cast == null:
+		return []
+	var out: Array = cast.extra.get(FIRED_KEY, []).duplicate()
+	var runner := cast.extra.get(LOOP_KEY) as ProgramLoopRunner
+	if runner != null and runner.root != null and runner.root != cast:
+		for id in runner.root.extra.get(FIRED_KEY, []):
+			if not id in out:
+				out.append(id)
+	return out
 
 
 ## Class trait reaction to a WHEN rule firing (Paladin's armour buff). One buff per rule.

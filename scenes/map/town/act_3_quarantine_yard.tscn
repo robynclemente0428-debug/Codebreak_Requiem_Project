@@ -1,0 +1,317 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/map/town/town_area.gd" id="1_town"]
+[ext_resource type="Script" path="res://dungeon_generation/dungeon_director.gd" id="2_dir"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act3_yard.tres" id="3_theme"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act3_yard_meshes.tres" id="4_mesh"]
+[ext_resource type="Script" path="res://dungeon_generation/layout/room_marker.gd" id="5_room"]
+[ext_resource type="Script" path="res://dungeon_generation/layout/spawn_marker.gd" id="6_spawn"]
+[ext_resource type="Script" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
+[ext_resource type="PackedScene" path="res://scenes/map/map_management/portal.tscn" id="12_20hpm"]
+[ext_resource type="Script" path="res://scenes/map/map_management/portal.gd" id="13_he07q"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/convoy_deck_meshes.tres" id="20_hull"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/convoy_deck.tres" id="21_hulltheme"]
+[ext_resource type="Script" path="res://scenes/map/town/convoy/convoy_dressing.gd" id="22_dressing"]
+[ext_resource type="PackedScene" path="res://scenes/npc/warden_brack.tscn" id="30_brack"]
+[ext_resource type="PackedScene" path="res://scenes/npc/examiner_sudo.tscn" id="31_sudo"]
+[ext_resource type="PackedScene" path="res://scenes/npc/registrar.tscn" id="32_registrar"]
+[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/general_vendor.tscn" id="33_vendor"]
+[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/rogue_vendor.tscn" id="34_rogue"]
+[ext_resource type="Resource" path="res://data/dialogue/hex.tres" id="35_hex"]
+[ext_resource type="Resource" path="res://data/shops/weapon_vendor.tres" id="36_wshop"]
+[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/weapon_vendor.tscn" id="37_wmodel"]
+[ext_resource type="Resource" path="res://data/shops/armour_vendor.tres" id="38_ashop"]
+[ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/armour_vendor.tscn" id="39_amodel"]
+[ext_resource type="Resource" path="res://data/shops/gem_vendor.tres" id="40_gshop"]
+[ext_resource type="Resource" path="res://data/dialogue/gem_vendor.tres" id="41_gdlg"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/crate.tscn" id="50_crate"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/crate_large.tscn" id="51_crate_large"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/crate_tarp.tscn" id="52_crate_tarp"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/crate_tarp_large.tscn" id="53_crate_tarp_large"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/desk_medium.tscn" id="54_desk"]
+[ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_tall.tscn" id="55_shelves"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_yard"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_20hpm"]
+size = Vector3(6, 3, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_he07q"]
+albedo_color = Color(0.1, 0.11, 0.14, 1)
+metallic = 0.7
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="BoxMesh_oc5dd"]
+material = SubResource("StandardMaterial3D_he07q")
+size = Vector3(6, 3, 3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3hsq5"]
+shading_mode = 0
+albedo_color = Color(0, 0.9, 1, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_c7kyo"]
+material = SubResource("StandardMaterial3D_3hsq5")
+size = Vector3(6.1, 0.08, 3.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_k5prd"]
+shading_mode = 0
+albedo_color = Color(1, 0.75, 0.35, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_c771m"]
+material = SubResource("StandardMaterial3D_k5prd")
+size = Vector3(0.8, 0.12, 0.12)
+
+[sub_resource type="StandardMaterial3D" id="Mat_quarantine"]
+shading_mode = 0
+albedo_color = Color(1, 0.22, 0.18, 1)
+
+[sub_resource type="BoxMesh" id="Mesh_line_long"]
+material = SubResource("Mat_quarantine")
+size = Vector3(35, 0.03, 0.18)
+
+[sub_resource type="BoxMesh" id="Mesh_line_short"]
+material = SubResource("Mat_quarantine")
+size = Vector3(0.18, 0.03, 24)
+
+[sub_resource type="BoxMesh" id="Mesh_floodlight"]
+material = SubResource("StandardMaterial3D_he07q")
+size = Vector3(0.25, 5, 0.25)
+
+[node name="Act3QuarantineYard" type="Node3D"]
+script = ExtResource("1_town")
+act = "III"
+null_decals = 4
+
+[node name="DungeonDirector" type="Node" parent="." node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("2_dir")
+grid_height = 30
+min_room_size = 0
+max_room_size = 0
+room_interval = 0
+room_min_gap = 0
+num_branch_rooms = 0
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("3_theme")
+use_random_seed = false
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_yard")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D"]
+mesh_library = ExtResource("4_mesh")
+data = {
+"cells": PackedInt32Array(8, 6, 1, 65544, 6, 1, 8, 7, 1, 65544, 7, 1, 8, 8, 1, 65544, 8, 1, 8, 9, 1, 65544, 9, 1, 8, 10, 1, 65544, 10, 1, 8, 11, 1, 65544, 11, 1, 8, 12, 1, 65544, 12, 1, 8, 13, 1, 65544, 13, 1, 8, 14, 1, 65544, 14, 1, 8, 15, 1, 65544, 15, 1, 8, 16, 1, 65544, 16, 1, 8, 17, 1, 65544, 17, 1, 8, 18, 1, 65544, 18, 1, 8, 19, 1, 65544, 19, 1, 8, 20, 1, 65544, 20, 1, 9, 6, 1, 65545, 6, 1, 9, 7, 2, 9, 8, 2, 9, 9, 2, 9, 10, 2, 9, 11, 2, 9, 12, 2, 9, 13, 2, 9, 14, 2, 9, 15, 2, 9, 16, 2, 9, 17, 2, 9, 18, 2, 9, 19, 2, 9, 20, 2, 10, 6, 1, 65546, 6, 1, 10, 7, 2, 10, 8, 2, 10, 9, 2, 10, 10, 2, 10, 11, 2, 10, 12, 2, 10, 13, 2, 10, 14, 2, 10, 15, 2, 10, 16, 2, 10, 17, 2, 10, 18, 2, 10, 19, 2, 10, 20, 2, 11, 6, 1, 65547, 6, 1, 11, 7, 2, 11, 8, 2, 11, 9, 2, 11, 10, 2, 11, 11, 2, 11, 12, 2, 11, 13, 2, 11, 14, 2, 11, 15, 2, 11, 16, 2, 11, 17, 2, 11, 18, 2, 11, 19, 2, 11, 20, 2, 12, 6, 1, 65548, 6, 1, 12, 7, 2, 12, 8, 2, 12, 9, 2, 12, 10, 2, 12, 11, 2, 12, 12, 2, 12, 13, 2, 12, 14, 2, 12, 15, 2, 12, 16, 2, 12, 17, 2, 12, 18, 2, 12, 19, 2, 12, 20, 2, 13, 6, 1, 65549, 6, 1, 13, 7, 2, 13, 8, 2, 13, 9, 2, 13, 10, 2, 13, 11, 2, 13, 12, 2, 13, 13, 2, 13, 14, 2, 13, 15, 2, 13, 16, 2, 13, 17, 2, 13, 18, 2, 13, 19, 2, 13, 20, 2, 14, 6, 1, 65550, 6, 1, 14, 7, 2, 14, 8, 2, 14, 9, 2, 14, 10, 2, 14, 11, 2, 14, 12, 2, 14, 13, 2, 14, 14, 2, 14, 15, 2, 14, 16, 2, 14, 17, 2, 14, 18, 2, 14, 19, 2, 14, 20, 2, 15, 6, 1, 65551, 6, 1, 15, 7, 2, 15, 8, 2, 15, 9, 2, 15, 10, 2, 15, 11, 2, 15, 12, 2, 15, 13, 2, 15, 14, 2, 15, 15, 2, 15, 16, 2, 15, 17, 2, 15, 18, 2, 15, 19, 2, 15, 20, 2, 16, 6, 1, 65552, 6, 1, 16, 7, 2, 16, 8, 2, 16, 9, 2, 16, 10, 2, 16, 11, 2, 16, 12, 2, 16, 13, 2, 16, 14, 2, 16, 15, 2, 16, 16, 2, 16, 17, 2, 16, 18, 2, 16, 19, 2, 16, 20, 2, 17, 6, 1, 65553, 6, 1, 17, 7, 2, 17, 8, 2, 17, 9, 2, 17, 10, 2, 17, 11, 2, 17, 12, 2, 17, 13, 2, 17, 14, 2, 17, 15, 2, 17, 16, 2, 17, 17, 2, 17, 18, 2, 17, 19, 2, 17, 20, 2, 18, 6, 1, 65554, 6, 1, 18, 7, 2, 18, 8, 2, 18, 9, 2, 18, 10, 2, 18, 11, 2, 18, 12, 2, 18, 13, 2, 18, 14, 2, 18, 15, 2, 18, 16, 2, 18, 17, 2, 18, 18, 2, 18, 19, 2, 18, 20, 2, 19, 6, 1, 65555, 6, 1, 19, 7, 2, 19, 8, 2, 19, 9, 2, 19, 10, 2, 19, 11, 2, 19, 12, 2, 19, 13, 2, 19, 14, 2, 19, 15, 2, 19, 16, 2, 19, 17, 2, 19, 18, 2, 19, 19, 2, 19, 20, 2, 20, 6, 1, 65556, 6, 1, 20, 7, 2, 20, 8, 2, 20, 9, 2, 20, 10, 2, 20, 11, 2, 20, 12, 2, 20, 13, 2, 20, 14, 2, 20, 15, 2, 20, 16, 2, 20, 17, 2, 20, 18, 2, 20, 19, 2, 20, 20, 2, 21, 6, 1, 65557, 6, 1, 21, 7, 2, 21, 8, 2, 21, 9, 2, 21, 10, 2, 21, 11, 2, 21, 12, 2, 21, 13, 2, 21, 14, 2, 21, 15, 2, 21, 16, 2, 21, 17, 2, 21, 18, 2, 21, 19, 2, 21, 20, 2, 22, 6, 1, 65558, 6, 1, 22, 7, 2, 22, 8, 2, 22, 9, 2, 22, 10, 2, 22, 11, 2, 22, 12, 2, 22, 13, 2, 22, 14, 2, 22, 15, 2, 22, 16, 2, 22, 17, 2, 22, 18, 2, 22, 19, 2, 22, 20, 2, 23, 6, 1, 65559, 6, 1, 23, 7, 2, 23, 8, 2, 23, 9, 2, 23, 10, 2, 23, 11, 2, 23, 12, 2, 23, 13, 2, 23, 14, 2, 23, 15, 2, 23, 16, 2, 23, 17, 2, 23, 18, 2, 23, 19, 2, 23, 20, 2, 24, 6, 1, 65560, 6, 1, 24, 7, 2, 24, 8, 2, 24, 9, 2, 24, 10, 2, 24, 11, 2, 24, 12, 2, 24, 13, 2, 24, 14, 2, 24, 15, 2, 24, 16, 2, 24, 17, 2, 24, 18, 2, 24, 19, 2, 24, 20, 2, 25, 6, 1, 65561, 6, 1, 25, 7, 2, 25, 8, 2, 25, 9, 2, 25, 10, 2, 25, 11, 2, 25, 12, 2, 25, 13, 2, 25, 14, 2, 25, 15, 2, 25, 16, 2, 25, 17, 2, 25, 18, 2, 25, 19, 2, 25, 20, 2, 26, 6, 1, 65562, 6, 1, 26, 7, 2, 26, 8, 2, 26, 9, 2, 26, 10, 2, 26, 11, 2, 26, 12, 2, 26, 13, 2, 26, 14, 2, 26, 15, 2, 26, 16, 2, 26, 17, 2, 26, 18, 2, 26, 19, 2, 26, 20, 2, 27, 6, 1, 65563, 6, 1, 27, 7, 1, 65563, 7, 1, 27, 8, 1, 65563, 8, 1, 27, 9, 1, 65563, 9, 1, 27, 10, 1, 65563, 10, 1, 27, 11, 1, 65563, 11, 1, 27, 12, 1, 65563, 12, 1, 27, 13, 1, 65563, 13, 1, 27, 14, 1, 65563, 14, 1, 27, 15, 1, 65563, 15, 1, 27, 16, 1, 65563, 16, 1, 27, 17, 1, 65563, 17, 1, 27, 18, 1, 65563, 18, 1, 27, 19, 1, 65563, 19, 1, 27, 20, 1, 65563, 20, 1)
+}
+
+[node name="DockedConvoy" type="Node3D" parent="NavigationRegion3D"]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 82, 0, 76)
+metadata/_note = "The convoy moored alongside the pier: the Act II deck (act_2_convoy.tscn), for show. Its gangway is PortalToConvoy."
+
+[node name="Hull" type="GridMap" parent="NavigationRegion3D/DockedConvoy"]
+mesh_library = ExtResource("20_hull")
+data = {
+"cells": PackedInt32Array(12, 12, 1, 12, 13, 1, 12, 14, 1, 12, 15, 1, 12, 16, 1, 12, 17, 1, 13, 12, 1, 13, 13, 2, 13, 14, 2, 13, 15, 2, 13, 16, 2, 13, 17, 1, 14, 12, 1, 14, 13, 2, 14, 14, 2, 14, 15, 2, 14, 16, 2, 14, 17, 1, 15, 12, 1, 15, 13, 2, 15, 14, 2, 15, 15, 2, 15, 16, 2, 15, 17, 1, 16, 12, 1, 16, 13, 2, 16, 14, 2, 16, 15, 2, 16, 16, 2, 17, 12, 1, 17, 13, 2, 17, 14, 2, 17, 15, 2, 17, 16, 2, 18, 12, 1, 18, 13, 2, 18, 14, 2, 18, 15, 2, 18, 16, 2, 19, 3, 1, 19, 4, 1, 19, 5, 1, 19, 6, 1, 19, 7, 1, 19, 8, 1, 19, 12, 1, 19, 13, 2, 19, 14, 2, 19, 15, 2, 19, 16, 2, 20, 3, 1, 20, 4, 2, 20, 5, 2, 20, 6, 2, 20, 7, 2, 20, 8, 1, 20, 12, 1, 20, 13, 2, 20, 14, 2, 20, 15, 2, 20, 16, 2, 21, 3, 1, 21, 4, 2, 21, 5, 2, 21, 6, 2, 21, 7, 2, 21, 8, 1, 21, 9, 1, 21, 10, 1, 21, 11, 1, 21, 12, 1, 21, 13, 2, 21, 14, 2, 21, 15, 2, 21, 16, 2, 22, 3, 1, 22, 4, 2, 22, 5, 2, 22, 6, 2, 22, 7, 2, 22, 8, 0, 22, 9, 0, 22, 10, 0, 22, 11, 0, 22, 12, 0, 22, 13, 2, 22, 14, 2, 22, 15, 2, 22, 16, 2, 23, 3, 1, 23, 4, 2, 23, 5, 2, 23, 6, 2, 23, 7, 2, 23, 8, 1, 23, 9, 1, 23, 10, 1, 23, 11, 1, 23, 12, 1, 23, 13, 2, 23, 14, 2, 23, 15, 2, 23, 16, 2, 24, 3, 1, 24, 4, 2, 24, 5, 2, 24, 6, 2, 24, 7, 2, 24, 8, 1, 24, 12, 1, 24, 13, 2, 24, 14, 2, 24, 15, 2, 24, 16, 2, 25, 3, 1, 25, 4, 1, 25, 5, 1, 25, 6, 1, 25, 7, 1, 25, 8, 1, 25, 12, 1, 25, 13, 2, 25, 14, 2, 25, 15, 2, 25, 16, 2, 26, 12, 1, 26, 13, 2, 26, 14, 2, 26, 15, 2, 26, 16, 2, 27, 12, 1, 27, 13, 1, 27, 14, 1, 27, 15, 0, 27, 16, 1, 28, 12, 1, 28, 13, 2, 28, 14, 2, 28, 15, 2, 28, 16, 2, 29, 12, 1, 29, 13, 2, 29, 14, 2, 29, 15, 2, 29, 16, 2, 30, 12, 1, 30, 13, 2, 30, 14, 2, 30, 15, 2, 30, 16, 2, 30, 17, 1, 31, 12, 1, 31, 13, 2, 31, 14, 2, 31, 15, 2, 31, 16, 2, 31, 17, 1, 32, 12, 1, 32, 13, 2, 32, 14, 2, 32, 15, 2, 32, 16, 2, 32, 17, 1, 33, 12, 1, 33, 13, 1, 33, 14, 1, 33, 15, 1, 33, 16, 1, 33, 17, 1, 16, 17, 1, 17, 17, 1, 18, 17, 1, 29, 17, 1)
+}
+
+[node name="ConvoyDressing" type="Node3D" parent="NavigationRegion3D/DockedConvoy" node_paths=PackedStringArray("hull")]
+script = ExtResource("22_dressing")
+hull = NodePath("../Hull")
+hull_theme = ExtResource("21_hulltheme")
+docked = true
+
+[node name="Deckhouse" type="StaticBody3D" parent="NavigationRegion3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 1.1, 43.5)
+collision_mask = 0
+
+[node name="Shape" type="CollisionShape3D" parent="NavigationRegion3D/Deckhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("BoxShape3D_20hpm")
+
+[node name="Walls" type="MeshInstance3D" parent="NavigationRegion3D/Deckhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("BoxMesh_oc5dd")
+
+[node name="RoofTrim" type="MeshInstance3D" parent="NavigationRegion3D/Deckhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, 0)
+mesh = SubResource("BoxMesh_c7kyo")
+
+[node name="DoorLamp" type="MeshInstance3D" parent="NavigationRegion3D/Deckhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.55, 1.56)
+mesh = SubResource("BoxMesh_c771m")
+
+[node name="DoorLight" type="OmniLight3D" parent="NavigationRegion3D/Deckhouse"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.4, 2.1)
+light_color = Color(1, 0.75, 0.35, 1)
+light_energy = 1.2
+omni_range = 4.0
+
+[node name="Layout" type="Node3D" parent="."]
+
+[node name="Yard" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 0, 28)
+script = ExtResource("5_room")
+room_size = Vector2i(18, 14)
+
+[node name="default" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30, 0, 34)
+script = ExtResource("6_spawn")
+create_room = false
+
+[node name="from_approach" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.5, 0, 27)
+script = ExtResource("6_spawn")
+spawn_id = &"from_approach"
+create_room = false
+metadata/_note = "Where THE LAST MILE docks you: just inside the gate from Checkpoint Approach."
+
+[node name="PortalToApproach" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 19.5, 0, 27)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/dungeon/act_2_checkpoint_approach.tscn"
+target_spawn = &"approach_out"
+dungeon_level = 21
+arrival_spawn_id = &"approach_gate"
+room_size = Vector2i(3, 3)
+metadata/_note = "Checkpoint's outer gate, back out to the approach."
+
+[node name="YardGate" type="Area3D" parent="." instance=ExtResource("12_20hpm")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 36, 1.1, 14.4)
+collision_layer = 5
+collision_mask = 3
+script = ExtResource("13_he07q")
+target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
+sealed_by_key = "quarantine_lifted"
+solid_while_sealed = true
+metadata/_note = "Into Checkpoint proper. Sealed while Hardfault is in quarantine (Act III opens it)."
+
+[node name="Registrar" parent="." instance=ExtResource("32_registrar")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 25.5, 1.1, 24.5)
+
+[node name="WardenBrack" parent="." instance=ExtResource("30_brack")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 34, 1.1, 38)
+
+[node name="ExaminerSudo" parent="." instance=ExtResource("31_sudo")]
+transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 38, 1.1, 38)
+
+[node name="Quartermaster" parent="." instance=ExtResource("33_vendor")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 41, 1.1, 18.5)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
+stock_level = 21
+model_scene = ExtResource("34_rogue")
+npc_id = "quartermaster"
+npc_name = "Quartermaster"
+info_title = "Convoy Supplies"
+
+[node name="TinkerHex" parent="." instance=ExtResource("33_vendor")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 1.1, 18.5)
+stock_level = 21
+model_scene = ExtResource("34_rogue")
+npc_id = "hex"
+npc_name = "Tinker Hex"
+dialogue = ExtResource("35_hex")
+info_title = "Trader"
+
+[node name="GemVendor" parent="." instance=ExtResource("33_vendor")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 47, 1.1, 18.5)
+shop = ExtResource("40_gshop")
+stock_level = 21
+follow_act_level = false
+model_scene = ExtResource("34_rogue")
+npc_id = "cache"
+npc_name = "Cache"
+dialogue = ExtResource("41_gdlg")
+info_title = "Gem Vendor"
+
+[node name="Weaponsmith" parent="." instance=ExtResource("33_vendor")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 52, 1.1, 22)
+shop = ExtResource("36_wshop")
+stock_level = 21
+model_scene = ExtResource("37_wmodel")
+npc_id = "weaponsmith"
+npc_name = "Weaponsmith"
+dialogue = null
+info_title = "Weapon Vendor"
+
+[node name="Armoursmith" parent="." instance=ExtResource("33_vendor")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 52, 1.1, 25.5)
+shop = ExtResource("38_ashop")
+stock_level = 21
+model_scene = ExtResource("39_amodel")
+npc_id = "armoursmith"
+npc_name = "Armoursmith"
+dialogue = null
+info_title = "Armour Vendor"
+
+[node name="Furniture" type="Node3D" parent="."]
+metadata/_note = "Hardfault's cargo, unloaded into the yard under quarantine."
+
+[node name="CargoA" parent="Furniture" instance=ExtResource("51_crate_large")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29, 1.1, 18)
+
+[node name="CargoB" parent="Furniture" instance=ExtResource("50_crate")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 30.6, 1.1, 17.6)
+
+[node name="CargoC" parent="Furniture" instance=ExtResource("53_crate_tarp_large")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 1.1, 17)
+
+[node name="CargoD" parent="Furniture" instance=ExtResource("52_crate_tarp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.8, 1.1, 17.6)
+
+[node name="CargoE" parent="Furniture" instance=ExtResource("51_crate_large")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 52.5, 1.1, 34)
+
+[node name="CargoF" parent="Furniture" instance=ExtResource("52_crate_tarp")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 51.8, 1.1, 36.4)
+
+[node name="RegistrarDesk" parent="Furniture" instance=ExtResource("54_desk")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 24.3, 1.1, 24.5)
+
+[node name="StockShelves" parent="Furniture" instance=ExtResource("55_shelves")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 1.1, 15.6)
+
+[node name="Quarantine" type="Node3D" parent="."]
+metadata/_note = "Red lines painted round the yard: Hardfault stays inside them. Floodlights on the wall."
+
+[node name="LineNorth" type="MeshInstance3D" parent="Quarantine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 1.12, 16.4)
+mesh = SubResource("Mesh_line_long")
+
+[node name="LineWest" type="MeshInstance3D" parent="Quarantine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18.6, 1.12, 29)
+mesh = SubResource("Mesh_line_short")
+
+[node name="LineEast" type="MeshInstance3D" parent="Quarantine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53.4, 1.12, 29)
+mesh = SubResource("Mesh_line_short")
+
+[node name="FloodlightW" type="MeshInstance3D" parent="Quarantine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19, 3.6, 14.6)
+mesh = SubResource("Mesh_floodlight")
+
+[node name="LampW" type="SpotLight3D" parent="Quarantine/FloodlightW"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0, 2.4, 0)
+light_color = Color(1, 0.4, 0.35, 1)
+light_energy = 3.0
+spot_range = 22.0
+spot_angle = 50.0
+
+[node name="FloodlightE" type="MeshInstance3D" parent="Quarantine"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 53, 3.6, 14.6)
+mesh = SubResource("Mesh_floodlight")
+
+[node name="LampE" type="SpotLight3D" parent="Quarantine/FloodlightE"]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866, 0, -0.866, 0.5, 0, 2.4, 0)
+light_color = Color(1, 0.4, 0.35, 1)
+light_energy = 3.0
+spot_range = 22.0
+spot_angle = 50.0
+
+[node name="GateLight" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 3.2, 15.6)
+light_color = Color(1, 0.3, 0.25, 1)
+light_energy = 1.6
+omni_range = 7.0

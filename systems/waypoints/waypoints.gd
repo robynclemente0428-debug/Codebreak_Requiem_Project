@@ -13,6 +13,9 @@ const ACT_FOLDER := "res://data/waypoints/"
 const SAVE_KEY := "waypoints"
 ## Convoy stops whose exit portal has been reached (Portal.clears_stop), saved like the waypoints.
 const SAVE_KEY_CLEARED := "route_cleared"
+## A deed (QuestManager.deeds "stop_finished:<id>") counted every time the party walks out of a
+## convoy stop's exit (Portal.clears_stop), first run or not.
+const FINISH_DEED := "stop_finished"
 
 static var _acts: Array[WaypointAct] = []
 static var _visited: Dictionary = {}          # waypoint id -> true
@@ -125,10 +128,22 @@ static func is_cleared(w: Waypoint) -> bool:
 static func route_open(w: Waypoint) -> bool:
 	if not is_convoy_stop(w):
 		return false
+	if not route_key_ok(w):
+		return false
 	if w.route_after == "" or is_cleared(w):
 		return true                  # cleared stops stay open (a stop added before it later)
 	var act := act_of_scene(w.scene)
 	return is_cleared(act.find(w.route_after))
+
+
+## True when the stop needs no quest key (Waypoint.route_needs_key), or the player has it.
+static func route_key_ok(w: Waypoint) -> bool:
+	if w == null or w.route_needs_key == "":
+		return true
+	var tree := Engine.get_main_loop() as SceneTree
+	var player := tree.get_first_node_in_group("players") if tree != null else null
+	var qm = player.get("quests") if player != null else null
+	return qm != null and qm.has_recovered(w.route_needs_key)
 
 
 ## Marks a convoy stop cleared (its exit portal was reached). Returns the stops this opened, so
@@ -149,6 +164,8 @@ static func clear_stop(id: String) -> Array[Waypoint]:
 
 ## Why the route terminal can't send the party to `w` now, or "" if it can.
 static func route_blocked_reason(w: Waypoint, tree: SceneTree) -> String:
+	if not route_key_ok(w):
+		return w.route_needs_text if w.route_needs_text != "" 				else "LOCKED: NEEDS %s" % QuestItems.name_of(w.route_needs_key)
 	if not route_open(w):
 		var act := act_of_scene(w.scene)
 		var before := act.find(w.route_after) if act != null else null

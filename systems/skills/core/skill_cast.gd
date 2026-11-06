@@ -62,6 +62,8 @@ func spawn_child() -> SkillCast:
 	child.already_hit = already_hit.duplicate()
 	child.flag_bonus = flag_bonus.duplicate()
 	child.damage_mult = damage_mult
+	if extra.has(ProgramSupport.FIRED_KEY):                # which WHEN rules fired (ChallengeLock)
+		child.extra[ProgramSupport.FIRED_KEY] = extra[ProgramSupport.FIRED_KEY]
 	return child
 
 

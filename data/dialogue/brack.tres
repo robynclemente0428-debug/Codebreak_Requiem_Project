@@ -15,6 +15,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ can_start:q00_proximity_trigger -> offer_q00_proximity_trigger
 @ quest_ready:q06_the_mimic -> ready_q06_the_mimic
 @ quest_ready:q05_the_leak -> ready_q05_the_leak
+@ quest_ready:q04c_the_last_mile -> ready_q04c_the_last_mile
 @ quest_ready:q04b_hollow_choir -> ready_q04b_hollow_choir
 @ quest_ready:q03_loop_hound_alpha -> ready_q03_loop_hound_alpha
 @ quest_ready:q02b_the_road_out -> ready_q02b_the_road_out
@@ -31,6 +32,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 ~ main
 @ quest_active:q06_the_mimic -> remind_q06_the_mimic
 @ quest_active:q05_the_leak -> remind_q05_the_leak
+@ quest_active:q04c_the_last_mile -> remind_q04c_the_last_mile
 @ quest_active:q04b_hollow_choir -> remind_q04b_hollow_choir
 @ quest_active:q03_loop_hound_alpha -> remind_q03_loop_hound_alpha
 @ quest_active:q02b_the_road_out -> remind_q02b_the_road_out
@@ -43,6 +45,7 @@ source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss que
 @ can_start:q02b_the_road_out -> offer_q02b_the_road_out
 @ can_start:q03_loop_hound_alpha -> offer_q03_loop_hound_alpha
 @ can_start:q04b_hollow_choir -> offer_q04b_hollow_choir
+@ can_start:q04c_the_last_mile -> offer_q04c_the_last_mile
 @ can_start:q05_the_leak -> offer_q05_the_leak
 @ can_start:q06_the_mimic -> offer_q06_the_mimic
 @ quest_active:ward_beacons_inner -> remind_beacons_inner
@@ -305,6 +308,48 @@ Brack: Relay's ours. Checkpoint answered. They're expecting us.
 Brack: Whatever's waiting there, we roll in loaded.
 -> start
 
+~ offer_q04c_the_last_mile
+# NEW: the Act II to Act III transition
+Brack: Checkpoint's close. I'm taking us in.
+Brack: They've got guns on the approach, and they know we're coming. Should be a quiet ride.
+* ACCEPT -> accept_q04c_the_last_mile
+* NOT YET -> end
+
+~ accept_q04c_the_last_mile
+> start_quest q04c_the_last_mile
+Brack: Keep the IFF Transponder answering. It's what tells their guns who we are.
+-> end
+
+~ remind_q04c_the_last_mile
+@ !recovered:checkpoint_guns_held -> remind_q04c_guns
+@ !recovered:iff_patched -> remind_q04c_iff
+@ !recovered:checkpoint_clearance -> remind_q04c_gate
+Brack: Get us through that gate, then find their Registrar. I want to know why their guns know our name.
+
+~ remind_q04c_guns
+Brack: That's not a welcome. Hold the terminal and get them off my deck.
+
+~ remind_q04c_iff
+Brack: Their guns are still on us. Patch the IFF Transponder by the bow. Make it tell them who we are.
+
+~ remind_q04c_gate
+Brack: Two Hardfaults on their list? That's not a typo.
+Brack: Set course for Checkpoint Approach. Their gate's Warden will want to know who we are.
+Brack: It asks in code. It'll hand you a program and wait. Fix it right and it opens up.
+Brack: Get it wrong and it hits back. Read the thing before you answer.
+
+~ ready_q04c_the_last_mile
+Brack: You talked to their Registrar. What did it say?
+* TURN IN -> turnin_q04c_the_last_mile
+* NOT YET -> end
+
+~ turnin_q04c_the_last_mile
+> turn_in q04c_the_last_mile
+Brack: Deleted. Eleven days ago. Eleven days ago we were still in the Static Mire.
+Brack: Something got here first wearing our name, and this place killed it.
+Brack: We're docked. Inside a fence, but docked. Hex and Sudo are setting up in the yard.
+-> start
+
 ~ offer_q05_the_leak
 Brack: Something is eating Checkpoint’s memory. It splits every time we hit it.
 * ACCEPT -> accept_q05_the_leak
@@ -312,7 +357,8 @@ Brack: Something is eating Checkpoint’s memory. It splits every time we hit it
 
 ~ accept_q05_the_leak
 > start_quest q05_the_leak
-Brack: Hit it hard and hit it wide. A reusable function helps.
+# NEW line below: matches the AREA script task
+Brack: Hit it hard and hit it wide. Script a Slam or a Blast, something that catches every piece.
 -> end
 
 ~ remind_q05_the_leak

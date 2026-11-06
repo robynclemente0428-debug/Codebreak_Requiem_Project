@@ -5,6 +5,9 @@ extends Interactable
 ##   power   POWER JUNCTION   the market row's power: the deck's vendors trade
 ##   cargo   CARGO LOCK       the hold's seal: the breach's cargo bonus is paid
 ##   comms   COMMS RELAY      the convoy's signal: the route terminal can plot a course
+## And one the Null leave alone (sabotage_target off), which only goes down in THE LAST MILE:
+##   iff     IFF TRANSPONDER  answers a node's friend/foe challenge: Checkpoint's guns knock it
+##                            out (GunsBreach), and patching it opens Checkpoint Approach
 ## During a breach some of the Null (saboteurs, picked by HullBreach) ignore you and head for a
 ## system. Each one standing at it drains its integrity; their swings take a chunk more. At 0 it
 ## goes OFFLINE: sparks, smoke, a dead core, and whatever it keeps working stops, for good,
@@ -19,9 +22,9 @@ extends Interactable
 signal went_offline(system: DeckSystem)
 signal repaired(system: DeckSystem)
 
-enum Look { JUNCTION, CARGO, COMMS }
+enum Look { JUNCTION, CARGO, COMMS, TRANSPONDER }
 
-## Which system: "power", "cargo" or "comms" (what RouteTerminal and ShopPanel ask about).
+## Which system: "power", "cargo", "comms" or "iff" (what RouteTerminal and ShopPanel ask about).
 @export var system_id := "power"
 @export var npc_name := "Power Junction"
 @export var look := Look.JUNCTION
@@ -31,13 +34,19 @@ enum Look { JUNCTION, CARGO, COMMS }
 @export var keeps := "Powers the market row: the deck's vendors."
 ## What being offline costs, said when it goes down and when you try what it powers.
 @export_multiline var offline_text := "The market row has no power. The vendors can't trade."
-@export var max_integrity := 100.0
+## Every boarder goes for the systems now (HullBreach.saboteur_every = 1): 3 at one take ~25-30 s.
+@export var max_integrity := 300.0
 ## Integrity per second each saboteur at it takes (on top of their swings).
-@export var drain_per_enemy := 1.2
+@export var drain_per_enemy := 2.0
 ## Integrity each swing at it takes (whatever the Null's damage: a system isn't armoured like you).
-@export var hit_damage := 1.0
+@export var hit_damage := 3.0
 ## Metres: a Null this close counts as at it.
 @export var reach := 3.2
+## Whether a breach's saboteurs go for it, and whether it counts for the blackout (every
+## target down). Off for the IFF Transponder: only Checkpoint's guns take it down (knock_out).
+@export var sabotage_target := true
+## A QuestItems id recovered when its patch deploys ("" = none): the IFF's "iff_patched".
+@export var recovers_on_repair := ""
 
 const DEED_PREFIX := "deck_down:"
 const PatchPanelScript := preload("res://scenes/map/town/convoy/patch_panel.gd")
@@ -48,10 +57,13 @@ const COL_OK := Color(0.25, 0.95, 1.0)
 const COL_HIT := Color(1.0, 0.55, 0.15)
 const COL_DOWN := Color(1.0, 0.18, 0.2)
 const COL_BAR_BACK := Color(0.05, 0.08, 0.1, 0.85)
+## Its solid box for each Look (the housing), when the scene doesn't give it a Body.
+const BODY_SIZES := [Vector3(1.4, 2.2, 0.7), Vector3(1.2, 1.1, 0.95), Vector3(1.0, 1.0, 0.75),
+		Vector3(1.1, 1.0, 0.8)]
 const BAR_WIDTH := 1.6
 const BAR_HEIGHT := 0.14
 
-var integrity := 100.0
+var integrity := 300.0
 ## True while a breach is on: the bar shows, saboteurs drain it.
 var contested := false
 ## Hit in the last moment and a half (the flicker, HullBreach's alert).
@@ -151,6 +163,13 @@ func _damage(amount: float) -> void:
 		_go_offline()
 
 
+## Takes it straight offline, whatever its integrity (Checkpoint's guns hitting the IFF).
+func knock_out() -> void:
+	if not _offline:
+		integrity = 0.0
+		_go_offline()
+
+
 func _go_offline() -> void:
 	_offline = true
 	var qm := _quests(get_tree())
@@ -171,6 +190,8 @@ func repair() -> void:
 	integrity = max_integrity
 	_refresh()
 	QuestItems.toast(get_tree(), "%s PATCHED  //  ONLINE\n%s" % [npc_name.to_upper(), keeps], COL_OK)
+	if qm != null and recovers_on_repair != "":
+		qm.recover(recovers_on_repair)
 	repaired.emit(self)
 
 
@@ -332,6 +353,44 @@ func _build() -> void:
 				_spin.add_child(tip)
 			_box(Vector3(1.1, 0.1, 0.8), Vector3(0, 0.05, 0), _hazard())
 			top = 3.2
+		Look.TRANSPONDER:
+			# The friend/foe transponder: a squat console, a tilted answer dish on a turning head,
+			# and a ring round the head that glows while it can answer a challenge.
+			_box(Vector3(1.1, 1.0, 0.8), Vector3(0, 0.5, 0), hull)
+			_box(Vector3(0.8, 0.3, 0.05), Vector3(0, 0.72, 0.41), dark)
+			_box(Vector3(0.6, 0.06, 0.04), Vector3(0, 0.72, 0.44), _core_mat)
+			_cyl(0.1, 0.5, Vector3(0, 1.25, 0), hull)
+			_spin = Node3D.new()
+			_spin.position = Vector3(0, 1.55, 0)
+			add_child(_spin)
+			var dish := MeshInstance3D.new()
+			var dm := CylinderMesh.new()
+			dm.top_radius = 0.55
+			dm.bottom_radius = 0.12
+			dm.height = 0.2
+			dish.mesh = dm
+			dish.material_override = hull
+			dish.rotation.x = -0.9
+			dish.position = Vector3(0, 0.1, 0.1)
+			_spin.add_child(dish)
+			var horn := MeshInstance3D.new()
+			var hm := SphereMesh.new()
+			hm.radius = 0.09
+			hm.height = 0.18
+			horn.mesh = hm
+			horn.material_override = _core_mat
+			horn.position = Vector3(0, 0.35, 0.42)
+			_spin.add_child(horn)
+			var halo := MeshInstance3D.new()
+			var torus := TorusMesh.new()
+			torus.inner_radius = 0.42
+			torus.outer_radius = 0.48
+			halo.mesh = torus
+			halo.material_override = _core_mat
+			halo.position = Vector3(0, 1.05, 0)
+			add_child(halo)
+			_box(Vector3(1.2, 0.1, 0.9), Vector3(0, 0.05, 0), _hazard())
+			top = 2.2
 	prompt_height = top + 1.0                         # its name plate, over the integrity bar
 	# The red alarm beacon on top (on while it's hit or down)
 	_alarm_mat = StandardMaterial3D.new()
@@ -356,23 +415,28 @@ func _build() -> void:
 	_sparks.position = Vector3(0, top * 0.6, 0.3)
 	_smoke = _particles(false)
 	_smoke.position = Vector3(0, top * 0.8, 0)
-	# Where the player can use it from
+	# Where the player can use it from (InteractionShape), and its solid body (Body), so the Null
+	# stand round it and the player can't walk through it. Both are in the scene, to see and
+	# tweak them there (like RouteTerminal); one made in code only if the scene has none.
 	collision_mask = 3
-	var reach_shape := CollisionShape3D.new()
-	var sphere := SphereShape3D.new()
-	sphere.radius = 2.2
-	reach_shape.shape = sphere
-	reach_shape.position = Vector3(0, 1.0, 0.6)
-	add_child(reach_shape)
-	# Solid, so the Null stand round it and the player can't walk through it
-	var body := StaticBody3D.new()
-	var shape := CollisionShape3D.new()
-	var bs := BoxShape3D.new()
-	bs.size = Vector3(1.3, 1.4, 0.8)
-	shape.shape = bs
-	shape.position.y = 0.7
-	body.add_child(shape)
-	add_child(body)
+	if get_node_or_null("InteractionShape") == null:
+		var reach_shape := CollisionShape3D.new()
+		reach_shape.name = "InteractionShape"
+		var sphere := SphereShape3D.new()
+		sphere.radius = 2.2
+		reach_shape.shape = sphere
+		reach_shape.position = Vector3(0, 1.0, 0.6)
+		add_child(reach_shape)
+	if get_node_or_null("Body") == null:
+		var body := StaticBody3D.new()
+		body.name = "Body"
+		var shape := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		bs.size = BODY_SIZES[look]
+		shape.shape = bs
+		shape.position.y = bs.size.y * 0.5
+		body.add_child(shape)
+		add_child(body)
 	# The integrity bar and name over it, facing the camera (breaches only)
 	_bar_root = Node3D.new()
 	_bar_root.position = Vector3(0, top + 0.55, 0)

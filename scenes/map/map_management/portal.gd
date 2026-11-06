@@ -167,7 +167,10 @@ func _on_body_entered(body: Node3D) -> void:
 	if manager == null:
 		push_error("Portal: no AreaManager found in the scene")
 		return
-	if clears_stop != "" and not manager.is_busy():
+	if clears_stop != "" and manager.can_go():     # only a trip that will happen counts
+		# Every run through to the exit counts, not just the first: each one is followed by a
+		# hull breach back on the convoy (HullBreach: a breach is due while these outnumber them)
+		GameEvents.report(Waypoints.FINISH_DEED, clears_stop)
 		for w in Waypoints.clear_stop(clears_stop):
 			QuestItems.toast(get_tree(), "ROUTE UNLOCKED: %s" % w.display_name.to_upper(),
 					Color(0.25, 1.0, 0.55))
