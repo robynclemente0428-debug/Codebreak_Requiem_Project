@@ -10,9 +10,14 @@ signal stock_changed
 ## shop moved to a later act sells that act's gear. Off = stock_level as set (the gem vendor).
 @export var follow_act_level := true
 ## Salvage caches recovered on the convoy route (SalvageCache) improve the stock: each one adds
-## this much to the shop's magic and rare chances (the Quartermaster). 0 = salvage doesn't count.
+## this much to the shop's magic and rare chances (Hex and the smiths). 0 = salvage doesn't count.
 @export var salvage_magic_per := 0.0
 @export var salvage_rare_per := 0.0
+## Once this quest is done (Hex: Copied Stock), the shop stocks tier_levels above its level, and
+## copy_slots extra "COPY OF" items at half price.
+@export var tier_quest := ""
+@export var tier_levels := 0
+@export var copy_slots := 0
 @export_group("Appearance")
 @export var model_scene: PackedScene
 @export var model_scale: Vector3 = Vector3.ONE
@@ -23,6 +28,7 @@ var stock: Array[ItemInstance] = []
 var _infinite: Array[ItemInstance] = []
 var _rerolls := 0                     # rerolls since the last natural restock
 var _stock_rank := 0                  # the player rank the stock was filtered for (_locked)
+var _stock_tier := false              # whether the stock was made with tier_quest done
 
 func _ready() -> void:
 	super._ready()
@@ -77,6 +83,7 @@ func restock() -> void:
 	if shop == null:
 		return
 	_stock_rank = Ranks.of_player(get_tree())
+	_stock_tier = _has_tier()
 
 	for def in shop.fixed_stock:
 		if _locked(def, _stock_rank):
@@ -89,10 +96,7 @@ func restock() -> void:
 			_infinite.append(item)
 
 	var pool := _build_random_pool()
-	for def in _roll_defs(pool, shop.random_slots):
-		var item := _make_item(def, true)
-		if item != null:
-			stock.append(item)
+	_add_random_stock(pool)
 
 	print("[Shop %s] level %d: %d eligible items, %d on sale" % [npc_name, stock_level, pool.size(), stock.size()])
 	stock_changed.emit()
@@ -124,13 +128,38 @@ func try_reroll(wallet: CurrencyComponent) -> String:
 		return "NOT ENOUGH CREDITS"
 	_rerolls += 1
 	stock.assign(stock.filter(func(item: ItemInstance) -> bool: return item.definition in shop.fixed_stock))
+	_add_random_stock(pool)
+	GameEvents.report("shop_reroll", npc_id)
+	stock_changed.emit()
+	return ""
+
+
+func _add_random_stock(pool: Array[ItemDefinition]) -> void:
 	for def in _roll_defs(pool, shop.random_slots):
 		var item := _make_item(def, true)
 		if item != null:
 			stock.append(item)
-	GameEvents.report("shop_reroll", npc_id)
-	stock_changed.emit()
-	return ""
+	if not _has_tier():
+		return
+	var copyable := pool.filter(func(d: ItemDefinition) -> bool: return not d.is_gem() and d.stim == null)
+	for def in _roll_defs(copyable as Array[ItemDefinition], copy_slots):
+		var copy := _make_item(def, true)
+		if copy != null:
+			copy.copied = true
+			stock.append(copy)
+
+
+func _has_tier() -> bool:
+	if tier_quest == "":
+		return false
+	var p := get_tree().get_first_node_in_group("players") if is_inside_tree() else null
+	var qm := p.get("quests") as QuestManager if p != null else null
+	return qm != null and qm.is_completed(tier_quest)
+
+
+## The level the stock rolls at, with the tier if it's earned.
+func _roll_level() -> int:
+	return stock_level + (tier_levels if _has_tier() else 0)
 
 
 func _build_random_pool() -> Array[ItemDefinition]:
@@ -139,7 +168,7 @@ func _build_random_pool() -> Array[ItemDefinition]:
 		var folders := PackedStringArray()
 		for f in shop.catalog_folders:
 			folders.append(f if f.ends_with("/") else f + "/")    # "weapons" must not match "weapons_old"
-		found.append_array(ItemCatalog.for_level(stock_level, shop.level_window, shop.include_gems, folders))
+		found.append_array(ItemCatalog.for_level(_roll_level(), shop.level_window, shop.include_gems, folders))
 	for def in shop.random_pool:
 		if def not in found:
 			found.append(def)
@@ -225,6 +254,8 @@ static func _locked(def: ItemDefinition, rank: int) -> bool:
 ## Opening the shop: gems the player's rank unlocked since the stock was made go on sale.
 func engage(player: Node3D) -> void:
 	super.engage(player)
+	if shop != null and _has_tier() != _stock_tier:
+		restock()                             # Copied Stock just turned in: the new tier goes on sale
 	var rank := Ranks.of(player)
 	if shop == null or rank <= _stock_rank:
 		return
@@ -259,7 +290,7 @@ func _make_item(def: ItemDefinition, roll_rarity: bool) -> ItemInstance:
 			rarity = "rare"
 		elif r < rare + magic:
 			rarity = "magic"
-	return ItemGenerator.generate_item(def, stock_level, rarity)
+	return ItemGenerator.generate_item(def, _roll_level(), rarity)
 
 
 ## Salvage caches the player has recovered (0 when salvage doesn't count here).

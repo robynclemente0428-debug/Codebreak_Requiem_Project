@@ -22,6 +22,9 @@ extends Resource
 ## Instead of a condition: the script needs a loop that can stop itself (a while, or a for with
 ## break), and each of its repeats counts as a fire.
 @export var required_stop_loop := false
+## Instead of a condition: the script must keep a count (SkillProgram.keeps_a_count), and each
+## time a rule reading the register fires counts as a fire.
+@export var required_variable := false
 ## Perks the sandbox lends during this exam (Ranks.PERKS flag keys), so an exam can ask for what
 ## its own rank unlocks: the Architect exam lends "loops".
 @export var lends: Array[String] = []
@@ -38,11 +41,6 @@ extends Resource
 ## Comma-separated modifier ids for each wave: a file in data/enemy_modifiers, or a dungeon threat
 ## ("firewalled"). Empty = none.
 @export var wave_mods: Array[String] = []
-## The Strategist exam: every set needs a script, each wave needs a different set doing most of
-## its damage (counted as the fires, against required_fires), and the time point also asks for no
-## more than par_swaps set swaps.
-@export var set_per_wave := false
-@export var par_swaps := 5
 @export var enemy_level: int = 1
 @export var spawn_radius: float = 8.5
 

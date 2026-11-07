@@ -13,9 +13,9 @@ target = "strategist"
 script = ExtResource("2_quest")
 id = "exam_strategist"
 title = "RANK EXAM: STRATEGIST"
-description = "Examiner Sudo wants a plan: three problems, three scripts. The District Gate stays shut until you pass.
-Sit the exam in Sudo's sandbox, a sealed bay replaying Checkpoint's quarantine logs. Three waves of samples: leaked memory, copied processes and marker drones. A different script set has to do most of the damage in each. The sandbox lends you set C for the exam.
-Graded PASS, MERIT or DISTINCTION. A few well-timed swaps grade better than swapping constantly. You can retake it later."
+description = "Examiner Sudo wants a script that remembers. The District Gate stays shut until you pass.
+Sit the exam in Sudo's sandbox, a sealed bay replaying Checkpoint's quarantine logs. Three waves of samples: leaked memory, copied processes and marker drones. The sandbox lends you counters, x and y, which keep their value between casts. Use them to keep a count: one rule adds to x when something happens, and another acts once x is high enough, or a buff grows with it. They clear on their own when a fight ends.
+Graded PASS, MERIT or DISTINCTION. You can retake it later. Passing makes counters yours, and unlocks set C."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
 ordered = false
 prerequisite_quest_ids = Array[String](["q04c_the_last_mile"])

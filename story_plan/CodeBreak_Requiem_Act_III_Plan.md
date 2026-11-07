@@ -1,6 +1,6 @@
 # CodeBreak Requiem: Act III Plan (Root Access)
 
-*Built: the Quarantine Yard hub, all six districts, the REFCOUNT, DIFF and GENERATIONS locks, the Strategist exam, every main quest through Root Access, and both side quests. Differences from the plan below: **Memory Shards** has four shards, one per district, because a district holds one beacon. **The Mimic** copies the skill that hits it but not the script. **Blobs** feed The Leak while alive instead of crawling back to it. **The Collector** sweeps its adds once five are alive rather than as it reaches them. **Not built: the Sweeps road event, Hex's new stock tier, the DOCKED state on the convoy's own route terminal, and the far side of the Inward Gate**, which stays shut until Act IV exists. Builds on `CodeBreak_Requiem_Setting_and_Campaign.md`, the source of truth.*
+*Built: the Quarantine Yard hub, all six districts, the REFCOUNT, DIFF and GENERATIONS locks, the Strategist exam, every main quest through Root Access, and both side quests. Differences from the plan below: **Memory Shards** has four shards, one per district, because a district holds one beacon. **The Mimic** copies the skill that hits it but not the script. **Blobs** feed The Leak while alive instead of crawling back to it. **The Collector** sweeps its adds once five are alive rather than as it reaches them. **Sweeps** only go for crates, not civilians, since the yard has none yet. The convoy's route terminal stays usable when DOCKED while an Act II quest is open, so nothing is stranded on the road. **Not built: the far side of the Inward Gate**, which stays shut until Act IV exists. Builds on `CodeBreak_Requiem_Setting_and_Campaign.md`, the source of truth.*
 
 ---
 
@@ -45,12 +45,12 @@ Act I taught reacting (`when`). Act II taught repeating (loops) and switching pa
 |---|---|---|
 | 1 | The Leak | Killing several enemies at once, by any means (AREA, Cleave, chains, a fast script). Optional: a second set with big hits for the core. |
 | 2 | The Mimic | One skill with two WHEN rules, so the script itself changes pattern (`program_branches`). |
-| 3 | Strategist exam | Three different waves, three script sets (set 3 lent for the exam). |
+| 3 | Strategist exam | **Counters** (`x`, `y`): a rule counts something, another acts on the count and resets it. |
 | 4 | The Collector | Three phases, three sets, each built for one phase. Swapping at the right moment, not every hit. |
 
 The difference from the Echo lock matters. Echo asks "switch anything"; Act III asks "switch to the *right* thing". The Mimic punishes outside switching and rewards branching inside one script. The Collector punishes the wrong set rather than a repeated one.
 
-No functions or free variables are needed. If they are added later, the Mimic is where they would fit (see Open Questions).
+Counters (`x`, `y`) are the game's variables. No functions are needed.
 
 ## 5. Regions and Hub
 
@@ -84,7 +84,7 @@ q04b Hollow Choir ─► q04c The Last Mile ─► exam_strategist ─► q05 Th
 | `q04c_the_last_mile` | THE LAST MILE | Brack | Set course for Checkpoint Approach; defend the deck; patch the IFF Transponder; answer the Perimeter Warden's challenges; dock in the Quarantine Yard | n/a (transition) | `q04b_hollow_choir` | II |
 | `q05_the_leak` | THE LEAK | Brack | Pass the Strategist exam; free 3 blobs by killing them together; defeat The Leak in the Heap | None: the task is in the fight | `q04c_the_last_mile` (was `q04b`) | III |
 | `q06_the_mimic` | THE MIMIC | Brack | Give one skill two WHEN rules; defeat The Mimic at Mirror Dock | Two WHEN rules (existing) | `q05_the_leak` | III |
-| `exam_strategist` | RANK EXAM: STRATEGIST | Sudo | Pass the exam in Sudo's sandbox | Three waves, three sets (below) | `q04c_the_last_mile` | III |
+| `exam_strategist` | RANK EXAM: STRATEGIST | Sudo | Pass the exam in Sudo's sandbox | Keep a count with counters (below) | `q04c_the_last_mile` | III |
 | `q06b_the_collector` | THE COLLECTOR | Brack | Pass the Strategist exam; defeat The Collector in the Sweep | Pass the Strategist exam | `q06_the_mimic`, `exam_strategist` | III |
 | `q06c_root_access` | ROOT ACCESS | Registrar | Take the root key to the Registrar; open the Inward Gate | n/a (transition) | `q06b_the_collector` | III |
 
@@ -129,10 +129,11 @@ Sat in Sudo's sandbox like the Operator and Architect exams, graded on efficienc
 
 - **Spec:** three waves of holographic samples of what's past the District Gate, with the same numbers as plain test processes (`sample_leak`, `sample_copy`, `sample_marker`; no locks):
   1. **Leaked Memory (swarm):** many weak blobs closing in.
-  2. **Copied Processes (armoured):** a few heavy copies (Firewalled trait).
+  2. **Copied Processes (armoured):** a few armoured copies.
   3. **Marker Drones (burst):** fast drones that hit hard and often, in melee rather than shooting as the real ones do.
-- **Pass:** clear all three within the time limit, with a different script set doing most of the damage in each wave. Set 3 is lent for the exam, the way loops are lent for the Architect exam.
-- **Grade:** fewer set swaps that land at the right moment grade better than swapping every few seconds. This is planning, not Echo spam.
+- **Pass:** clear all three within the time limit with a script that keeps a count: a WHEN rule about the fight raises `x` or `y`, and a rule reading it fires at least 3 times. Counters are lent for the exam, the way loops are lent for the Architect exam.
+- **Grade:** the same as the other exams: efficiency tier, time and damage taken. Counter writes aren't blocks, so a script using them can still reach ELEGANT.
+- **Counters (`ScriptRegisters`):** two registers per script, kept between casts and cleared when the script is applied. Both blocks are modular, like the patch puzzles: reads are `when [x] [>=] [3]:` with any of `< > <= >= == !=`, writes are `[x] [+=] [1]` with `=`, `+=` or `-=`, and every part is a token you click. A write can name at most 5, while the counter itself climbs to 99 and reads can compare up to 99. In the snippets list the counters and operators are separate pieces: an operator adds a whole line, or changes the operator of the line it's dropped on, and a counter changes a counter line or, dropped on a knob, makes that buff grow with it. Writes are free. Reads discount a rule to x0.75. A cast reads first and writes after, so rule order doesn't change the meaning, and a toggle (`x < 1`, `x >= 1`) answers The Mimic's DIFF. A read needs a line raising the register, and can't be always or never true (`x >= 0`), or the script doesn't compile. A buff can grow with a counter (`damage += x * 2%`): it grows until it reaches the knob's limit, less the script's flat lines on that knob, and a knob can have one growing line. Its value sets how fast it gets there. It costs x0.3 (slowest) to x0.6 (fastest) of that room's flat price if a WHEN about the fight raises the counter, and full price otherwise, so `always: x = 5` gets no discount. A counter a buff grows with only rises once per cast. Only buffs on values that can change gradually can grow (damage, radius, range, arc, spread, speed, leech, barrier, guard), not whole numbers like pierce. Counters live on the script, so rebuilding a skill keeps them and each set has its own, and they clear 10 seconds out of combat or on a change of area. A read always gets the discount, even if nothing lowers the register, because counters clear after every fight: a one-way switch has to be earned again each time. The Variable Store support stays as it was: a Blast-only store of charge from hits.
 - **Unlocks:** script set 3 (already in `Ranks.PERKS`).
 
 ### The Collector (Act III finale)
@@ -163,9 +164,9 @@ Sat in Sudo's sandbox like the Operator and Architect exams, graded on efficienc
 | Quest | Giver | Objectives | Reward |
 |---|---|---|---|
 | **Memory Shards** (`memory_shards`) | Registrar | Restore six archive shards across the Registry, the Heap, Mirror Dock and the Dangling Quarter. Each is a hold point, like the ward beacons: start the restore, hold the ring while Leak blobs come for it. | Cache pick, plus the full Compiler Guild expedition log (lore: who reached the Null Zone's edge, and where the route in starts) |
-| **Copied Stock** (`copied_stock`) | Hex | Recover four of Hex's copied crates from Mirror Dock. They are hers, exactly: same scratches, same price tags. | Hex stocks a new item tier; the shop's "COPY OF" items come in as a novelty |
+| **Copied Stock** (`copied_stock`) | Hex | Recover four of Hex's copied crates from Mirror Dock. They are hers, exactly: same scratches, same price tags. | Hex stocks 10 levels above the act, plus two "COPY OF" items at half price |
 
-**Road event, Act III version: Sweeps.** Replaces hull breaches while docked. An alarm sounds and the Collector's marker drones come over the yard wall and head for the convoy's crates and civilians, red-tagging them (same saboteur logic as `HullBreach`, aimed at cargo instead of systems). Kill the markers before the sweep timer ends. A tagged crate is deleted: the breach's cargo bonus, in reverse. Sweeps stop for good once the Collector falls, so the yard visibly becomes safe.
+**Road event, Act III version: Sweeps.** Replaces hull breaches while docked. An alarm sounds and the Collector's marker drones come over the yard wall and head for the convoy's crates and civilians, red-tagging them (same saboteur logic as `HullBreach`, aimed at cargo instead of systems). Kill the markers before the sweep timer ends. A tagged crate is deleted: the breach's cargo bonus, in reverse. Sweeps stop for good once the Collector falls, so the yard visibly becomes safe. Built as `YardSweep`: one sweep is owed per run through a district.
 
 ## 8. Cast Changes
 
@@ -219,11 +220,11 @@ Same writing rules as the other acts: the Executor is silent, lines are one or t
 
 ### Rank Exam: Strategist
 
-**Offer — Sudo:** You've been swapping scripts like a nervous habit. Now do it on purpose.
+**Offer — Sudo:** Your scripts only know what's true right now. This whole place is what happens when memory goes wrong.
 **Offer — Sudo:** The Strategist exam. The Registrar let me replay Checkpoint's quarantine logs into a sealed bay.
-**Offer — Sudo:** Three samples from out there. Three problems, three scripts.
-**Accept — Sudo:** I'll lend you a third set. Each sample needs a different answer. Plan, then run.
-**Pass — Sudo:** Right tool, right moment. Rank up. Strategist.
+**Offer — Sudo:** Three samples from out there, and one new tool: a script that remembers.
+**Accept — Sudo:** I'll lend you two counters, x and y. Count something with one rule, use it with another. They clear themselves when the fight ends. In the middle of one, though, a count nobody spends is just a leak.
+**Pass — Sudo:** It remembered, and it let go. Rank up. Strategist.
 **Idle — Sudo:** A plan is just a loop you haven't run yet.
 
 ### The Collector
@@ -282,7 +283,7 @@ What the plan needs in the project, grouped by area. Everything listed as existi
 - Sweep event: a `HullBreach` variant whose saboteurs target cargo.
 - `data/waypoints/act_3.tres` and the quarantine-level gating.
 
-**Exam:** `data/exams/strategist.tres` with three wave kinds; lends set 3; a new program objective that checks which set did most damage per wave.
+**Exam:** `data/exams/strategist.tres` with three sample waves; lends counters; `required_variable` checks `SkillProgram.keeps_a_count()`.
 
 **Scenes:** `act_2_checkpoint_approach`, the `act_3_quarantine_yard` hub (docked convoy deck plus yard), and districts `act_3_registry`, `act_3_heap`, `act_3_mirror_dock`, `act_3_dangling_quarter`, `act_3_mark_yards`, `act_3_sweep`.
 
@@ -299,7 +300,7 @@ What the plan needs in the project, grouped by area. Everything listed as existi
 
 ## 12. Open Questions
 
-- **Functions and variables.** The doc says Act III is where they would belong. This plan doesn't need them. If one is added, the Mimic is the place: a `counter` that switches rules would be the cleanest answer to DIFF.
+- **Functions.** Counters are in, as the Strategist exam's new system. Functions aren't. For The Mimic, a `counter` that switches rules would be the cleanest answer to DIFF.
 - **Convoy losses.** Optional and cheap: the Registrar runs a census on docking, counting Act II deeds (breaches held, cargo kept, systems never lost) and Sweep losses. That count could feed the endings later (the old REQ025 and REQ026).
 - **The Mimic's last fragment.** An optional silent choice when it falls, [Delete] or [Keep]. It costs nothing now and gives the Merge and Terminate endings something earned in Act III. Leave it out if Act III should stay choice-free.
 - **Hex and Sudo in Act IV.** Act IV says "no settlement". With Hex and Sudo coming along, it becomes a camp that moves with the player. Confirm that is wanted, or have them stay and reach the player remotely.

@@ -144,7 +144,7 @@ Status: Acts I, II and III are built, Act III through Root Access (details and d
 
 **Story:** The survivors settle at Checkpoint, and the player starts to notice something wrong. The Null is not just spreading, it is converging. Every surge vector points inward toward the Core. In a Custodian cache the player finds a recovered Compiler Guild data shard with partial logs from an expedition that reached the edge of a Null Zone. The logs describe something that should not be possible: the Null is copying AXIOM’s processes. The stakes become existential. The player is no longer fighting for Hardfault, but for every process running in AXIOM.
 
-**Teaching goal:** adaptation. Act I taught reacting (`when`), Act II taught repeating (loops). Act III teaches changing strategy: varied rules and switching between script sets. The Strategist rank unlocks a third script set.
+**Teaching goal:** adaptation. Act I taught reacting (`when`), Act II taught repeating (loops). Act III teaches remembering: counters that carry across casts, and script sets built for different jobs. The Strategist rank unlocks counters and a third script set.
 
 **Main quests (stubbed)**
 
@@ -152,7 +152,7 @@ Status: Acts I, II and III are built, Act III through Root Access (details and d
 |---|---|---|---|
 | The Leak | Brack | A mass of corrupted memory that splits into smaller blobs when hit. Kill them together, by any means. | Free 3 blobs by killing them within 2 seconds. |
 | The Mimic | Brack | Copies the player’s equipped skill, so predictable scripts get used against you. | Give one skill two different WHEN rules, so its pattern changes. |
-| Rank Exam: Strategist | Sudo | n/a | Not designed yet (planned: a sandbox exam that needs more than one script set). |
+| Rank Exam: Strategist | Sudo | n/a | Sandbox: three sample waves; a script that keeps a count with counters, paying out at least 3 times. |
 
 Boss locks for The Leak and The Mimic are not designed yet.
 
@@ -206,7 +206,7 @@ Executors climb one rank per act (two in the last). Examiner Sudo gives each ran
 | Initiate | start | n/a | 1 script set |
 | Operator | I | Sandbox: 3 waves closing in; a rule using `enemies_nearby()` that fires at least 3 times, within 75 seconds | Script set 2, +1 rule per script, threat counter hints |
 | Architect | II | Sandbox: 3 waves; a loop that stops itself and repeats at least 6 times (loops lent for the exam) | +1 rule, +4 blocks per script, script library (save / load), loops (`for` / `while` / `break`) |
-| Strategist | III | Not designed yet | Script set 3 |
+| Strategist | III | Sandbox: 3 waves; a script keeping a count with counters that pays out at least 3 times, within 120 seconds (counters lent for the exam) | Counters (`x`, `y`), script set 3 |
 | Engineer | IV | ELEGANT script (3 blocks or fewer) and a rule with two conditions | +2 script points on every skill |
 | Defragmenter | V | Not designed yet | +2 script points on every skill |
 | Theorist | after the campaign | Not designed yet | +2 script points on every skill |
@@ -217,11 +217,11 @@ Executors climb one rank per act (two in the last). Examiner Sudo gives each ran
 |---|---|
 | I | Conditions (`when enemies_nearby()`), reacting to a crowd |
 | II | Loops with exit conditions, defensive conditions (`when my_life_below()`), alternating patterns (Echo lock) |
-| III | Skill tags (AREA), multiple rules per skill, switching between script sets |
+| III | **Counters** (`x`, `y`: counting across casts), multiple rules per skill, script sets built for different jobs |
 | IV | Rules with two conditions, efficient scripts |
 | V | Free use of all concepts |
 
-The block-based scripting system has no functions (`def`) or free variables. The closest tools are the script library (reusable saved scripts), `every_nth_cast` and the Variable Store support gem (a counter). If functions or variables are added later, Act III is where they belong.
+The block-based scripting system has counters from Act III: `x` and `y` (`ScriptRegisters`), its version of variables, unlocked by the Strategist rank. It has no functions (`def`); the closest tool is the script library (reusable saved scripts). The Variable Store support gem is separate: a Blast-only store of charge from hits.
 
 ---
 

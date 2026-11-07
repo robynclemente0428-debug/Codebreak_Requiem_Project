@@ -32,6 +32,8 @@
 [ext_resource type="PackedScene" path="res://scenes/props/furniture/shelves_wide_tall.tscn" id="55_shelves"]
 [ext_resource type="PackedScene" uid="uid://d0uml10ovqxip" path="res://scenes/props/route_terminal/route_terminal.tscn" id="60_route"]
 [ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="61_vesper"]
+[ext_resource type="Script" path="res://scenes/map/town/yard_sweep.gd" id="70_sweep"]
+[ext_resource type="Resource" path="res://data/enemies/marker_drone.tres" id="71_marker"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_yard"]
 
@@ -205,18 +207,13 @@ transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 34, 
 [node name="ExaminerSudo" parent="." instance=ExtResource("31_sudo")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 38, 1.1, 38)
 
-[node name="Quartermaster" parent="." instance=ExtResource("33_vendor")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 1.1, 26.5)
-salvage_magic_per = 0.04
-salvage_rare_per = 0.03
-stock_level = 21
-model_scene = ExtResource("34_rogue")
-npc_id = "quartermaster"
-npc_name = "Quartermaster"
-info_title = "Convoy Supplies"
-
 [node name="TinkerHex" parent="." instance=ExtResource("33_vendor")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 43, 1.1, 26.5)
+tier_quest = "copied_stock"
+tier_levels = 10
+copy_slots = 2
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 stock_level = 21
 model_scene = ExtResource("34_rogue")
 npc_id = "hex"
@@ -237,6 +234,8 @@ info_title = "Gem Vendor"
 
 [node name="Weaponsmith" parent="." instance=ExtResource("33_vendor")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 46, 1.1, 30)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 shop = ExtResource("36_wshop")
 stock_level = 21
 model_scene = ExtResource("37_wmodel")
@@ -247,6 +246,8 @@ info_title = "Weapon Vendor"
 
 [node name="Armoursmith" parent="." instance=ExtResource("33_vendor")]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 46, 1.1, 33.5)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 shop = ExtResource("38_ashop")
 stock_level = 21
 model_scene = ExtResource("39_amodel")
@@ -324,6 +325,32 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 3.2, 23.6)
 light_color = Color(1, 0.3, 0.25, 1)
 light_energy = 1.6
 omni_range = 7.0
+
+[node name="YardSweep" type="Node3D" parent="."]
+script = ExtResource("70_sweep")
+quest_id = ""
+held_key = ""
+dock_target = ""
+load_time = 60.0
+wave_every = 15.0
+wave_sizes = Array[int]([3, 4, 5])
+enemy_level = 24
+wave_health_flat = 0.0
+wave_armour_flat = 0.0
+wave_health_growth = 0.0
+wave_armour_growth = 0.0
+wave_damage_growth = 0.0
+spawn_min = 10.0
+spawn_max = 26.0
+swarm = ExtResource("71_marker")
+brute = ExtResource("71_marker")
+shooter = ExtResource("71_marker")
+title_text = "// SWEEP //"
+start_toast = "SWEEP INBOUND
+The Collector's markers are over the wall, and they want Hardfault's crates. Kill them before the sweep."
+progress_text = "SWEEP IN PROGRESS  %d%%"
+count_text = "MARKERS IN THE YARD: %d"
+done_toast = "SWEEP BROKEN"
 
 [node name="DistrictGate" parent="." instance=ExtResource("60_route")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 1.1, 26)

@@ -52,6 +52,27 @@ func keyword() -> String:
 	return ""
 
 
+## True for blocks shown as their parameters in a row, each one a token to click, instead of a
+## call with parentheses:  when [x] [>=] [3]:
+func modular() -> bool:
+	return false
+
+
+## How the editor shows a parameter. "" = its plain value.
+func param_text(_param: String) -> String:
+	return ""
+
+
+## What marks this block on a cast as having fired (ProgramSupport.fired_conditions).
+func fired_id() -> String:
+	return type_id()
+
+
+## True when a rule may use this block more than once (when x >= 1 and x < 5:).
+func allows_repeats() -> bool:
+	return false
+
+
 ## True for blocks that can only ever be true on a loop repeat (target_alive, stack_overflow,
 ## except missed). A rule using one only changes repeats, so in a skill without any loop it
 ## would do nothing: SkillProgram.validate() reports that.

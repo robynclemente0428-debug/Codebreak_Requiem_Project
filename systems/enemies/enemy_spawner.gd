@@ -19,6 +19,26 @@ const LEVEL_FLAT := {
 	StatTypes.Stat.ARMOUR: 3.0,
 }
 
+## Health and armour for each act after the first: +50% in Act II, +100% in Act III. By the scene an
+## enemy spawns in, so places that aren't in an act (the exam sandbox) aren't scaled.
+const ACT_SCALING := 0.5
+const ACT_STATS: Array[StatTypes.Stat] = [StatTypes.Stat.MAX_HEALTH, StatTypes.Stat.ARMOUR]
+
+
+static func act_multiplier_of_scene(scene_path: String) -> float:
+	var act := Waypoints.act_of_scene(scene_path)
+	return 1.0 + ACT_SCALING * maxi(act.act_number - 1, 0) if act != null else 1.0
+
+
+## The multiplier for an enemy spawning under `node`: the first scene above it that's in an act.
+static func _act_multiplier(node: Node) -> float:
+	while node != null:
+		if node.scene_file_path != "" and Waypoints.act_of_scene(node.scene_file_path) != null:
+			return act_multiplier_of_scene(node.scene_file_path)
+		node = node.get_parent()
+	return 1.0
+
+
 ## forced_mods:   null = roll the modifiers as usual (every existing call does this).
 ##                An Array of EnemyModifierDefinition = use those instead of rolling.
 ## add_to_random: only with forced_mods. true = keep the rolled modifiers and add yours on top.
@@ -72,6 +92,16 @@ static func spawn_enemy(def: EnemyDefinition, rarity: String, parent: Node,
 			flat_mod.value = LEVEL_FLAT[stat] * (level - 1)
 			flat_mod.source_id = "dungeon_level"
 			enemy.stats.add_modifier(flat_mod)
+
+	var act_mult := _act_multiplier(parent)
+	if act_mult > 1.0:
+		for stat in ACT_STATS:
+			var act_mod := Modifier.new()
+			act_mod.stat = stat
+			act_mod.op = Modifier.ModOp.PERCENT_MULT
+			act_mod.value = act_mult - 1.0
+			act_mod.source_id = "act_scaling"
+			enemy.stats.add_modifier(act_mod)
 
 	var mods: Array = []
 	if forced_mods == null:

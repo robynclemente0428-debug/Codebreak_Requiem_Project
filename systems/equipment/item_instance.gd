@@ -5,6 +5,8 @@ extends Resource
 @export var rolled_affixes: Array[Dictionary] = []
 @export var rarity: String = "normal"
 @export var item_level: int = 1
+## A "COPY OF" item from Hex's copied stock: the same stats, half the value.
+@export var copied := false
 ## Stims only (see StimRoller): rolled numbers, modifier ids, charges left.
 @export var stim_roll: Dictionary = {}
 @export var stim_mods: Array[String] = []
@@ -22,6 +24,8 @@ func get_display_name() -> String:
 		elif affix.affix_type == "suffix" and suffix == "":
 			suffix = affix.display_name
 	var parts: Array[String] = []
+	if copied:
+		parts.append("COPY OF")
 	if prefix != "":
 		parts.append(prefix)
 	parts.append(definition.display_name)
@@ -85,6 +89,8 @@ func to_dict() -> Dictionary:
 			a['max'] = e.rolled_max
 		affixes.append(a)
 	var d := {'item': definition.id, 'rarity': rarity, 'level': item_level, 'affixes': affixes}
+	if copied:
+		d['copied'] = true
 	if definition.stim != null:
 		d['stim'] = {'base_amount': stim_roll.get('base_amount', 0.0), 'mods': stim_mods.duplicate(),
 				'charges': charges}
@@ -99,6 +105,7 @@ static func from_dict(d: Dictionary) -> ItemInstance:
 	inst.definition = def
 	inst.rarity = str(d.get('rarity', 'normal'))
 	inst.item_level = int(d.get('level', 1))
+	inst.copied = bool(d.get('copied', false))
 	for a in d.get('affixes', []):
 		var affix := ItemGenerator.get_affix(str(a.get('id', '')))
 		if affix == null:

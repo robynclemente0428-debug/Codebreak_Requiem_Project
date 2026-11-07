@@ -8,6 +8,7 @@ script = ExtResource("2_scvkn")
 id = "armour_vendor"
 display_name = "Armour Vendor"
 greeting = "Got some credits? I got some Armours"
+random_slots = 12
 rare_chance = 0.2
 catalog_folders = ["res://data/items/equipment"]
 level_window = 100

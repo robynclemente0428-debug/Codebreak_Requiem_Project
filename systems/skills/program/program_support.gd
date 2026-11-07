@@ -16,6 +16,17 @@ const FIRED_KEY := "program_fired"
 var program: SkillProgram
 var limits: SkillProgramLimits
 var _cast_count := 0
+## The script's memory: register name -> value (ScriptRegisters). It lives on the program, so it
+## outlasts this support when the skill is rebuilt.
+var registers: Dictionary:
+	get:
+		return program.registers
+var _caster: Node3D
+## While a cast's rules are being judged, writes wait here, so every rule reads the same values.
+var _pending_writes: Array[ProgramEffect] = []
+var _judging := false
+## The counters a growing buff reads that have already risen this cast: they only rise once.
+var _raised := {}
 ## Loops still running (kept here so they live until they finish).
 var _runners: Array[ProgramLoopRunner] = []
 ## Assassin: attack speed from per-hit rules, for the skill's next cast (see speed_mult).
@@ -35,6 +46,9 @@ func _init(p_program: SkillProgram = null, p_limits: SkillProgramLimits = null) 
 func before_release(cast: SkillCast) -> void:
 	if cast.extra.get("hologram", false) or cast.depth > 0:
 		return                                   # Multicast copy / repeat: rules already applied
+	_caster = cast.caster
+	_clear_stale_registers()
+	_raised.clear()
 	# This cast started with any per-hit attack speed bonus (its cooldown and animation were set
 	# before now): it's used up. Hits from this cast can earn the next one.
 	_hit_speed = 0.0
@@ -49,6 +63,7 @@ func before_release(cast: SkillCast) -> void:
 	var tickets: Array[ProgramRule] = []
 	var whiles: Array[ProgramRule] = []
 	var late_fors: Array[ProgramRule] = []
+	_judging = true
 	for rule in program.rules:
 		if rule.scope() != ProgramCondition.Scope.CAST:
 			continue
@@ -63,9 +78,17 @@ func before_release(cast: SkillCast) -> void:
 				for i in rule.loop.count:
 					tickets.append(rule)
 			continue
-		if rule.is_always() or not rule.all_true(cast, null):
+		if rule.is_always():
+			_write_registers(rule)               # the rest of an always: rule is baked into the skill
+			_apply_effects(cast, rule, {}, true)
+			continue
+		if not rule.all_true(cast, null):
 			continue
 		_fire_cast_rule(cast, rule, undo if _is_repeat_rule(rule) else {})
+	_judging = false
+	for e in _pending_writes:
+		_write_register(e)
+	_pending_writes.clear()
 	cast.extra[REPEAT_UNDO_KEY] = undo
 	if tickets.is_empty() and whiles.is_empty() and late_fors.is_empty():
 		return
@@ -144,14 +167,19 @@ func _fire_cast_rule(cast: SkillCast, rule: ProgramRule, record: Dictionary) -> 
 	_apply_effects(cast, rule, record)
 
 
-func _apply_effects(cast: SkillCast, rule: ProgramRule, record: Dictionary) -> void:
+## `only_growing`: just the buffs growing with a counter (the rest of an always: rule is baked in).
+func _apply_effects(cast: SkillCast, rule: ProgramRule, record: Dictionary, only_growing := false) -> void:
 	var mult := limits.rule_effect_mult(rule)              # Gladiator: every-Nth rules x1.5
 	for e in rule.effects:
+		if only_growing and not e.ramps():
+			continue
 		var knob := limits.get_knob(e.knob)
 		if knob == null:
 			continue
-		var v := knob.value_for(e.steps) * mult
+		var v := knob.step * _steps_now(e, knob, cast) * mult
 		match knob.kind:
+			SkillKnob.Kind.VARIABLE:
+				_queue_write(e)
 			SkillKnob.Kind.DAMAGE:
 				cast.damage_mult *= 1.0 + v
 				if not record.is_empty():
@@ -160,6 +188,109 @@ func _apply_effects(cast: SkillCast, rule: ProgramRule, record: Dictionary) -> v
 				cast.flag_bonus[knob.flag_key] = cast.flag_bonus.get(knob.flag_key, 0.0) + v
 				if not record.is_empty():
 					record["flags"][knob.flag_key] = float(record["flags"].get(knob.flag_key, 0.0)) + v
+
+
+# ---------- REGISTERS (ScriptRegisters) ----------
+func _write_registers(rule: ProgramRule) -> void:
+	for e in rule.effects:
+		if ScriptRegisters.is_write(e.knob):
+			_queue_write(e)
+
+
+func _queue_write(e: ProgramEffect) -> void:
+	if _judging:
+		_pending_writes.append(e)
+	else:
+		_write_register(e)
+
+
+func _write_register(e: ProgramEffect) -> void:
+	var reg := e.register_name()
+	var before := int(registers.get(reg, 0))
+	var after := ScriptRegisters.written(e, before)
+	if after > before and _grows_with(reg):
+		if _raised.has(reg):
+			return
+		_raised[reg] = true
+	registers[reg] = after
+
+
+func _grows_with(reg: String) -> bool:
+	for rule in program.rules:
+		for e in rule.effects:
+			if e.ramps() and e.ramp_register() == reg:
+				return true
+	return false
+
+
+## How many of its knob's steps an effect gives now: its value, unless it grows with a counter. The
+## exam counts a counter paying out here like a rule reading it.
+func _steps_now(e: ProgramEffect, knob: SkillKnob, cast: SkillCast) -> float:
+	if not e.ramps():
+		return float(e.steps)
+	var count := int(registers.get(e.ramp_register(), 0))
+	if count > 0 and not SkillTargets.is_enemy(cast.caster):
+		GameEvents.report("rule_triggered", "var_growth")
+	return ScriptRegisters.ramp_steps(count, e.steps, program.growth_room(e, knob))
+
+
+## The fight is over: CLEAR_AFTER seconds without landing a hit or being hit, or a new area.
+func _clear_stale_registers() -> void:
+	if not is_instance_valid(_caster):
+		return
+	var now := Time.get_ticks_msec()
+	if program.last_active_msec < 0:
+		program.last_active_msec = now             # a new script's fight starts here
+	var active := program.last_active_msec
+	var hp := _caster.get("health") as HealthComponent
+	if hp != null:
+		active = maxi(active, hp.last_damaged_msec)
+	var am := _caster.get_tree().get_first_node_in_group("area_manager") as AreaManager if _caster.is_inside_tree() else null
+	var area := am.current_area.get_instance_id() if am != null and am.current_area != null else program.area_id
+	if program.area_id == 0:
+		program.area_id = area
+	if area != program.area_id or now - active > int(ScriptRegisters.CLEAR_AFTER * 1000.0):
+		registers.clear()
+		program.area_id = area
+
+
+## The ProgramSupport running a skill's script (null = none).
+static func of(skill: SkillInstance) -> ProgramSupport:
+	if skill != null:
+		for s in skill.support_behaviors:
+			if s is ProgramSupport:
+				return s
+	return null
+
+
+static func register_value(skill: SkillInstance, reg: String) -> int:
+	var support := of(skill)
+	return int(support.registers.get(reg, 0)) if support != null else 0
+
+
+## What the skill bar shows for a script using registers: "x=3", or "3|1" with both. "" = none.
+func registers_badge() -> String:
+	_clear_stale_registers()
+	var used: Array[String] = []
+	for reg in ScriptRegisters.NAMES:
+		if _uses_register(reg):
+			used.append(reg)
+	match used.size():
+		1:
+			return "%s=%d" % [used[0], int(registers.get(used[0], 0))]
+		2:
+			return "%d|%d" % [int(registers.get("x", 0)), int(registers.get("y", 0))]
+	return ""
+
+
+func _uses_register(reg: String) -> bool:
+	for rule in program.rules:
+		for e in rule.effects:
+			if ScriptRegisters.is_write(e.knob) and e.register_name() == reg:
+				return true
+			if e.ramps() and e.ramp_register() == reg:
+				return true
+	return false
 
 
 ## Loops count what each cast and repeat hit (for break and target_alive).
@@ -178,6 +309,7 @@ func on_area_impact(cast: SkillCast, center: Vector3, direction: Vector3) -> voi
 
 ## HIT rules: checked for every target, before damage is applied.
 func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
+	program.last_active_msec = Time.get_ticks_msec()
 	for rule in program.rules:
 		if rule.is_always() or rule.loop != null or rule.scope() != ProgramCondition.Scope.HIT:
 			continue
@@ -192,8 +324,10 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 			var knob := limits.get_knob(e.knob)
 			if knob == null:
 				continue
-			if knob.kind == SkillKnob.Kind.DAMAGE:
-				hit.damage *= 1.0 + knob.value_for(e.steps) * mult
+			if knob.kind == SkillKnob.Kind.VARIABLE:
+				_write_register(e)
+			elif knob.kind == SkillKnob.Kind.DAMAGE:
+				hit.damage *= 1.0 + knob.step * _steps_now(e, knob, cast) * mult
 			elif limits.per_hit_attack_speed(knob) and not cast.extra.has(flags_key):
 				# Assassin: the next cast of this skill is faster (once per rule per cast)
 				_hit_speed += knob.value_for(e.steps) * mult
@@ -201,7 +335,7 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 			elif knob.kind == SkillKnob.Kind.FLAG and limits.per_hit_any_knob() \
 					and not cast.extra.has(flags_key):
 				# Assassin: a per-hit flag change lasts for the rest of this cast, added once
-				cast.flag_bonus[knob.flag_key] = cast.flag_bonus.get(knob.flag_key, 0.0) + knob.value_for(e.steps) * mult
+				cast.flag_bonus[knob.flag_key] = cast.flag_bonus.get(knob.flag_key, 0.0) + knob.step * _steps_now(e, knob, cast) * mult
 		if limits.per_hit_any_knob():
 			cast.extra[flags_key] = true
 
@@ -218,8 +352,8 @@ func speed_mult(_skill: SkillInstance) -> float:
 static func _mark_fired(cast: SkillCast, rule: ProgramRule) -> void:
 	var fired: Array = cast.extra.get(FIRED_KEY, [])
 	for c in rule.conditions:
-		if not c.type_id() in fired:
-			fired.append(c.type_id())
+		if not c.fired_id() in fired:
+			fired.append(c.fired_id())
 	cast.extra[FIRED_KEY] = fired
 
 

@@ -40,7 +40,8 @@ Hex: That's them. Don't tell me how they smell the same.
 
 ~ turnin_copied_stock
 > turn_in copied_stock
-Hex: Paid in full. Nobody sells anything past that gate, which is why I'm going.
+Hex: Paid in full. The originals go on my shelf, and the copies go on sale. Half price. Same scratches.
+Hex: Nobody sells anything past that gate, which is why I'm going.
 -> idle
 
 ~ offer_clear_hub

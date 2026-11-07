@@ -2,7 +2,7 @@ class_name SalvageCache
 extends Area3D
 ## A convoy stop's salvage: one supply cache somewhere off the main path of each route stop
 ## (DungeonPopulator.place_salvage). Walk into it to recover it: credits, and the deed
-## "salvage:<stop id>". Every cache recovered makes the Quartermaster's random stock likelier to
+## "salvage:<stop id>". Every cache recovered makes Hex's, the Armoursmith's and the Weaponsmith's random stock likelier to
 ## roll magic and rare (ShopNPC salvage_magic_per / salvage_rare_per). Once per stop: a stop
 ## whose cache is recovered doesn't place it again. Built in code: SalvageCache.spawn().
 
@@ -26,7 +26,7 @@ static func spawn(parent: Node, pos: Vector3, p_stop_id: String) -> SalvageCache
 	return c
 
 
-## Caches recovered so far, over every stop (for the Quartermaster).
+## Caches recovered so far, over every stop (for the shops they improve).
 static func recovered(qm: QuestManager) -> int:
 	return ScriptBudget._deeds(qm, DEED).size() if qm != null else 0
 
@@ -111,7 +111,7 @@ func _on_body_entered(body: Node3D) -> void:
 	if wallet != null:
 		wallet.add(CREDITS)
 	var n := recovered(qm)
-	QuestItems.toast(get_tree(), "SALVAGE RECOVERED  %d/%d\n+%d CREDITS  //  the Quartermaster restocks better" % [
+	QuestItems.toast(get_tree(), "SALVAGE RECOVERED  %d/%d\n+%d CREDITS  //  Hex and the smiths restock better" % [
 		n, total(), CREDITS], COL)
 	SoundManager.play_ui("res://assets/sound/Start_Button_Click.wav", -4.0)
 	var t := create_tween()

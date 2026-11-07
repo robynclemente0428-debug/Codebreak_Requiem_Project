@@ -54,15 +54,15 @@ Sudo: Efficiency is just laziness with a plan.
 * LEAVE -> end
 
 ~ offer_strategist
-Sudo: You've been swapping scripts like a nervous habit. Now do it on purpose.
+Sudo: Your scripts only know what's true right now. This whole place is what happens when memory goes wrong.
 Sudo: The Strategist exam. The Registrar let me replay Checkpoint's quarantine logs into a sealed bay.
-Sudo: Three samples from out there. Three problems, three scripts.
+Sudo: Three samples from out there, and one new tool: a script that remembers.
 * ACCEPT -> accept_strategist
 * DECLINE -> end
 
 ~ accept_strategist
 > start_quest exam_strategist
-Sudo: I'll lend you a third set. Each sample needs a different answer. Plan, then run.
+Sudo: I'll lend you two counters, x and y. Count something with one rule, use it with another. They clear themselves when the fight ends. In the middle of one, though, a count nobody spends is just a leak.
 -> ready_strategist
 
 ~ ready_strategist
@@ -76,8 +76,8 @@ Sudo: The bay is sealed and the samples are loaded. Ready when you are.
 ~ pass_strategist
 > turn_in exam_strategist
 > report rank_up strategist
-Sudo: Right tool, right moment. Rank up. Strategist.
-Sudo: Set C is yours now. A plan is just a loop you haven't run yet.
+Sudo: It remembered, and it let go. Rank up. Strategist.
+Sudo: x and y are yours now, and so is set C. A plan is just a loop you haven't run yet.
 -> end
 
 ~ retake_strategist

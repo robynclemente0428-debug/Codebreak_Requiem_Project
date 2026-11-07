@@ -139,15 +139,6 @@ script = ExtResource("9_iri4i")
 [node name="ConvoyDressing" type="Node3D" parent="." unique_id=505001253]
 script = ExtResource("10_imbut")
 
-[node name="Quartermaster" parent="." unique_id=1385360680 instance=ExtResource("11_hky0x")]
-transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 37.51132, 1.1, 33.260796)
-salvage_magic_per = 0.04
-salvage_rare_per = 0.03
-model_scene = ExtResource("14_tnwyf")
-npc_id = "quartermaster"
-npc_name = "Quartermaster"
-info_title = "Convoy Supplies"
-
 [node name="WardenBrack" parent="." unique_id=730114521 instance=ExtResource("15_brack")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 39, 1.1, 27.1)
 
@@ -156,6 +147,8 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 42, 1.1, 27.1)
 
 [node name="TinkerHex" parent="." unique_id=730114523 instance=ExtResource("11_hky0x")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 41, 1.1, 32.9)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 stock_level = 20
 model_scene = ExtResource("14_tnwyf")
 npc_id = "hex"
@@ -176,6 +169,8 @@ info_title = "Gem Vendor"
 
 [node name="Weaponsmith" parent="." unique_id=730114524 instance=ExtResource("11_hky0x")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 46.315598, 1.1, 32.9)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 shop = ExtResource("19_wshop")
 stock_level = 20
 model_scene = ExtResource("20_wmodel")
@@ -186,6 +181,8 @@ info_title = "Weapon Vendor"
 
 [node name="Armoursmith" parent="." unique_id=730114525 instance=ExtResource("11_hky0x")]
 transform = Transform3D(-1, 0, -8.742278e-08, 0, 1, 0, 8.742278e-08, 0, -1, 48.05629, 1.1, 32.9)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 shop = ExtResource("21_ashop")
 stock_level = 20
 model_scene = ExtResource("22_amodel")
@@ -196,6 +193,7 @@ info_title = "Armour Vendor"
 
 [node name="RouteTerminal" parent="." unique_id=730114530 instance=ExtResource("18_route")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.5, 1.1, 27)
+docks = true
 
 [node name="Furniture" type="Node3D" parent="." unique_id=675951601]
 metadata/_note = "Sci-Fi Essentials Kit props (scenes/props/furniture/). Solid ones block the player and the navmesh bakes round them."

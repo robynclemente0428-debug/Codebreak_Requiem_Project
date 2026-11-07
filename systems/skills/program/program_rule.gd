@@ -74,7 +74,7 @@ static func raw_cost_multiplier_of(best: Dictionary) -> float:
 func repeated_condition() -> String:
 	var seen := {}
 	for c in conditions:
-		if seen.has(c.type_id()):
+		if seen.has(c.type_id()) and not c.allows_repeats():
 			return c.palette_name().to_lower().replace(" ", "_")
 		seen[c.type_id()] = true
 	return ""
@@ -91,8 +91,21 @@ func only_on_repeats() -> bool:
 	return false
 
 
+## Writing a register doesn't count as a block (ScriptRegisters).
 func action_count() -> int:
-	return conditions.size() + effects.size() + (loop.action_count() if loop != null else 0)
+	var n := conditions.size() + (loop.action_count() if loop != null else 0)
+	for e in effects:
+		if not ScriptRegisters.is_write(e.knob):
+			n += 1
+	return n
+
+
+## True when part of this rule has to run per cast even in always: (x += 1, damage += x * 1%).
+func uses_registers() -> bool:
+	for e in effects:
+		if ScriptRegisters.is_write(e.knob) or e.ramps():
+			return true
+	return false
 
 
 ## A plain ALWAYS rule, baked into the skill (not a loop).
@@ -106,6 +119,9 @@ func describe(limits: SkillProgramLimits) -> String:
 		whens.append(c.describe())
 	var dos: Array[String] = []
 	for e in effects:
+		if ScriptRegisters.is_write(e.knob):
+			dos.append(e.describe_write())
+			continue
 		var k := limits.get_knob(e.knob) if limits != null else null
 		dos.append(k.describe(e.steps) if k != null else "%s %+d" % [e.knob, e.steps])
 	var head := "ALWAYS" if whens.is_empty() else " AND ".join(whens)

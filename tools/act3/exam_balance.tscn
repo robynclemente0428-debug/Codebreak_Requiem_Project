@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://tools/act3/exam_balance.gd" id="1_script"]
+
+[node name="ExamTour" type="Node"]
+script = ExtResource("1_script")
+speed = 1.0
+scripts = PackedStringArray("flat", "grow")
+result_file = "res://tools/act3/exam_balance_results_1x.txt"

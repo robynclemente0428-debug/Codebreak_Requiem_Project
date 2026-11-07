@@ -117,6 +117,8 @@ metadata/_custom_type_script = "uid://drtmekm517kgm"
 
 [node name="GeneralVendor" parent="." unique_id=1385360680 instance=ExtResource("8_4ttov")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.565979, 1.1000004, 21.429565)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 stock_level = 10
 model_scene = ExtResource("9_rkjhf")
 npc_id = "hex"
@@ -143,6 +145,8 @@ transform = Transform3D(0.70710677, 0, 0.70710677, 0, 1, 0, -0.70710677, 0, 0.70
 
 [node name="Weaponsmith" parent="." unique_id=1912207264 instance=ExtResource("8_4ttov")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14.284399, 1.1000004, 24.729116)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 shop = ExtResource("13_wgwnr")
 stock_level = 10
 model_scene = ExtResource("14_iaabq")
@@ -153,6 +157,8 @@ info_title = "Weapon Vendor"
 
 [node name="Armoursmith" parent="." unique_id=1653674595 instance=ExtResource("8_4ttov")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.838394, 1.1000004, 28.209734)
+salvage_magic_per = 0.04
+salvage_rare_per = 0.03
 shop = ExtResource("14_wgwnr")
 stock_level = 10
 model_scene = ExtResource("15_iaabq")

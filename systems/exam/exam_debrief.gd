@@ -18,8 +18,8 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 		"PROCESS TERMINATED":
 			out.append("I pulled you out before they did. A rule that fires earlier keeps them off you.")
 		"SPEC NOT MET":
-			if spec.set_per_wave:
-				out.append("%d script sets did the work. I asked for %d. Each sample needs its own answer." \
+			if spec.required_variable:
+				out.append("Your count paid out %d times. I asked for %d. Count something that happens more often, or ask for less." \
 						% [fires, spec.required_fires])
 			elif spec.required_stop_loop:
 				out.append("Your loop repeated %d times. I asked for %d. Let it run longer before it stops, or raise its count." \
@@ -31,12 +31,11 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 			out.append(["Passed. Barely, but passed.", "Solid work.", "Flawless. Nothing wasted."][r["grade"]])
 
 	# The rule against the casts (a loop: its repeats against the casts)
-	if spec.set_per_wave:
-		var swaps: int = r.get("swaps", 0)
-		if swaps > spec.par_swaps:
-			out.append("%d swaps. A plan needs about %d. That wasn't a plan, it was a nervous habit." % [swaps, spec.par_swaps])
-		else:
-			out.append("%d swaps, each with a reason. That's a plan." % swaps)
+	if spec.required_variable:
+		if casts > 0 and fires == 0:
+			out.append("You cast %d times and never spent what you counted. Memory you don't use is just a leak." % casts)
+		elif casts > 0:
+			out.append("%d casts, and your count paid out %d times. It remembered what you'd have forgotten." % [casts, fires])
 	elif spec.required_stop_loop:
 		if casts > 0 and fires == 0:
 			out.append("You cast %d times and your loop never repeated once." % casts)
@@ -59,7 +58,7 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 	elif casts > 0 and fires == 0:
 		out.append("You cast %d times and %s never fired once." % [casts, cond])
 
-	if spec.set_per_wave and r["passed"] and r["grade"] < 2:
+	if spec.required_variable and r["passed"] and r["grade"] < 2:
 		out.append("Those were recordings. The real ones are past the District Gate, and I can't pull you out of there.")
 
 	# The script itself
@@ -74,10 +73,7 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 	# The points it missed
 	if r["passed"]:
 		if not r["fast"]:
-			if spec.set_per_wave:
-				out.append("Clear it within %d seconds, in %d swaps or fewer, for that point." % [int(spec.par_time), spec.par_swaps])
-			else:
-				out.append("Clear it within %d seconds for the time point." % int(spec.par_time))
+			out.append("Clear it within %d seconds for the time point." % int(spec.par_time))
 		if not r["unhurt"]:
 			out.append("You lost %d%% of your health. Keep it under %d%% for the last point." \
 					% [roundi(r["damage"] * 100.0), roundi(spec.par_damage * 100.0)])

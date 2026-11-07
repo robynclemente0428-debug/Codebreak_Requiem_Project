@@ -24,6 +24,9 @@ static var _loaded_for := -2                  # save slot _visited was read from
 
 
 # ---------- ACTS ----------
+const DOCKED_QUEST := "q04c_the_last_mile"
+
+
 static func acts() -> Array[WaypointAct]:
 	if _acts.is_empty():
 		var dir := DirAccess.open(ACT_FOLDER)
@@ -183,11 +186,18 @@ static func route_blocked_reason(w: Waypoint, tree: SceneTree) -> String:
 	return breach_reason(tree)
 
 
+## True once Hardfault has docked at Checkpoint: the convoy doesn't sail again.
+static func is_docked(qm: QuestManager) -> bool:
+	return qm != null and qm.is_completed(DOCKED_QUEST)
+
+
 ## Why the convoy can't sail on because of a hull breach (HullBreach.blocks_route: on, or due
 ## because its stop was just cleared), or "".
 static func breach_reason(tree: SceneTree) -> String:
 	for b in tree.get_nodes_in_group("hull_breach"):
 		if b.has_method("blocks_route") and b.blocks_route():
+			if b.has_method("route_block_text"):
+				return b.route_block_text()
 			return "HULL BREACH: CLEAR THE DECK FIRST" if b.is_running() \
 					else "THE NULL ARE BOARDING: HOLD THE DECK FIRST"
 	return ""

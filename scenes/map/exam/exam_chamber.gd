@@ -58,8 +58,6 @@ var _casts := 0
 var _rule_fires := {}                    # "gem#index" -> times
 var _ended := false
 var _real_loadout := {}                  # what the player walked in with (_enter_sandbox)
-var _swaps := 0
-var _wave_damage: Array[Dictionary] = []  # for each wave: script set -> damage (set_per_wave)
 var _ring_mat: StandardMaterial3D
 var _tanks: Array[Dictionary] = []        # for each wave: {"fill": MeshInstance3D, "light": OmniLight3D}
 var _tank_tween: Tween
@@ -179,11 +177,8 @@ func try_start() -> void:
 
 ## "" if the player's applied script meets the spec, otherwise what's wrong.
 func _spec_problem() -> String:
-	if spec.set_per_wave:
-		for i in SkillComponent.SCRIPT_SETS:
-			if not _set_has_script(i):
-				return "SPEC NOT MET: script set %s has no script.\nWrite one in each set: [K] opens the editor, its tabs are the sets." \
-						% SkillComponent.SET_NAMES[i]
+	if spec.required_variable and not _any_applied(_keeps_a_count):
+		return "SPEC NOT MET: no applied script keeps a count.\nOne rule: when something happens, x += 1. Another: when x >= N, do something. Or make a buff grow with x. Open your skill script with [K]."
 	if spec.required_stop_loop and not _any_applied(_has_stop_loop):
 		return "SPEC NOT MET: no applied script has a loop that stops itself.\nUse a while loop, or a for loop with break. Open your skill script with [K]."
 	if spec.required_condition == "":
@@ -197,42 +192,7 @@ func _spec_problem() -> String:
 	return ""
 
 
-## True when a skill has an applied script in script set `index`.
-func _set_has_script(index: int) -> bool:
-	var skills: SkillComponent = _player.get("skills")
-	for s in skills.sockets:
-		if s.gem != null and s.sets[index] != null and (s.sets[index] as SkillProgram).has_rules():
-			return true
-	return false
-
-
-## How many different sets were the top damage dealer of a wave so far.
-func _distinct_top_sets() -> int:
-	var tops := {}
-	for damage in _wave_damage:
-		var best := -1
-		var most := 0.0
-		for set_index in damage:
-			if damage[set_index] > most:
-				most = damage[set_index]
-				best = set_index
-		if best >= 0:
-			tops[best] = true
-	return tops.size()
-
-
-func _on_enemy_hurt(amount: float, wave_index: int) -> void:
-	if _state != State.RUNNING or wave_index >= _wave_damage.size():
-		return
-	var set_index: int = (_player.get("skills") as SkillComponent).script_set
-	_wave_damage[wave_index][set_index] = float(_wave_damage[wave_index].get(set_index, 0.0)) + amount
-	if spec.set_per_wave:
-		_fires = _distinct_top_sets()
-
-
 func _reset_run() -> void:
-	_swaps = 0
-	_wave_damage.clear()
 	_refill_tanks()
 	for e in _alive:
 		if is_instance_valid(e):
@@ -276,7 +236,6 @@ func _process(delta: float) -> void:
 func _next_wave() -> void:
 	_between_waves = 0.0
 	var count := spec.wave_sizes[_wave]
-	var wave_index := _wave
 	var wave_def: EnemyDefinition = spec.wave_enemies[_wave] if _wave < spec.wave_enemies.size() else spec.wave_enemy
 	var mods := spec.mods_for_wave(_wave)
 	var tint := spec.wave_tint(_wave)
@@ -285,7 +244,6 @@ func _next_wave() -> void:
 	_drain_tank(_wave)
 	if spec.wave_name(_wave) != "":
 		_hud.announce_wave(_wave, spec, tint)
-	_wave_damage.append({})
 	_wave += 1
 	var turn := randf() * TAU
 	for i in count:
@@ -293,7 +251,6 @@ func _next_wave() -> void:
 		var at := Vector3(cos(a), 0.0, sin(a)) * minf(spec.spawn_radius, RADIUS - 1.0) + Vector3.UP * 0.1
 		var e := EnemySpawner.spawn_enemy(wave_def, "normal", _enemies_root, to_global(at),
 				spec.enemy_level, mods)
-		e.health.damage_taken.connect(_on_enemy_hurt.bind(wave_index))
 		e.ai.aggro_range = RADIUS * 3.0          # they all come for you
 		_holo(e, tint)
 		_alive.append(e)
@@ -337,6 +294,8 @@ func _on_event(kind: String, target: String, _amount: int) -> void:
 		"rule_triggered":
 			if target == spec.required_condition:
 				_fires += 1
+			elif spec.required_variable and target.begins_with("var_"):
+				_fires += 1
 		"loop_repeat":
 			if spec.required_stop_loop and target == "stop":
 				_fires += 1
@@ -344,8 +303,6 @@ func _on_event(kind: String, target: String, _amount: int) -> void:
 			_rule_fires[target] = int(_rule_fires.get(target, 0)) + 1
 		"cast":
 			_casts += 1
-		"script_set":
-			_swaps += 1
 
 
 func _on_player_hurt(amount: float) -> void:
@@ -383,14 +340,14 @@ func _finish(fail: String) -> void:
 func _result(fail: String) -> Dictionary:
 	var tier := _best_tier()
 	var tier_pts := 2 if tier == "elegant" else (1 if tier == "lean" else 0)
-	var fast := _time <= spec.par_time and (not spec.set_per_wave or _swaps <= spec.par_swaps)
+	var fast := _time <= spec.par_time
 	var unhurt := _damage / _max_health <= spec.par_damage
 	var points := tier_pts + int(fast) + int(unhurt)
 	return {
 		"passed": fail == "", "fail": fail, "grade": ExamSpec.grade_of(points), "points": points,
 		"tier": tier, "time": _time, "fast": fast, "damage": _damage / _max_health, "unhurt": unhurt,
 		"fires": _fires, "casts": _casts, "waves": _wave, "rule_fires": _rule_fires.duplicate(),
-		"new_best": false, "first_pass": false, "swaps": _swaps,
+		"new_best": false, "first_pass": false,
 	}
 
 
@@ -413,6 +370,8 @@ func _best_tier() -> String:
 func _uses_condition(program: SkillProgram) -> bool:
 	if spec.required_stop_loop:
 		return _has_stop_loop(program)
+	if spec.required_variable:
+		return _keeps_a_count(program)
 	for rule in program.rules:
 		for c in rule.conditions:
 			if spec.required_condition == "" or c.type_id() == spec.required_condition:
@@ -425,6 +384,10 @@ static func _has_stop_loop(program: SkillProgram) -> bool:
 		if rule.loop != null and rule.loop.stops_itself():
 			return true
 	return false
+
+
+static func _keeps_a_count(program: SkillProgram) -> bool:
+	return program.keeps_a_count()
 
 
 ## True when one of the player's applied (valid) scripts passes `check`.

@@ -13,6 +13,9 @@ extends Interactable
 ## The rank exam the player should pass before taking the road (its stops are built round what
 ## it unlocks: the Architect exam's loops). Until then the route stays locked. "" = no exam.
 @export var required_exam := "exam_architect"
+## The convoy's own terminal: DOCKED once Hardfault reaches Checkpoint (Waypoints.is_docked). It
+## plots no more courses, unless an Act II quest is still open, so nothing is stranded on the road.
+@export var docks := false
 
 var _prompt: ConfirmationDialog
 
@@ -29,6 +32,7 @@ var _base_title := ""
 var _base_glow := 1.0
 var _base_glow_col := Color.WHITE
 var _ticker: Node
+var _docked_tag: Label3D
 var _t := 0.0
 
 
@@ -36,6 +40,8 @@ func _ready() -> void:
 	super._ready()
 	face_player = false                           # a console doesn't turn round
 	_base_title = info_title
+	if docks:
+		get_tree().create_timer(0.5, false).timeout.connect(_show_docked)   # once the player's in
 	var glow := get_node_or_null("Glow") as OmniLight3D
 	if glow != null:
 		_base_glow = glow.light_energy
@@ -80,6 +86,46 @@ func set_signal(ok: bool) -> void:
 		add_child(tk)
 	if _ticker != null:
 		_ticker.set_process(not ok)
+	_show_docked()
+
+
+func _is_docked() -> bool:
+	var player := get_tree().get_first_node_in_group("players")
+	return docks and player != null and Waypoints.is_docked(player.get("quests") as QuestManager)
+
+
+## Docked at Checkpoint: the plate and the glow say so.
+func _show_docked() -> void:
+	if not is_inside_tree() or not _is_docked():
+		return
+	info_title = "DOCKED AT CHECKPOINT"
+	prompt_text = "DOCKED"
+	var glow := get_node_or_null("Glow") as OmniLight3D
+	if glow != null and signal_ok:
+		glow.light_color = Color(1.0, 0.72, 0.25)
+	if _docked_tag == null:
+		_docked_tag = Label3D.new()
+		_docked_tag.text = "DOCKED"
+		_docked_tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_docked_tag.pixel_size = 0.006
+		_docked_tag.font_size = 40
+		_docked_tag.outline_size = 10
+		_docked_tag.modulate = Color(1.0, 0.72, 0.25)
+		_docked_tag.position = Vector3(0, prompt_height - 0.15, 0.3)
+		add_child(_docked_tag)
+	_docked_tag.visible = signal_ok
+
+
+## An Act II quest still open: the road stays open for it.
+func _open_road_quest(player: Node3D) -> bool:
+	var qm := player.get("quests") as QuestManager
+	if qm == null:
+		return false
+	for id in qm.active:
+		var def := qm.get_def(id)
+		if def != null and def.get_meta("act", "") == "II":
+			return true
+	return false
 
 
 ## No signal: the screen crawls with static and now and then a red flash.
@@ -109,9 +155,18 @@ class _Ticker extends Node:
 
 
 func interact(player: Node3D) -> void:
-	if Waypoints.breach_reason(get_tree()) != "":
+	var blocked := Waypoints.breach_reason(get_tree())
+	if blocked.begins_with("SWEEP") or blocked.begins_with("THE MARKERS"):
+		QuestItems.toast(get_tree(), "SWEEP\nThe Collector's markers are in the yard: kill them before you leave.",
+				Color(1.0, 0.35, 0.35))
+		return
+	if blocked != "":
 		QuestItems.toast(get_tree(), "HULL BREACH\nThe Null are on the deck: clear it before you plot a course.",
 				Color(1.0, 0.35, 0.35))
+		return
+	if _is_docked() and not _open_road_quest(player):
+		QuestItems.toast(get_tree(), "DOCKED AT CHECKPOINT\nHardfault isn't going anywhere. Use the District Gate in the Quarantine Yard.",
+				Color(1.0, 0.72, 0.25))
 		return
 	var comms = DeckSystemScript.find(get_tree(), "comms")
 	if comms != null and comms.is_offline():

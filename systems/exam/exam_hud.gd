@@ -162,11 +162,7 @@ func show_result(r: Dictionary) -> void:
 			"+1" if r["fast"] else "+0"))
 	_result_box.add_child(_stat("HEALTH LOST", "%d%%  (par %d%%)" % [roundi(r["damage"] * 100.0),
 			roundi(spec.par_damage * 100.0)], "+1" if r["unhurt"] else "+0"))
-	if spec.set_per_wave:
-		_result_box.add_child(_stat("SETS USED", "%d of %d, in %d swaps  (par %d)" % [r["fires"],
-				spec.required_fires, r["swaps"], spec.par_swaps], ""))
-	else:
-		_result_box.add_child(_stat("RULE FIRED", "%d times in %d casts" % [r["fires"], r["casts"]], ""))
+	_result_box.add_child(_stat("RULE FIRED", "%d times in %d casts" % [r["fires"], r["casts"]], ""))
 	_result_box.add_child(_rule())
 	_result_box.add_child(_label("EXAMINER SUDO:", 16, ACCENT))
 	for line in ExamDebrief.lines(spec, r):

@@ -75,6 +75,7 @@ static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: Clas
 		for k in defense.knobs:
 			if out.get_knob(k.id) == null:       # a gem may define its own version
 				out.knobs.append(k)
+	out.knobs.append_array(ScriptRegisters.knobs())
 	out.knobs.assign(out.knobs.filter(func(k: SkillKnob) -> bool: return out.allows("knob:" + String(k.id))))
 	for sup in supports:
 		var def := sup as SupportGemDefinition

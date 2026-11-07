@@ -81,7 +81,7 @@ func blocks_route() -> bool:
 ## don't all come due at once.
 func is_due() -> bool:
 	var qm := _qm()
-	if qm == null or after_stop == "":
+	if qm == null or after_stop == "" or Waypoints.is_docked(qm):   # docked: Sweeps take over (YardSweep)
 		return false
 	return qm.deed_count(Waypoints.FINISH_DEED, after_stop) > qm.deed_count(DEED, after_stop)
 

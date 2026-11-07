@@ -26,12 +26,13 @@ const LADDER := [
 ##   hints     the threat panel shows how to counter each threat
 ##   library   the SCRIPTING editor's save / load library (SkillComponent.library)
 ##   loops     for / while / break and the blocks about repeats (see LOCKED_BLOCKS)
+##   variables the registers x and y: [x] [+=] [1], when [x] [>=] [3] (see ScriptRegisters)
 ##   budget    extra script points on every skill (ScriptBudget adds exam grades and clears)
 const PERKS := [
 	{"sets": 1},                                          # INITIATE
 	{"sets": 2, "rules": 1, "hints": true},               # OPERATOR
 	{"rules": 1, "blocks": 4, "library": true, "loops": true},   # ARCHITECT
-	{"sets": 3},                                          # STRATEGIST
+	{"sets": 3, "variables": true},                       # STRATEGIST
 	{"budget": 2},                                        # ENGINEER
 	{"budget": 2},                                        # DEFRAGMENTER
 	{"budget": 2},                                        # THEORIST
@@ -44,10 +45,11 @@ const PERK_TEXT := {
 	"hints": "Threat counter hints",
 	"library": "Script library (save / load scripts)",
 	"loops": "Loops (for / while / break)",
+	"variables": "Counters (x and y)",
 	"budget": "+%d script points on every skill",
 }
 ## Perks that are on / off (the rest are numbers).
-const FLAG_PERKS := ["hints", "library", "loops"]
+const FLAG_PERKS := ["hints", "library", "loops", "variables"]
 
 ## Script blocks a perk unlocks. Below that rank they don't exist for the player: the editor
 ## doesn't list them, the gem vendor doesn't sell them, and a script using one doesn't compile.
@@ -61,6 +63,8 @@ const LOCKED_BLOCKS := {
 	"cond:target_alive": "loops",
 	"cond:stack_overflow": "loops",
 	"gem:for_loop_support": "loops",
+	"cond:var_compare": "variables",
+	"knob:var": "variables",
 }
 
 
@@ -74,7 +78,7 @@ static var lent := PackedStringArray()
 static func perk(rank: int, key: String) -> Variant:
 	if key in FLAG_PERKS and key in lent:
 		return true
-	if key == "sets" and key in lent:                 # the Strategist exam lends set 3
+	if key == "sets" and key in lent:                 # every set, for a test of The Collector
 		return SkillComponent.SCRIPT_SETS
 	var out: Variant = null
 	for i in mini(rank + 1, PERKS.size()):

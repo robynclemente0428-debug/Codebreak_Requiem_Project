@@ -15,6 +15,8 @@ enum Kind {
 	## Any other stat (mana cost, attack speed, crit...). Only in ALWAYS rules, because mana and
 	## cooldown are paid before any condition can be checked.
 	STAT,
+	## Writes a register (ScriptRegisters): x += 1, x = 0. Free, and works in every rule.
+	VARIABLE,
 }
 
 @export var id: StringName

@@ -227,6 +227,9 @@ func _process(delta: float) -> void:
 		slot.tick(delta)
 		if slot.skill != null:
 			var charge := ""
+			var script_support := ProgramSupport.of(slot.skill)
+			if script_support != null:
+				charge = script_support.registers_badge()       # x=3: the script's variables
 			if VariableStoreSupport.on_skill(slot.skill) and _skills != null:
 				charge = str(VariableStoreSupport.read(_skills.get_parent(), slot.skill))
 			if TryExceptSupport.on_skill(slot.skill) and _skills != null:

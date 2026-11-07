@@ -191,7 +191,7 @@ func _current_hint() -> Dictionary:
 
 	# A hull breach has its own panel in the same spot: no convoy hints over it
 	for b in get_tree().get_nodes_in_group("hull_breach"):
-		if (b as HullBreach).is_running():
+		if b.has_method("is_running") and b.is_running():
 			return {}
 
 	# On the convoy before its rank exam: Sudo first, then the road

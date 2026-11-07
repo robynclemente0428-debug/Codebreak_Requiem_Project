@@ -19,6 +19,13 @@ extends Resource
 const EPSILON := 0.001
 
 @export var rules: Array[ProgramRule] = []
+## The script's counters (ScriptRegisters): register name -> value. They live here, so rebuilding
+## the skill keeps them and each script set has its own. Never saved. Applying a script makes a
+## new copy of it, which starts from nothing.
+var registers := {}
+## When the owner last landed a hit (-1 = not yet), and the area its counters belong to.
+var last_active_msec := -1
+var area_id := 0
 
 
 func has_rules() -> bool:
@@ -137,6 +144,29 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 				continue
 			if e.steps == 0:
 				continue
+			if e.ramps() and not ScriptRegisters.can_grow(knob):
+				var why := "it's read before the cast starts" if knob.always_only or knob.kind == SkillKnob.Kind.STAT \
+						else "it can't change gradually"
+				v.add_issue("%s: %s can't grow with a counter." % [label, knob.display_name],
+					"%s can't grow with a counter: %s" % [e.knob, why],
+					"click its %s until the line is a plain value" % e.ramp_register(), rule, e)
+				continue
+			if e.ramps() and knob.cost_for(e.steps) < 0.0:      # points back for a drawback that starts at nothing
+				v.add_issue("%s: only a buff can grow with a counter." % label,
+					"only a buff can grow with a counter, and this pays points back",
+					"raise its value above 0, or click its %s until the line is a plain value" % e.ramp_register(), rule, e)
+				continue
+			if e.ramps() and (e.steps > knob.max_steps or _grows_twice(e) or growth_room(e, knob) <= 0):
+				var problem := "%s grows too fast: the most is one step's worth per %d counts" % [e.knob, ScriptRegisters.RAMP_PER_STEP]
+				var cure := "lower its value"
+				if _grows_twice(e):
+					problem = "only one line per knob can grow, and %s already has one" % e.knob
+					cure = "delete this line, or click its %s until the line is a plain value" % e.ramp_register()
+				elif growth_room(e, knob) <= 0:
+					problem = "%s has no room left to grow: other lines reach its limit" % e.knob
+					cure = "lower the other %s lines" % e.knob
+				v.add_issue("%s: %s." % [label, problem], problem, cure, rule, e)
+				continue
 			if not rule.is_baked():
 				if knob.kind == SkillKnob.Kind.STAT and not (rule.scope() == ProgramCondition.Scope.HIT \
 						and limits.per_hit_attack_speed(knob)):
@@ -156,17 +186,19 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 						"move this line to a rule without a loop (and without target_alive, stack_overflow or loop_index)", rule, e)
 					continue
 				if rule.scope() == ProgramCondition.Scope.HIT and knob.kind != SkillKnob.Kind.DAMAGE \
-						and not limits.per_hit_any_knob():
+						and knob.kind != SkillKnob.Kind.VARIABLE and not limits.per_hit_any_knob():
 					v.add_issue("%s: per-hit conditions can only change damage." % label,
 						"per-hit rules can only change damage",
 						"move this line to an always: rule, or to a rule without per-hit conditions", rule, e)
 					continue
-			raw_cost += knob.cost_for(e.steps)
+			raw_cost += line_cost(knob, e)
 			var pushes := raising if e.steps > 0 else lowering
 			if not pushes.has(e.knob):
 				pushes[e.knob] = []
 			pushes[e.knob].append([rule, e])
-			if rule.is_baked():
+			if e.ramps():
+				pass                                   # it only uses the room the flat lines leave
+			elif rule.is_baked():
 				always_steps[e.knob] = always_steps.get(e.knob, 0) + e.steps
 			elif e.steps > 0:
 				cond_up[e.knob] = cond_up.get(e.knob, 0) + e.steps
@@ -178,7 +210,7 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 				var k := limits.get_knob(e.knob)
 				if k == null or limits.owner_of(e.knob) != rule.owner:
 					continue
-				var c := k.cost_for(e.steps)
+				var c := line_cost(k, e)
 				if c > 0.0:
 					c *= limits.buff_cost_mult()           # Enchanter: buffs cost less
 					v.buff_points += c
@@ -228,6 +260,8 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 					"lower the number to %d or less, or raise Charge capacity in an always: rule (+%d per step)" % [
 						capacity, int(cap_knob.step)], rule, charge)
 
+	_check_registers(v)
+
 	if v.points_used > limits.point_budget + EPSILON:
 		var over_by := v.points_used - limits.point_budget
 		v.add_error("Over budget by %.1f points: add drawbacks or remove buffs." % over_by,
@@ -251,6 +285,114 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 	return v
 
 
+## Scripts that can't be what the player meant: a counter that is read but that nothing raises
+## never changes, and a comparison no value can change (x >= 0) isn't a condition at all. A counter
+## nothing lowers is fine: it's a one-way switch, until the fight ends and it clears.
+func _check_registers(v: ProgramValidation) -> void:
+	var seen := {}
+	for rule in rules:
+		seen[rule.owner] = seen.get(rule.owner, 0) + 1
+		for c in rule.conditions:
+			var read := c as VarCondition
+			if read == null:
+				continue
+			var reg := read.register_name()
+			var label := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
+			var constant := read.constant_answer()
+			if constant != "":
+				var text := "%s %s %d is %s true" % [reg, read.op_text(), read.value, constant]
+				v.add_issue("%s: %s." % [label, text], text, "change the operator or the value", rule, c)
+			elif not _register_rises(reg):
+				v.add_issue("%s: nothing ever raises %s, so this never changes." % [label, reg],
+					"nothing ever raises %s, so this never changes" % reg,
+					"add %s += 1 to a rule, under the WHEN you want to count" % reg, rule, c)
+		for e in rule.effects:
+			if ScriptRegisters.is_write(e.knob) and e.steps > ScriptRegisters.WRITE_MAX:
+				var over := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
+				v.add_issue("%s: a counter line can use at most %d." % [over, ScriptRegisters.WRITE_MAX],
+					"a counter line can use at most %d" % ScriptRegisters.WRITE_MAX,
+					"lower its value to %d or less" % ScriptRegisters.WRITE_MAX, rule, e)
+			if e.ramps() and e.steps != 0 and not _register_rises(e.ramp_register()):
+				var line := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
+				v.add_issue("%s: nothing ever raises %s, so this buff stays at nothing." % [line, e.ramp_register()],
+					"nothing ever raises %s, so this buff stays at nothing" % e.ramp_register(),
+					"add %s += 1 to a rule, under the WHEN you want to count" % e.ramp_register(), rule, e)
+
+
+func _register_rises(reg: String) -> bool:
+	for e in _writes_of(reg):
+		if ScriptRegisters.raises(e):
+			return true
+	return false
+
+
+func _writes_of(reg: String) -> Array[ProgramEffect]:
+	var out: Array[ProgramEffect] = []
+	for rule in rules:
+		for e in rule.effects:
+			if ScriptRegisters.is_write(e.knob) and e.register_name() == reg:
+				out.append(e)
+	return out
+
+
+## True when this script keeps a count of something: a WHEN rule about the fight raises a register
+## that another rule reads or grows with. (Counting every cast is just every_nth_cast.)
+func keeps_a_count() -> bool:
+	for rule in rules:
+		for c in rule.conditions:
+			var read := c as VarCondition
+			if read != null and _counted_by_a_when(read.register_name()):
+				return true
+		for e in rule.effects:
+			if e.ramps() and _counted_by_a_when(e.ramp_register()):
+				return true
+	return false
+
+
+## What a line costs before any rule discount. A growing buff is priced on the room it can fill, and
+## is cheaper only if it has to be earned in the fight: always: x = 5 pays for it all.
+func line_cost(knob: SkillKnob, e: ProgramEffect) -> float:
+	if not e.ramps() or e.steps <= 0:
+		return knob.cost_for(e.steps)
+	var room := growth_room(e, knob)
+	var full := knob.cost_for(maxi(room, 0))
+	return full * ScriptRegisters.ramp_cost_share(e.steps, room) if _counted_by_a_when(e.ramp_register()) else full
+
+
+## How many steps a growing buff can reach: the knob's limit, less this script's flat buffs on it.
+## They all count, active or not, the same way the knob's limit counts them.
+func growth_room(e: ProgramEffect, knob: SkillKnob) -> int:
+	var room := knob.max_steps
+	for rule in rules:
+		for other in rule.effects:
+			if other.knob == e.knob and not other.ramps() and other.steps > 0:
+				room -= other.steps
+	return room
+
+
+func _grows_twice(e: ProgramEffect) -> bool:
+	for rule in rules:
+		for other in rule.effects:
+			if other == e:
+				return false
+			if other.knob == e.knob and other.ramps():
+				return true
+	return false
+
+
+func _counted_by_a_when(reg: String) -> bool:
+	for rule in rules:
+		var about_the_fight := false
+		for c in rule.conditions:
+			about_the_fight = about_the_fight or not c is VarCondition
+		if not about_the_fight:
+			continue
+		for e in rule.effects:
+			if ScriptRegisters.raises(e) and e.register_name() == reg:
+				return true
+	return false
+
+
 ## One error for a knob pushed past its limit, marked on every line that pushes it that way.
 static func _knob_issue(v: ProgramValidation, full: String, text: String, hint: String, lines: Array) -> void:
 	if lines.is_empty():
@@ -264,7 +406,7 @@ static func _knob_issue(v: ProgramValidation, full: String, text: String, hint: 
 static func _second_use(rule: ProgramRule) -> ProgramCondition:
 	var seen := {}
 	for c in rule.conditions:
-		if seen.has(c.type_id()):
+		if seen.has(c.type_id()) and not c.allows_repeats():
 			return c
 		seen[c.type_id()] = true
 	return null

@@ -11,7 +11,7 @@ scene = "res://scenes/map/town/act_2_convoy.tscn"
 kind = 0
 map_position = Vector2(0.06, 0.5)
 links = Array[String](["act2_gate"])
-note = "Brack, Sudo, Quartermaster, Hex"
+note = "Brack, Sudo, Hex"
 
 [sub_resource type="Resource" id="Waypoint_act2_gate"]
 script = ExtResource("2_wp")
