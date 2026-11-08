@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="WaypointAct" format=3]
+
+[ext_resource type="Script" uid="uid://e2ln6b6b1sre" path="res://systems/waypoints/waypoint_act.gd" id="1_act"]
+[ext_resource type="Script" uid="uid://cpivoq1jwxma1" path="res://systems/waypoints/waypoint.gd" id="2_wp"]
+
+[sub_resource type="Resource" id="Waypoint_act5_core"]
+script = ExtResource("2_wp")
+id = "act5_core"
+display_name = "The Core"
+scene = "res://scenes/map/town/act_5_core.tscn"
+kind = 0
+map_position = Vector2(0.5, 0.5)
+note = "The Last Log, Vesper. The end of the road so far"
+
+[resource]
+script = ExtResource("1_act")
+act_number = 5
+title = "ACT V"
+subtitle = "THE CORE  -  Final Execution"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act5_core")])

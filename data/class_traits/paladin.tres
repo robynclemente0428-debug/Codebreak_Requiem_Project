@@ -5,7 +5,8 @@
 [resource]
 script = ExtResource("1_trait")
 display_name = "Fortified Code"
-description = "Each ALWAYS rule in your programs gives +10% armour. Each time a WHEN rule fires, +10% armour for 4 seconds."
+description = "Each ALWAYS rule in your programs gives +10% armour. Each time a WHEN rule fires, +10% armour for 4 seconds. 1% increased damage per 10 armour."
 armour_per_always_rule = 0.1
 armour_per_when_fire = 0.1
 when_buff_seconds = 4.0
+damage_per_10_armour = 0.01

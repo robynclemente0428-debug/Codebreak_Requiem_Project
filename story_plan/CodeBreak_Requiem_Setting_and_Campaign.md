@@ -166,9 +166,13 @@ Boss locks for The Leak and The Mimic are not designed yet.
 
 | Quest | Giver | Boss Trait | Script Task |
 |---|---|---|---|
+| Learn the Language | Vesper | n/a: defeat 6 Null Weavers in The Fray. | None. |
+| Decode the Null (side) | Vesper | n/a: recover 5 Null Fragments from Weavers in The Fray. | None. |
 | Null Weaver Prime | Vesper | Weaves traps in patterns. Read the pattern and step through the gaps. | Write a rule with two conditions (`when ... and ...`). |
 | Rank Exam: Engineer | Sudo | n/a | Apply an ELEGANT script (3 blocks or fewer) and use a rule with two conditions. |
 | Null Gatekeeper | Vesper | Shifts between a fast form and a slow, heavy form. | Pass the Engineer exam. |
+
+**Transition to Act V:** the Null Gatekeeper is also the transition quest. Its Core Key opens the way from The Core's Gate into the Core, and the quest ends by talking to The Last Log there, who gives the Architects' reveal.
 
 ---
 
@@ -228,7 +232,7 @@ The block-based scripting system has counters from Act III: `x` and `y` (`Script
 ## Known Gaps
 
 - **Strategist, Defragmenter and Theorist exams** have no quests yet (`exam_strategist`, `exam_defragmenter`, `exam_theorist`).
-- **Act III** has no Sweeps road event yet, and the Inward Gate stays shut until Act IV exists. **Acts IV and V** have no zones, hub, transition quest or boss locks yet.
+- **Act IV** is a prototype, reached through Checkpoint's Far Side (Act III's last zone, past the Inward Gate): The Threshold (hub), The Fray, The Weaver's Loom and The Core's Gate, with its quests, the Engineer exam and the Null Gatekeeper (`FormShift`). It reuses Act III's tiles and enemies with Null Weaver added, and Null Weaver Prime has no lock yet. **Act V** is only its hub, The Core, with The Last Log and Vesper: no zones, Core Sentinel, Root Process or endings yet, so The Last Log doesn't offer them.
 - **Naming:** the Architect rank shares its name with the Architects who built AXIOM. Keep it only if earning the creators' title is intentional.
 - **Convoy losses:** the v1 dialogue doc tied Act II losses to the endings (REQ025, REQ026). The game does not track convoy losses yet.
 

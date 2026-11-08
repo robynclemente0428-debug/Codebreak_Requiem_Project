@@ -8,7 +8,7 @@ var _skill_base_flags: Dictionary = {
 	"strike": {"arc_angle": 90.0,"range_bonus": 0.5, "combo_grace": 0.5},
 	"slam": {"radius": 2.0, "center_offset": 1.5, "recovery_mult": 1.5},
 	"blast": {"max_projectiles": 1.0, "spread_angle": 15.0, "speed": 14.0, "range": 20.0,
-		"radius": 1.35, "spawn_height": 1.0, "spawn_forward": 0.8, "recovery_mult": 2.0},
+		"radius": 2.0, "spawn_height": 1.0, "spawn_forward": 0.8, "recovery_mult": 2.0},
 	"shoot": {"max_projectiles": 1.0, "spread_angle": 6.0, "speed": 60.0, "range": 30.0,
 		"pierce": 0.0, "pierce_falloff": 0.2, "spawn_height": 1.0, "spawn_forward": 0.8,
 		"recovery_mult": 0.1},

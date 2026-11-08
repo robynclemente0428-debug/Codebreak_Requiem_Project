@@ -11,7 +11,7 @@
 script = ExtResource("5_jeq0f")
 stat = 10
 op = 2
-value = 1.0
+value = 1.5
 metadata/_custom_type_script = "uid://c4ewwdjeurelq"
 
 [sub_resource type="Resource" id="Resource_m3hrv"]
@@ -28,7 +28,7 @@ display_name = "Slam"
 behavior_script = ExtResource("1_aaroa")
 stat_modifiers = Array[ExtResource("5_jeq0f")]([SubResource("Resource_strq1"), SubResource("Resource_m3hrv")])
 tags = Array[int]([1, 4, 5])
-animation_keys = ["slam"]
+animation_keys = Array[String](["slam"])
 program_limits = ExtResource("9_prog")
 base_mana_cost = 5.0
 required_weapon_types = Array[ExtResource("1_ea6fj")]([ExtResource("3_r6g47")])

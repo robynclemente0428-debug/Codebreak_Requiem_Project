@@ -100,7 +100,7 @@ anchors_preset = 0
 offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("6_wveil")
-container = NodePath("../../SubViewportContainer")
+container = NodePath("../../GameScreen/SubViewportContainer")
 font = ExtResource("4_g13t0")
 
 [node name="QuestTracker" type="Control" parent="Hud" unique_id=175523188]
@@ -127,7 +127,7 @@ theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 5
 theme_override_font_sizes/font_size = 24
 script = ExtResource("5_g0txf")
-container = NodePath("../../SubViewportContainer")
+container = NodePath("../../GameScreen/SubViewportContainer")
 
 [node name="MiniMap" type="Control" parent="Hud" unique_id=363012376]
 layout_mode = 3
@@ -206,7 +206,9 @@ offset_right = 40.0
 offset_bottom = 40.0
 script = ExtResource("16_fec4r")
 
-[node name="SubViewportContainer" type="SubViewportContainer" parent="." unique_id=1925379568]
+[node name="GameScreen" type="Node" parent="." unique_id=1310699252]
+
+[node name="SubViewportContainer" type="SubViewportContainer" parent="GameScreen" unique_id=1925379568]
 texture_filter = 5
 anchors_preset = 15
 anchor_right = 1.0
@@ -215,32 +217,32 @@ grow_horizontal = 2
 grow_vertical = 2
 stretch = true
 
-[node name="SubViewport" type="SubViewport" parent="SubViewportContainer" unique_id=544999069]
+[node name="SubViewport" type="SubViewport" parent="GameScreen/SubViewportContainer" unique_id=544999069]
 handle_input_locally = false
 size = Vector2i(1920, 1080)
 render_target_update_mode = 4
 
-[node name="map" type="Node3D" parent="SubViewportContainer/SubViewport" unique_id=899275609]
+[node name="map" type="Node3D" parent="GameScreen/SubViewportContainer/SubViewport" unique_id=899275609]
 transform = Transform3D(0.70710677, 0, -0.70710677, 0, 1, 0, 0.70710677, 0, 0.70710677, 0, 0, 0)
 
-[node name="Player" parent="SubViewportContainer/SubViewport" unique_id=1695220546 instance=ExtResource("1_4tf7g")]
+[node name="Player" parent="GameScreen/SubViewportContainer/SubViewport" unique_id=1695220546 instance=ExtResource("1_4tf7g")]
 
-[node name="AreaManager" type="Node" parent="SubViewportContainer/SubViewport" unique_id=886248463 node_paths=PackedStringArray("area_container", "player", "fade_rect")]
+[node name="AreaManager" type="Node" parent="GameScreen/SubViewportContainer/SubViewport" unique_id=886248463 node_paths=PackedStringArray("area_container", "player", "fade_rect")]
 script = ExtResource("2_csenv")
 area_container = NodePath("../map")
 player = NodePath("../Player")
 start_area = "uid://de57t2qg8my1n"
-fade_rect = NodePath("../../../FadeLayer/FadeRect")
+fade_rect = NodePath("../../../../FadeLayer/FadeRect")
 arrival_cooldown_ms = 400
 
-[node name="PlayerBlastSwarm" type="MultiMeshInstance3D" parent="SubViewportContainer/SubViewport" unique_id=625759255]
+[node name="PlayerBlastSwarm" type="MultiMeshInstance3D" parent="GameScreen/SubViewportContainer/SubViewport" unique_id=625759255]
 script = ExtResource("19_808uu")
 
-[node name="EnemyBlastSwarm" type="MultiMeshInstance3D" parent="SubViewportContainer/SubViewport" unique_id=833600421]
+[node name="EnemyBlastSwarm" type="MultiMeshInstance3D" parent="GameScreen/SubViewportContainer/SubViewport" unique_id=833600421]
 script = ExtResource("19_808uu")
 group_name = &"enemy_blast_swarm"
 
-[node name="RetroScreen" type="CanvasLayer" parent="SubViewportContainer/SubViewport" unique_id=501288404]
+[node name="RetroScreen" type="CanvasLayer" parent="GameScreen/SubViewportContainer/SubViewport" unique_id=501288404]
 script = ExtResource("21_1cbjo")
 preset = 2
 metadata/_custom_type_script = "uid://byuuabq4t0m3n"

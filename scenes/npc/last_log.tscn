@@ -1,0 +1,52 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://systems/dialogue/dialogue_npc.gd" id="1_npc"]
+[ext_resource type="Resource" path="res://data/dialogue/last_log.tres" id="2_dlg"]
+
+[sub_resource type="SphereShape3D" id="Talk"]
+radius = 2.4
+
+[sub_resource type="CylinderShape3D" id="BodyShape"]
+radius = 0.5
+
+[sub_resource type="StandardMaterial3D" id="Glow"]
+shading_mode = 0
+albedo_color = Color(0.45, 0.95, 1, 1)
+emission_enabled = true
+emission = Color(0.45, 0.95, 1, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="BoxMesh" id="Pillar"]
+size = Vector3(0.5, 2.4, 0.5)
+material = SubResource("Glow")
+
+[node name="LastLog" type="Area3D"]
+collision_mask = 3
+script = ExtResource("1_npc")
+npc_id = "last_log"
+npc_name = "THE LAST LOG"
+info_title = "Recorded Voice"
+info_description = "A record the Architects left at the Core, still playing. It has been waiting for someone to arrive."
+dialogue = ExtResource("2_dlg")
+face_player = false
+metadata/_note = "PROTOTYPE. A glowing pillar until it has a model."
+
+[node name="InteractionShape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("Talk")
+
+[node name="Body" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("BodyShape")
+
+[node name="Pillar" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+mesh = SubResource("Pillar")
+
+[node name="Glow" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+light_color = Color(0.45, 0.95, 1, 1)
+light_energy = 2.0
+omni_range = 8.0

@@ -5,7 +5,8 @@
 [resource]
 script = ExtResource("1_trait")
 display_name = "Mobility"
-description = "15% more damage while moving. +0.3 movement speed for every rule in your skill programs. Phases through enemies: they can't block your path."
-moving_damage_more = 0.15
-move_speed_per_rule = 0.3
+description = "15% more damage per 1 movement speed while moving. +0.15 movement speed for every knob step that costs points in your skill programs (drawbacks don't count). Skills start with 2 fewer program points. Phases through enemies: they can't block your path."
+extra_points = -2.0
+move_speed_per_knob_step = 0.15
+moving_damage_more_per_speed = 0.15
 phase_through_enemies = true

@@ -2,32 +2,48 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
 
-[sub_resource type="Resource" id="Objective_1"]
+[sub_resource type="Resource" id="Objective_0"]
 script = ExtResource("1_obj")
 description = "Pass Examiner Sudo's advanced exam"
 kind = "quest_done"
 target = "exam_engineer"
-metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 
-[sub_resource type="Resource" id="Objective_2"]
+[sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
 description = "Defeat the Null Gatekeeper"
 kind = "kill"
 target = "null_gatekeeper"
-metadata/_custom_type_script = "uid://bo3sbbxgckkre"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("3_rec")
+description = "Take the Core Key from the Gatekeeper"
+kind = "recover"
+target = "core_key"
+
+[sub_resource type="Resource" id="Objective_3"]
+script = ExtResource("1_obj")
+description = "Enter the Core"
+kind = "enter_area"
+target = "act_5_core"
+
+[sub_resource type="Resource" id="Objective_4"]
+script = ExtResource("1_obj")
+description = "Find what is speaking at the Core"
+kind = "talk"
+target = "last_log"
 
 [resource]
 script = ExtResource("2_quest")
 id = "q08_null_gatekeeper"
 title = "THE NULL GATEKEEPER"
-description = "The Gatekeeper guards the Core.
-BOSS TRAIT: shifts between a fast form and a slow, heavy form.
+description = "The Gatekeeper guards the Core. Past it is the first place in AXIOM nobody has come back from.
+BOSS TRAIT: shifts between a fast form that is easy to hurt and a slow, heavy form that hits hard and shrugs off damage.
 SCRIPT TASK: pass Examiner Sudo's advanced rank exam."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3"), SubResource("Objective_4")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q07_null_weaver_prime"])
-reward_credits = 250
-metadata/_custom_type_script = "uid://ddwasls37yxoi"
+reward_credits = 400
 metadata/giver = "Vesper"
 metadata/act = "IV"

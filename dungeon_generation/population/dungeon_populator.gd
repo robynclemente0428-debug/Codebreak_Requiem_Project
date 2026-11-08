@@ -12,7 +12,7 @@ const WAVE_EVENTS := "wave_events"
 ## Scene dropped for every item. Defaults to the standard pickup, so a new dungeon works
 ## without setting it (an empty slot used to crash the first item drop).
 @export var loot_pickup_scene: PackedScene = preload("res://scenes/loot/loot_pickup.tscn")
-@export var loot_level_window: int = 20   # items older than level - window stop dropping
+@export var loot_level_window: int = 10   # items more than this many levels below the dungeon stop dropping
 
 @export_group("Corridor enemies")
 ## Small groups wandering the corridors: one group per this many corridor floor tiles.

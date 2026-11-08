@@ -8,12 +8,73 @@ source = "# Vesper: Null Speaker, guide to the Core (Acts IV and V). Calm, eerie
 ~ start
 @ quest_active:q06c_root_access -> out_of_quarantine
 @ quest_ready:q08_null_gatekeeper -> ready_q08_null_gatekeeper
+@ quest_ready:null_fragments -> ready_fragments
 @ quest_ready:q07_null_weaver_prime -> ready_q07_null_weaver_prime
-@ quest_active:q08_null_gatekeeper -> remind_q08_null_gatekeeper
-@ quest_active:q07_null_weaver_prime -> remind_q07_null_weaver_prime
+@ quest_ready:q07a_learn_the_language -> ready_language
+@ can_start:q07a_learn_the_language -> offer_language
 @ can_start:q07_null_weaver_prime -> offer_q07_null_weaver_prime
 @ can_start:q08_null_gatekeeper -> offer_q08_null_gatekeeper
+@ can_start:null_fragments -> offer_fragments
+@ quest_active:q08_null_gatekeeper -> remind_q08_null_gatekeeper
+@ quest_active:q07_null_weaver_prime -> remind_q07_null_weaver_prime
+@ quest_active:q07a_learn_the_language -> remind_language
+@ quest_active:null_fragments -> remind_fragments
+@ quest_done:q08_null_gatekeeper -> at_the_core
 -> idle
+
+~ offer_language
+Vesper: You can hear it, can’t you? The Null speaks. You just never listened.
+Vesper: The Weavers speak in patterns. Break them and you’ll hear the grammar.
+* ACCEPT -> accept_language
+* DECLINE -> end
+
+~ accept_language
+> start_quest q07a_learn_the_language
+Vesper: Don’t fear them. Read them.
+-> end
+
+~ remind_language
+Vesper: Six of them, in The Fray. Watch the gaps in what they fire.
+-> end
+
+~ ready_language
+Vesper: Done?
+* TURN IN -> turnin_language
+* NOT YET -> end
+
+~ turnin_language
+> turn_in q07a_learn_the_language
+Vesper: You see it now. The Null has syntax. It has logic.
+-> start
+
+~ offer_fragments
+Vesper: Some Weavers carry pieces of what they’re saying. Five, in The Fray. I want to read them together.
+* ACCEPT -> accept_fragments
+* DECLINE -> end
+
+~ accept_fragments
+> start_quest null_fragments
+Vesper: Careful. They’re unstable. So was everyone who tried to read them.
+-> end
+
+~ remind_fragments
+Vesper: Five fragments. Bring me all of them, or it’s only noise.
+-> end
+
+~ ready_fragments
+Vesper: Done?
+* TURN IN -> turnin_fragments
+* NOT YET -> end
+
+~ turnin_fragments
+> turn_in null_fragments
+Vesper: It’s not destruction. It’s a message. A very old one.
+Vesper: It isn’t addressed to the Null. It’s addressed to whoever gets there first.
+-> start
+
+~ at_the_core
+Vesper: The way is open. What you do next is yours alone.
+-> end
 
 ~ out_of_quarantine
 Vesper: Eleven days of listening. It hasn't stopped calling. It's calling you.
@@ -21,7 +82,6 @@ Vesper: The copy had no Executor in it. It can copy any process, but not one tha
 -> end
 
 ~ offer_q07_null_weaver_prime
-Vesper: You can hear it, can’t you? The Null speaks. You just never listened.
 Vesper: The Weaver spins the Null’s grammar. Break it and you’ll hear the language.
 * ACCEPT -> accept_q07_null_weaver_prime
 * DECLINE -> end
@@ -43,6 +103,7 @@ Vesper: Done?
 ~ turnin_q07_null_weaver_prime
 > turn_in q07_null_weaver_prime
 Vesper: You see it now. The Null has logic. It isn’t just destruction.
+Vesper: One thing still stands between you and the Core. Sudo will want a word first.
 -> start
 
 ~ offer_q08_null_gatekeeper
@@ -52,12 +113,12 @@ Vesper: The Gatekeeper guards the Core. It will not let you pass.
 
 ~ accept_q08_null_gatekeeper
 > start_quest q08_null_gatekeeper
-Vesper: Prove your code is worthy. Sudo will test you first.
+Vesper: Prove your code is worthy. Sudo will test you first. The road opens when you pass.
 -> end
 
 ~ remind_q08_null_gatekeeper
 # NEW line below
-Vesper: Sudo first. Then the Gate.
+Vesper: Sudo first. Then the Gate. Take its key, and go through.
 
 ~ ready_q08_null_gatekeeper
 Vesper: Done?

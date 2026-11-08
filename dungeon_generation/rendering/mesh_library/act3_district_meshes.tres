@@ -1,4 +1,4 @@
-[gd_resource type="MeshLibrary" format=3]
+[gd_resource type="MeshLibrary" format=3 uid="uid://dqp5lbsp836v2"]
 
 [sub_resource type="Shader" id="Shader_jb42q"]
 code = "shader_type spatial;
@@ -191,7 +191,15 @@ void fragment() {
 render_priority = 0
 shader = SubResource("Shader_jb42q")
 shader_parameter/piece = 0
+shader_parameter/glass = Color(0.3, 0.29, 0.4, 1)
+shader_parameter/rack = Color(0.3, 0.28, 0.4, 1)
+shader_parameter/pit = Color(0.05, 0.05, 0.08, 1)
+shader_parameter/accent = Color(0.62, 0.28, 1, 1)
+shader_parameter/ice = Color(0.35, 0.9, 1, 1)
+shader_parameter/mark = Color(1, 0.14, 0.2, 1)
 shader_parameter/glow = 1.1
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
 
 [sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
 material = SubResource("ShaderMaterial_nqxis")
@@ -204,7 +212,15 @@ data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.09999999
 render_priority = 0
 shader = SubResource("Shader_jb42q")
 shader_parameter/piece = 2
+shader_parameter/glass = Color(0.3, 0.29, 0.4, 1)
+shader_parameter/rack = Color(0.3, 0.28, 0.4, 1)
+shader_parameter/pit = Color(0.05, 0.05, 0.08, 1)
+shader_parameter/accent = Color(0.62, 0.28, 1, 1)
+shader_parameter/ice = Color(0.35, 0.9, 1, 1)
+shader_parameter/mark = Color(1, 0.14, 0.2, 1)
 shader_parameter/glow = 1.1
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
 
 [sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
 material = SubResource("ShaderMaterial_j70o3")
@@ -217,7 +233,15 @@ data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -
 render_priority = 0
 shader = SubResource("Shader_jb42q")
 shader_parameter/piece = 1
+shader_parameter/glass = Color(0.3, 0.29, 0.4, 1)
+shader_parameter/rack = Color(0.3, 0.28, 0.4, 1)
+shader_parameter/pit = Color(0.05, 0.05, 0.08, 1)
+shader_parameter/accent = Color(0.62, 0.28, 1, 1)
+shader_parameter/ice = Color(0.35, 0.9, 1, 1)
+shader_parameter/mark = Color(1, 0.14, 0.2, 1)
 shader_parameter/glow = 1.1
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
 
 [sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
 material = SubResource("ShaderMaterial_bcrlo")

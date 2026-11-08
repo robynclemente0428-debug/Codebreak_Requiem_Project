@@ -840,11 +840,10 @@ func fill_item_detail(box: VBoxContainer, item: ItemInstance) -> void:
 		box.add_child(_rule())
 	var show_ids := Input.is_key_pressed(KEY_ALT)
 	for entry in item.rolled_affixes:
-		var text := _affix_text(entry)
-		if show_ids:
+		if show_ids:                               # ALT: the modifier's id, small and dim, over it
 			var a: AffixDefinition = entry["affix"]
-			text += "  [%s]" % a.id
-		var l := _label(text, 16, COL_AFFIX)
+			box.add_child(_label(a.id, 11, Color(COL_DIM, 0.6)))
+		var l := _label(_affix_text(entry), 16, COL_AFFIX)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		box.add_child(l)

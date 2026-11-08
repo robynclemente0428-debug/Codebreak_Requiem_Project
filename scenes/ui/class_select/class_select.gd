@@ -19,6 +19,8 @@ const ATTR_MAX := 24.0          # attribute value that fills a bar completely
 @onready var error_label: Label = %ErrorLabel
 @onready var create_button: Button = %CreateButton
 @onready var back_button: TextureButton = %BackButton
+@onready var info_scroll: ScrollContainer = %InfoPanel.get_node("InfoScroll")
+@onready var list_scroll: ScrollContainer = %ClassListPanel.get_node("ListScroll")
 
 var classes: Array[ClassData] = []
 var selected: ClassData = null
@@ -84,6 +86,8 @@ func _select(index: int) -> void:
 	skill_label.text = c.starting_skill_gem.display_name if c.starting_skill_gem else "None"
 
 	_show_passive(c)
+	for sc in [info_scroll, list_scroll]:
+		_style_scrollbar(sc.get_v_scroll_bar(), c.accent_color)
 	_build_attributes(c)
 	_show_model(c)
 	_play_swap_animation()
@@ -93,6 +97,9 @@ func _select(index: int) -> void:
 ## style as the other headings, so nothing has to be placed in the scene.
 func _build_passive_section() -> void:
 	var box := skill_label.get_parent()
+	for heading in [box.get_node("AttrTitle"), box.get_node("SkillTitle")]:
+		_add_gap_before(heading)
+	_add_gap(box)
 	var title := Label.new()
 	title.text = "Passive"
 	title.add_theme_color_override("font_color", Color(0, 0.8980392, 1, 0.7019608))
@@ -107,6 +114,36 @@ func _build_passive_section() -> void:
 	_passive_desc.add_theme_font_size_override("font_size", 20)
 	_passive_desc.add_theme_color_override("font_color", Color(0.85, 0.96, 1.0, 0.85))
 	box.add_child(_passive_desc)
+
+
+## Space above a section heading, so the sections don't run into each other.
+const SECTION_GAP := 14.0
+
+func _add_gap(box: Node) -> Control:
+	var gap := Control.new()
+	gap.custom_minimum_size.y = SECTION_GAP
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(gap)
+	return gap
+
+
+func _add_gap_before(heading: Node) -> void:
+	var box := heading.get_parent()
+	box.move_child(_add_gap(box), heading.get_index())
+
+
+## The theme's scrollbar has no width and a dim grabber, so it's styled here in the class colour.
+func _style_scrollbar(bar: ScrollBar, accent: Color) -> void:
+	bar.custom_minimum_size = Vector2(10, 0)
+	var track := StyleBoxFlat.new()
+	track.bg_color = Color(accent, 0.12)
+	track.set_corner_radius_all(5)
+	bar.add_theme_stylebox_override("scroll", track)
+	for entry in [["grabber", 0.6], ["grabber_highlight", 0.85], ["grabber_pressed", 1.0]]:
+		var g := StyleBoxFlat.new()
+		g.bg_color = Color(accent, entry[1])
+		g.set_corner_radius_all(5)
+		bar.add_theme_stylebox_override(entry[0], g)
 
 
 func _show_passive(c: ClassData) -> void:

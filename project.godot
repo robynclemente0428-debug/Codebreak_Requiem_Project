@@ -202,3 +202,7 @@ gfx_detail={
 "type": "float",
 "value": 1.0
 }
+glitch_clock={
+"type": "float",
+"value": 0.0
+}

@@ -35,6 +35,18 @@ static func hittable(caster: Node) -> Array:
 	return out
 
 
+## True when no world geometry stands between a projectile and a target it is touching, checked
+## level at the projectile's height. Generous hit radii use it so shots don't reach through walls.
+static func line_is_clear(space: PhysicsDirectSpaceState3D, from: Vector3, target: Node,
+		target_rid: RID) -> bool:
+	if not target is Node3D:
+		return true
+	var at := (target as Node3D).global_position
+	at.y = from.y
+	var ray := PhysicsRayQueryParameters3D.create(from, at, WORLD_LAYER_MASK, [target_rid])
+	return space.intersect_ray(ray).is_empty()
+
+
 ## Layers a projectile explodes on. Players keep the projectile's own default mask.
 ## Enemies get world + player, so their shots ignore other enemies.
 static func projectile_mask(caster: Node, default_mask: int) -> int:

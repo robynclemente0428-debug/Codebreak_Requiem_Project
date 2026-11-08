@@ -39,7 +39,7 @@ const ITEMS := {
 	"iff_patched": {"name": "IFF TRANSPONDER PATCHED", "sealed": "CHECKPOINT'S GUNS ARE TRACKING US",
 		"hint": "Patch the IFF Transponder on the convoy's deck."},
 	"checkpoint_clearance": {"name": "CHECKPOINT CLEARANCE", "item": true,
-		"hint": "The Perimeter Warden at Checkpoint's gate carries it.",
+		"hint": "The Perimeter Warden at Checkpoint's gate carries it.", "carrier": "perimeter_warden",
 		"desc": "A Custodian gate credential, issued for a challenge answered in code. It says HARDFAULT: INBOUND.",
 		"opens": "The Quarantine Yard"},
 	"quarantine_lifted": {"name": "QUARANTINE LIFTED", "sealed": "THE YARD IS IN QUARANTINE",
@@ -50,11 +50,33 @@ const ITEMS := {
 		"desc": "A Compiler Guild expedition log, partly eaten. The Registrar can read it.",
 		"opens": ""},
 	"root_key": {"name": "ROOT KEY", "item": true,
-		"hint": "The Collector carries it, in the Sweep.",
+		"hint": "The Collector carries it, in the Sweep.", "carrier": "the_collector",
 		"desc": "C-0's credential. The Registrar isn't authorized to touch it, and neither, strictly, are you.",
 		"opens": "The way out of the Sweep"},
 	"inward_gate": {"name": "INWARD GATE", "sealed": "THE INWARD GATE IS SHUT: THE NULL ZONE LIES BEYOND",
-		"hint": "Act IV starts past this gate."},
+		"hint": "Root Access opens it: bring the root key to the Registrar."},
+	# ACT IV: the way to the Core, and the fragments of DECODE THE NULL
+	"core_road": {"name": "ROAD TO THE CORE", "sealed": "THE ROAD TO THE CORE IS SHUT",
+		"hint": "Pass Examiner Sudo's Engineer exam."},
+	"core_key": {"name": "CORE KEY", "item": true, "sealed": "THE CORE IS SHUT",
+		"hint": "The Null Gatekeeper carries it.", "carrier": "null_gatekeeper",
+		"desc": "It isn't a credential. It's a question the Core asked itself, with the answer already filled in.",
+		"opens": "The Core"},
+	"null_fragment_a": {"name": "NULL FRAGMENT (FIRST)", "item": true,
+		"hint": "A Null Weaver in The Fray carries it.",
+		"desc": "It repeats. Every repeat is slightly shorter."},
+	"null_fragment_b": {"name": "NULL FRAGMENT (SECOND)", "item": true,
+		"hint": "A Null Weaver in The Fray carries it.",
+		"desc": "The same phrase, in AXIOM's oldest syntax."},
+	"null_fragment_c": {"name": "NULL FRAGMENT (THIRD)", "item": true,
+		"hint": "A Null Weaver in The Fray carries it.",
+		"desc": "A condition with nothing after it: when ... and ..."},
+	"null_fragment_d": {"name": "NULL FRAGMENT (FOURTH)", "item": true,
+		"hint": "A Null Weaver in The Fray carries it.",
+		"desc": "A date. It is older than the Executors."},
+	"null_fragment_e": {"name": "NULL FRAGMENT (FIFTH)", "item": true,
+		"hint": "A Null Weaver in The Fray carries it.",
+		"desc": "The end of a message, signed with no name."},
 	"shard_registry": {"name": "REGISTRY SHARD"},
 	"shard_heap": {"name": "HEAP SHARD"},
 	"shard_mirror": {"name": "MIRROR DOCK SHARD"},
@@ -85,6 +107,11 @@ static func sealed_text(id: String) -> String:
 
 static func hint_of(id: String) -> String:
 	return ITEMS.get(id, {}).get("hint", "")
+
+
+## The enemy id of the boss that carries this item, or "" (see "carrier" in ITEMS).
+static func carrier_of(id: String) -> String:
+	return ITEMS.get(id, {}).get("carrier", "")
 
 
 ## A real item (a key), as opposed to a beacon or an event.

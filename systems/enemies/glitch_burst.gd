@@ -7,7 +7,8 @@ extends GPUParticles3D
 ## burst() places each pixel with emit_particle(); PROCESS_CODE runs them: a short random
 ## delay, drifting up and slowing, cyan to magenta to gone, shrinking at the end.
 
-const CAPACITY := 4096                  # pixels alive at once, from every death together
+const CAPACITY := 1024                  # pixels alive at once, from every death together
+const HIDE_AFTER := 2.0                 # seconds after the last burst (every pixel gone): off, so idle costs nothing
 const SYSTEM_LIFETIME := 120.0          # see ImpactDust: slots are only recycled this rarely
 const LIFETIME := 0.9                   # longest a pixel lives (some live down to half that)
 const SPREAD := 70.0                    # degrees off straight up
@@ -76,14 +77,17 @@ void process() {
 static var _current: GlitchBurst
 static var _process_shader: Shader
 
+var _hide_in := HIDE_AFTER
+
 
 ## Pixels for one death: from a box round the body (radius wide, height tall, centred on
-## `centre`), clampi(28 x height, 16, 90) of them, as the old per-death burst.
-static func burst(parent: Node, centre: Vector3, radius: float, height: float) -> void:
+## `centre`), clampi(28 x height, 16, 90) of them, times `pixels` (GlitchDeath's share).
+static func burst(parent: Node, centre: Vector3, radius: float, height: float, pixels := 1.0) -> void:
 	var sys := _for(parent)
 	if sys == null:
 		return
-	var count := clampi(roundi(28.0 * height), 16, 90)
+	sys._wake()
+	var count := maxi(roundi(clampi(roundi(28.0 * height), 16, 90) * pixels), 1)
 	var extents := Vector3(radius, height * 0.5, radius)
 	for i in count:
 		var offset := Vector3(randf_range(-1, 1), randf_range(-1, 1), randf_range(-1, 1)) * extents
@@ -108,6 +112,19 @@ static func _for(parent: Node) -> GlitchBurst:
 	_current.top_level = true
 	_current.global_transform = Transform3D.IDENTITY
 	return _current
+
+
+func _wake() -> void:
+	_hide_in = HIDE_AFTER
+	visible = true
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	_hide_in -= delta
+	if _hide_in <= 0.0:
+		visible = false
+		set_process(false)
 
 
 func _init() -> void:

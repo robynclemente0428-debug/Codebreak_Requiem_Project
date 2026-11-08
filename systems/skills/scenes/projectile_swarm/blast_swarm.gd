@@ -11,6 +11,10 @@ extends MultiMeshInstance3D
 const MAX := 512
 const BALL_RADIUS := 0.2        # same as the SphereMesh in blast_projectile.tscn
 const HIT_RADIUS := 0.35        # same as BlastProjectile.hit_radius
+## How wide the player's projectiles are against enemies, so near misses still explode.
+## Walls, floors and enemy projectiles keep HIT_RADIUS.
+const ENEMY_HIT_RADIUS := 0.7
+const ENEMY_LAYER_MASK := 4     # layer 3
 
 ## Skills find the swarm through this group.
 @export var group_name: StringName = &"player_blast_swarm"
@@ -31,6 +35,7 @@ var _exclude: Array[RID] = []
 var _on_impact: Array[Callable] = []
 
 var _query := PhysicsShapeQueryParameters3D.new()
+var _enemy_query := PhysicsShapeQueryParameters3D.new()
 var _no_exclude: Array[RID] = []
 var _one_exclude: Array[RID] = [RID()]
 var _fallback_mat: ShaderMaterial
@@ -66,6 +71,10 @@ func _ready() -> void:
 	var hit_shape := SphereShape3D.new()
 	hit_shape.radius = HIT_RADIUS
 	_query.shape = hit_shape
+	var enemy_shape := SphereShape3D.new()
+	enemy_shape.radius = ENEMY_HIT_RADIUS
+	_enemy_query.shape = enemy_shape
+	_enemy_query.collision_mask = ENEMY_LAYER_MASK
 
 	var ball := SphereMesh.new()
 	ball.radius = BALL_RADIUS
@@ -159,7 +168,8 @@ func _physics_process(delta: float) -> void:
 		else:
 			_query.exclude = _no_exclude
 
-		if _left[i] <= 0.0 or not space.intersect_shape(_query, 1).is_empty():
+		if _left[i] <= 0.0 or not space.intersect_shape(_query, 1).is_empty() \
+				or _touches_enemy(space, next, _mask[i]):
 			var cb := _on_impact[i]
 			_remove(i)
 			if cb.is_valid():
@@ -171,6 +181,17 @@ func _physics_process(delta: float) -> void:
 	multimesh.visible_instance_count = _pos.size()
 	for j in _pos.size():
 		multimesh.set_instance_transform(j, Transform3D(Basis.IDENTITY, _pos[j]))
+
+
+## The wider check against enemies, for projectiles that target them (never through a wall).
+func _touches_enemy(space: PhysicsDirectSpaceState3D, at: Vector3, mask: int) -> bool:
+	if mask & ENEMY_LAYER_MASK == 0:
+		return false
+	_enemy_query.transform = Transform3D(Basis.IDENTITY, at)
+	for r in space.intersect_shape(_enemy_query, 8):
+		if SkillTargets.line_is_clear(space, at, r["collider"] as Node, r["rid"]):
+			return true
+	return false
 
 
 func _remove(i: int) -> void:   # swap-remove

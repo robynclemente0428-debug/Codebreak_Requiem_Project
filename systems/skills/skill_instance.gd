@@ -145,6 +145,15 @@ func build_effective_stats(caster_stats: StatComponent) -> StatComponent:
 	_effective.base_stats = base
 	for m in _modifiers:
 		_effective.add_modifier(m)
+	if class_trait != null:                       # Paladin: damage from armour
+		var inc := class_trait.armour_damage_increase(caster_stats)
+		if inc > 0.0:
+			var m := Modifier.new()
+			m.stat = StatTypes.Stat.SKILL_DAMAGE_MULT
+			m.op = Modifier.ModOp.PERCENT_ADD
+			m.value = inc
+			m.source_id = "class_trait_armour_damage"
+			_effective.add_modifier(m)
 	return _effective
 
 ## Which clip to use for the next swing. Doesn't advance the combo.

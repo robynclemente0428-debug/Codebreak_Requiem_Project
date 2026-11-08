@@ -45,10 +45,18 @@ static func for_class(class_id: String) -> ClassTrait:
 ## Increased armour for a few seconds each time a WHEN rule fires. Paladin: 0.10
 @export var armour_per_when_fire: float = 0.0
 @export var when_buff_seconds: float = 4.0
-## Flat movement speed for each rule in your applied programs. Rogue: 0.3
+## Increased skill damage for every full 10 armour you have, read on each cast. Paladin: 0.01
+@export var damage_per_10_armour: float = 0.0
+## Flat movement speed for each rule in your applied programs. (Not used by any class right now.)
 @export var move_speed_per_rule: float = 0.0
-## More damage on skill hits while you are moving. Rogue: 0.15
+## Flat movement speed for each knob step in your applied programs (every step of every
+## effect that costs points: -1 mana cost counts, drawbacks and variable writes don't). Rogue: 0.15
+@export var move_speed_per_knob_step: float = 0.0
+## More damage on skill hits while you are moving. (Not used by any class right now.)
 @export var moving_damage_more: float = 0.0
+## More damage on skill hits while you are moving, for each 1 movement speed you have.
+## Rogue: 0.15 (base speed 5 = 75% more)
+@export var moving_damage_more_per_speed: float = 0.0
 ## More damage on a hit against an enemy still at full life (the opening shot). Assassin: 0.5
 @export var full_life_damage_more: float = 0.0
 
@@ -106,7 +114,7 @@ const RULES_SOURCE := "class_trait_rules"
 
 ## Paladin / Rogue: stat bonuses from how many rules your applied programs have.
 ## SkillComponent calls this whenever a socket or program changes.
-func apply_rule_bonuses(stats: StatComponent, always_rules: int, total_rules: int) -> void:
+func apply_rule_bonuses(stats: StatComponent, always_rules: int, total_rules: int, knob_steps: int = 0) -> void:
 	if stats == null:
 		return
 	stats.remove_by_source(RULES_SOURCE)
@@ -116,6 +124,17 @@ func apply_rule_bonuses(stats: StatComponent, always_rules: int, total_rules: in
 	if move_speed_per_rule > 0.0 and total_rules > 0:
 		stats.add_modifier(_mod(StatTypes.Stat.MOVE_SPEED, Modifier.ModOp.FLAT_ADD,
 				move_speed_per_rule * total_rules, RULES_SOURCE))
+	if move_speed_per_knob_step > 0.0 and knob_steps > 0:
+		stats.add_modifier(_mod(StatTypes.Stat.MOVE_SPEED, Modifier.ModOp.FLAT_ADD,
+				move_speed_per_knob_step * knob_steps, RULES_SOURCE))
+
+
+## Paladin: increased skill damage from current armour (every full 10), added to a cast's
+## effective stats by SkillInstance.build_effective_stats.
+func armour_damage_increase(caster_stats: StatComponent) -> float:
+	if damage_per_10_armour <= 0.0 or caster_stats == null:
+		return 0.0
+	return damage_per_10_armour * floorf(maxf(caster_stats.get_stat(StatTypes.Stat.ARMOUR), 0.0) / 10.0)
 
 
 ## Paladin: a WHEN rule fired. Its armour buff starts, or restarts if it was still running.
@@ -139,10 +158,13 @@ func on_rule_fired(caster: Node, key: String) -> void:
 ## Rogue / Assassin: the damage multiplier for a hit right now (before the damage lands).
 func hit_damage_mult(caster: Node, target: Node = null) -> float:
 	var m := 1.0
-	if moving_damage_more > 0.0 and caster is CharacterBody3D:
+	if (moving_damage_more > 0.0 or moving_damage_more_per_speed > 0.0) and caster is CharacterBody3D:
 		var v := (caster as CharacterBody3D).velocity
 		if Vector2(v.x, v.z).length() > 0.5:
 			m *= 1.0 + moving_damage_more
+			var stats := caster.get("stats") as StatComponent
+			if moving_damage_more_per_speed > 0.0 and stats != null:
+				m *= 1.0 + moving_damage_more_per_speed * maxf(stats.get_stat(StatTypes.Stat.MOVE_SPEED), 0.0)
 	if full_life_damage_more > 0.0 and target != null and not target.is_in_group(&"breakables") \
 			and ProgramCondition.health_fraction(target) >= 0.999:
 		m *= 1.0 + full_life_damage_more                       # the opening shot
@@ -172,10 +194,16 @@ func summary() -> PackedStringArray:
 		out.append("+%d%% armour per ALWAYS rule" % roundi(armour_per_always_rule * 100.0))
 	if armour_per_when_fire > 0.0:
 		out.append("+%d%% armour for %ds when a WHEN rule fires" % [roundi(armour_per_when_fire * 100.0), roundi(when_buff_seconds)])
+	if damage_per_10_armour > 0.0:
+		out.append("%s%% increased damage per 10 armour" % _n(damage_per_10_armour * 100.0))
 	if move_speed_per_rule > 0.0:
 		out.append("+%s movement speed per rule" % _n(move_speed_per_rule))
+	if move_speed_per_knob_step > 0.0:
+		out.append("+%s movement speed per knob step" % _n(move_speed_per_knob_step))
 	if moving_damage_more > 0.0:
 		out.append("%d%% more damage while moving" % roundi(moving_damage_more * 100.0))
+	if moving_damage_more_per_speed > 0.0:
+		out.append("%d%% more damage per 1 movement speed while moving" % roundi(moving_damage_more_per_speed * 100.0))
 	if full_life_damage_more > 0.0:
 		out.append("%d%% more damage against enemies at full life" % roundi(full_life_damage_more * 100.0))
 	if phase_through_enemies:

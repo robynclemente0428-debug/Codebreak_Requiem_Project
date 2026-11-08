@@ -111,13 +111,13 @@ func _rebuild() -> void:
 	if not lines.is_empty() and not _item.rolled_affixes.is_empty():
 		_box.add_child(_rule())
 	for entry in _item.rolled_affixes:
+		if _ids:                                   # ALT: the modifier's id, small and dim, over it
+			var a: AffixDefinition = entry["affix"]
+			_box.add_child(_label(a.id, 11, Color(COL_DIM, 0.6)))
 		var l := _label(ItemText.affix_text(entry), 16, COL_AFFIX)
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_box.add_child(l)
-		if _ids:
-			var a: AffixDefinition = entry["affix"]
-			_box.add_child(_label("    id: %s" % a.id, 12, COL_DIM))
 
 	if _hint != "":
 		_box.add_child(_rule())

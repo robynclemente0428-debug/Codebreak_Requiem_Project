@@ -1,6 +1,6 @@
 # CodeBreak Requiem: Act III Plan (Root Access)
 
-*Built: the Quarantine Yard hub, all six districts, the REFCOUNT, DIFF and GENERATIONS locks, the Strategist exam, every main quest through Root Access, and both side quests. Differences from the plan below: **Memory Shards** has four shards, one per district, because a district holds one beacon. **The Mimic** copies the skill that hits it but not the script. **Blobs** feed The Leak while alive instead of crawling back to it. **The Collector** sweeps its adds once five are alive rather than as it reaches them. **Sweeps** only go for crates, not civilians, since the yard has none yet. The convoy's route terminal stays usable when DOCKED while an Act II quest is open, so nothing is stranded on the road. **Not built: the far side of the Inward Gate**, which stays shut until Act IV exists. Builds on `CodeBreak_Requiem_Setting_and_Campaign.md`, the source of truth.*
+*Built: the Quarantine Yard hub, all six districts, the REFCOUNT, DIFF and GENERATIONS locks, the Strategist exam, every main quest through Root Access, and both side quests. Differences from the plan below: **Memory Shards** has four shards, one per district, because a district holds one beacon. **The Mimic** copies the skill that hits it but not the script. **Blobs** feed The Leak while alive instead of crawling back to it. **The Collector** sweeps its adds once five are alive rather than as it reaches them. **Sweeps** only go for crates, not civilians, since the yard has none yet. The convoy's route terminal stays usable when DOCKED: Hardfault stays moored, and the terminal drops the player at Act II's stops, with no breaches or Sweeps owed for those runs. The Inward Gate opens once Root Access is turned in, onto Checkpoint's Far Side, a level 30 zone that comes out at Act IV's prototype hub, so Act III ends at the end of a zone like Act II does. Builds on `CodeBreak_Requiem_Setting_and_Campaign.md`, the source of truth.*
 
 ---
 
@@ -69,7 +69,7 @@ Counters (`x`, `y`) are the game's variables. No functions are needed.
 | Dangling Quarter | After The Leak (level 2) | Pointers to things that no longer exist. Side content, Echo Wisp variants |
 | Mark Yards | After the Mimic (level 1) | The Collector's marking floors. Red-tagged processes waiting for deletion |
 | The Sweep | After the Mimic and the exam (level 0) | The Collector's furnace. **The Collector** |
-| Inward Gate | Root Access | The far side of Checkpoint; leads to Act IV |
+| Inward Gate | Root Access | In the yard; opens onto Checkpoint's Far Side (level 30), a zone that comes out at Act IV's hub |
 
 ## 6. Main Quests
 
@@ -278,7 +278,7 @@ What the plan needs in the project, grouped by area. Everything listed as existi
 **Enemies** (`data/enemies`): `the_leak`, `leak_blob`, `the_mimic`, `mirror_husk`, `the_collector`, `marker_drone`.
 
 **Convoy and travel**
-- Route terminal: seventh stop Checkpoint Approach, then a DOCKED state.
+- Route terminal: seventh stop Checkpoint Approach, then a DOCKED state that can still deploy to the old stops.
 - `DeckSystem`: fourth system `iff` (glyph `I`), forced offline during the Last Mile breach; `PatchPanel` gets the IFF puzzle and the two-record output. `DeckOutages` needs a look for it.
 - Sweep event: a `HullBreach` variant whose saboteurs target cargo.
 - `data/waypoints/act_3.tres` and the quarantine-level gating.

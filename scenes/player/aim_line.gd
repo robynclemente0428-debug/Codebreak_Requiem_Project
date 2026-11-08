@@ -19,7 +19,7 @@ const PRIMARY_ACTION := &"attack"
 const ENEMY_MASK := 4           # layer 3
 const WORLD_MASK := 1
 const RING_SEGMENTS := 40
-const HIT_RADIUS := 0.15        # ShootProjectile.hit_radius
+const HIT_RADIUS := 0.5         # ShootProjectile.target_radius
 
 var enabled := true
 ## Where each line ended last frame, in metres from its start (for tests / debugging).

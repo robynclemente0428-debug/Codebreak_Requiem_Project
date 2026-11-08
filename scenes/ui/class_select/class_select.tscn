@@ -7,29 +7,17 @@
 [ext_resource type="PackedScene" uid="uid://c1anpifsroohb" path="res://scenes/ui/reusables/circuit_border.tscn" id="4_hc0rs"]
 [ext_resource type="Script" uid="uid://dj0ktnv8eva86" path="res://scenes/ui/design/cyber_back_button.gd" id="5_g885k"]
 [ext_resource type="FontFile" uid="uid://cwuudm0bjtvk4" path="res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf" id="6_a4beg"]
-[ext_resource type="Shader" uid="uid://bj1r3k37ybtvy" path="res://assets/shaders/materials/shader/edge_detection.gdshader" id="8_hc0rs"]
 [ext_resource type="Shader" uid="uid://kfcd702mcvha" path="res://assets/shaders/materials/game_shaders/hologram_glitch.gdshader" id="9_8yee1"]
+[ext_resource type="Script" uid="uid://byuuabq4t0m3n" path="res://assets/textures/retro_screen.gd" id="10_8yee1"]
 [ext_resource type="Shader" uid="uid://c6j74g7ux17v4" path="res://assets/shaders/materials/game_shaders/orb_arcane.gdshader" id="10_ufxba"]
 
-[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_4flwa"]
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_ufxba"]
 blend_mode = 1
 
 [sub_resource type="Environment" id="Environment_rwnve"]
 ambient_light_source = 2
 ambient_light_color = Color(4.5242905e-06, 0.7415382, 0.741538, 1)
 ambient_light_energy = 0.6
-
-[sub_resource type="QuadMesh" id="QuadMesh_o8aln"]
-flip_faces = true
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_5uciv"]
-render_priority = 0
-shader = ExtResource("8_hc0rs")
-shader_parameter/lightIntensity = 1.25
-shader_parameter/lineAlpha = 0.7
-shader_parameter/useLighting = true
-shader_parameter/lineHighlight = 0.2
-shader_parameter/lineShadow = 0.55
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_4fgvj"]
 render_priority = 0
@@ -114,7 +102,7 @@ theme_override_constants/separation = 10
 
 [node name="BackButton" type="TextureButton" parent="Header/HBox" unique_id=1669220454]
 unique_name_in_owner = true
-material = SubResource("CanvasItemMaterial_4flwa")
+material = SubResource("CanvasItemMaterial_ufxba")
 custom_minimum_size = Vector2(200, 60)
 layout_mode = 2
 stretch_mode = 5
@@ -182,25 +170,19 @@ texture_filter = 1
 layout_mode = 2
 mouse_filter = 0
 stretch = true
-stretch_shrink = 2
 
 [node name="PreviewViewport" type="SubViewport" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer" unique_id=189638231]
 own_world_3d = true
 transparent_bg = true
 handle_input_locally = false
 msaa_3d = 2
-size = Vector2i(297, 315)
+size = Vector2i(594, 630)
 render_target_update_mode = 4
 
 [node name="Camera3D" type="Camera3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=657333656]
 transform = Transform3D(1, 0, 0, 0, 0.9975641, 0.06975647, 0, -0.06975647, 0.9975641, 0, 1.1, 4)
 environment = SubResource("Environment_rwnve")
 fov = 35.0
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport/Camera3D" unique_id=119840528]
-extra_cull_margin = 16384.0
-mesh = SubResource("QuadMesh_o8aln")
-surface_material_override/0 = SubResource("ShaderMaterial_5uciv")
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=403816019]
 transform = Transform3D(0.85843116, -0.37161252, 0.35355338, 0.014808527, 0.7069517, 0.70710677, -0.51271486, -0.6017668, 0.6123724, 0, 5.8928003, 0)
@@ -216,56 +198,70 @@ mesh = SubResource("CylinderMesh_bl57u")
 [node name="ModelPivot" type="Node3D" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=663597909]
 unique_name_in_owner = true
 
+[node name="RetroScreen" type="CanvasLayer" parent="Content/RootVBox/Columns/PreviewPanel/PreviewContainer/PreviewViewport" unique_id=1207847158]
+script = ExtResource("10_8yee1")
+preset = 2
+metadata/_custom_type_script = "uid://byuuabq4t0m3n"
+
 [node name="InfoPanel" type="PanelContainer" parent="Content/RootVBox/Columns" unique_id=844698876]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(500, 0)
 layout_mode = 2
 
-[node name="InfoMargin" type="MarginContainer" parent="Content/RootVBox/Columns/InfoPanel" unique_id=1743448827]
+[node name="InfoScroll" type="ScrollContainer" parent="Content/RootVBox/Columns/InfoPanel" unique_id=1743448830]
 layout_mode = 2
+horizontal_scroll_mode = 0
 
-[node name="InfoVBox" type="VBoxContainer" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin" unique_id=1376250862]
+[node name="InfoMargin" type="MarginContainer" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll" unique_id=1743448827]
 layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 24
 
-[node name="ClassName" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1001161328]
+[node name="InfoVBox" type="VBoxContainer" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin" unique_id=1376250862]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ClassName" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=1001161328]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 56
 
-[node name="TagLine" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1590567177]
+[node name="TagLine" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=1590567177]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.8980392, 1, 0.7019608)
 theme_override_font_sizes/font_size = 26
 
-[node name="HSeparator" type="HSeparator" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1285052574]
+[node name="HSeparator" type="HSeparator" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=1285052574]
 layout_mode = 2
 
-[node name="Description" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=1742840384]
+[node name="Description" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=1742840384]
 unique_name_in_owner = true
-custom_maximum_size = Vector2(500, 381)
+custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-size_flags_vertical = 3
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 24
 autowrap_mode = 3
 
-[node name="AttrTitle" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=110654651]
+[node name="AttrTitle" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=110654651]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.8980392, 1, 0.7019608)
 theme_override_font_sizes/font_size = 22
 text = "Attributes"
 
-[node name="AttributeList" type="VBoxContainer" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=23884473]
+[node name="AttributeList" type="VBoxContainer" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=23884473]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="SkillTitle" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=74447513]
+[node name="SkillTitle" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=74447513]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.8980392, 1, 0.7019608)
 theme_override_font_sizes/font_size = 22
 text = "Starting Skill"
 
-[node name="SkillLabel" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoMargin/InfoVBox" unique_id=467870485]
+[node name="SkillLabel" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=467870485]
 unique_name_in_owner = true
 layout_mode = 2
 

@@ -16,10 +16,8 @@ const SHADER := preload("res://assets/textures/retro_screen.gdshader")
 ## Shader parameters per preset; everything else stays at the shader default (off).
 const PRESETS := {
 	Preset.NONE: {},
-	Preset.CRT: {curvature = 0.1, corner_radius = 0.04, scanlines = 0.55, mask = 0.3, glow = 0.35,
-		chromatic = 1.0, vignette = 0.45},
-	Preset.ARCADE: {pixel_size = 3.0, curvature = 0.06, corner_radius = 0.03, scanlines = 0.7,
-		glow = 0.5, saturation = 1.25, vignette = 0.3},
+	Preset.CRT: {scanlines = 0.55, mask = 0.3, glow = 0.35, chromatic = 1.0, vignette = 0.45},
+	Preset.ARCADE: {pixel_size = 3.0, scanlines = 0.7, glow = 0.5, saturation = 1.25, vignette = 0.3},
 	Preset.VHS: {jitter = 0.5, color_bleed = 0.7, tracking = 0.7, noise = 0.35, chromatic = 2.0,
 		saturation = 0.85, scanlines = 0.2, vignette = 0.3},
 	Preset.FILM: {noise = 0.3, vignette = 0.6, saturation = 0.7, contrast = 1.15,

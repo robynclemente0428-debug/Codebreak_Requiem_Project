@@ -595,12 +595,20 @@ func _apply_trait_rule_bonuses() -> void:
 		return
 	var always_rules := 0
 	var total_rules := 0
+	var knob_steps := 0
 	for sock in sockets:
 		if sock.skill == null or sock.program == null or sock.skill.program_validation == null \
 				or not sock.skill.program_validation.valid:
 			continue
+		var limits := sock.skill.get_program_limits()
 		for r in sock.program.rules:
 			total_rules += 1
 			if r.is_always():
 				always_rules += 1
-	t.apply_rule_bonuses(stats, always_rules, total_rules)
+			for e in r.effects:
+				if ScriptRegisters.is_write(e.knob) or limits == null:
+					continue
+				var k := limits.get_knob(e.knob)
+				if k != null and k.cost_for(e.steps) > 0.0:   # only buff steps (cost points)
+					knob_steps += absi(e.steps)
+	t.apply_rule_bonuses(stats, always_rules, total_rules, knob_steps)

@@ -362,11 +362,29 @@ func _add_quest(s: QuestState) -> void:
 			text += "  %d/%d" % [have, o.required]
 		var mark := "[X] " if done else "[ ] "
 		_box.add_child(_wrapped(mark + text, base_font_size - 2, COL_DONE if done else COL_TEXT))
-		# A boss with a lock: how to hurt it, right under "Defeat ..." (from the lock itself)
-		if not done and o.kind == "kill" and not o.hidden:
-			var lock: Dictionary = preload("res://scenes/ui/player_ui/lock_banner/lock_banner.gd").hint_for_enemy(o.target)
-			if not lock.is_empty() and lock["hint"] != "":
-				_box.add_child(_wrapped("    %s: %s" % [lock["name"], lock["hint"]], base_font_size - 3, COL_HINT))
+		# A boss with a lock: how to hurt it, right under "Defeat ..." (from the lock itself), or under
+		# "Take ... from" when the boss carries the item and the quest has no "Defeat" for it
+		if not done and not o.hidden:
+			var boss := _lock_boss(s.def, o)
+			if boss != "":
+				var lock: Dictionary = preload("res://scenes/ui/player_ui/lock_banner/lock_banner.gd").hint_for_enemy(boss)
+				if not lock.is_empty() and lock["hint"] != "":
+					_box.add_child(_wrapped("    %s: %s" % [lock["name"], lock["hint"]], base_font_size - 3, COL_HINT))
+
+
+## The enemy whose lock hint belongs under this objective, or "".
+func _lock_boss(def: QuestDefinition, o: Objective) -> String:
+	if o.kind == "kill":
+		return o.target
+	if o.kind != "recover":
+		return ""
+	var carrier := QuestItems.carrier_of(o.target)
+	if carrier == "":
+		return ""
+	for other: Objective in def.objectives:
+		if other.kind == "kill" and other.target == carrier:
+			return ""                                # its "Defeat ..." already shows the hint
+	return carrier
 
 
 func _on_recovered(id: String) -> void:

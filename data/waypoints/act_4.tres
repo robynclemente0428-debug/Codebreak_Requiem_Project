@@ -1,0 +1,58 @@
+[gd_resource type="Resource" script_class="WaypointAct" format=3]
+
+[ext_resource type="Script" uid="uid://e2ln6b6b1sre" path="res://systems/waypoints/waypoint_act.gd" id="1_act"]
+[ext_resource type="Script" uid="uid://cpivoq1jwxma1" path="res://systems/waypoints/waypoint.gd" id="2_wp"]
+
+[sub_resource type="Resource" id="Waypoint_act4_threshold"]
+script = ExtResource("2_wp")
+id = "act4_threshold"
+display_name = "The Threshold"
+scene = "res://scenes/map/town/act_4_threshold.tscn"
+kind = 0
+map_position = Vector2(0.12, 0.5)
+links = Array[String](["act4_fray", "act4_gate"])
+note = "Vesper, Sudo, Hex. The far side of the Inward Gate"
+
+[sub_resource type="Resource" id="Waypoint_act4_fray"]
+script = ExtResource("2_wp")
+id = "act4_fray"
+display_name = "The Fray"
+scene = "res://scenes/map/dungeon/act_4_the_fray.tscn"
+spawn_id = &"fray_in"
+dungeon_level = 30
+kind = 1
+map_position = Vector2(0.5, 0.5)
+links = Array[String](["act4_threshold", "act4_loom"])
+note = "Level 30  -  Where AXIOM's rules start to come apart"
+random_threats = Vector2i(1, 1)
+
+[sub_resource type="Resource" id="Waypoint_act4_loom"]
+script = ExtResource("2_wp")
+id = "act4_loom"
+display_name = "The Weaver's Loom"
+scene = "res://scenes/map/dungeon/act_4_weavers_loom.tscn"
+spawn_id = &"loom_in"
+dungeon_level = 33
+kind = 2
+map_position = Vector2(0.88, 0.3)
+links = Array[String](["act4_fray"])
+note = "Level 33  -  Null Weaver Prime"
+
+[sub_resource type="Resource" id="Waypoint_act4_gate"]
+script = ExtResource("2_wp")
+id = "act4_gate"
+display_name = "The Core's Gate"
+scene = "res://scenes/map/dungeon/act_4_core_gate.tscn"
+spawn_id = &"gate_in"
+dungeon_level = 35
+kind = 2
+map_position = Vector2(0.88, 0.7)
+links = Array[String](["act4_threshold"])
+note = "Level 35  -  Null Gatekeeper"
+
+[resource]
+script = ExtResource("1_act")
+act_number = 4
+title = "ACT IV"
+subtitle = "THE NULL ZONE  -  Into the Null  -  Levels 30-35"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act4_threshold"), SubResource("Waypoint_act4_fray"), SubResource("Waypoint_act4_loom"), SubResource("Waypoint_act4_gate")])

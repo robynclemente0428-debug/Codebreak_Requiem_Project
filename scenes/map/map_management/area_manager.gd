@@ -175,6 +175,7 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 	if area.has_method("on_player_arrived"):
 		area.on_player_arrived(player)
 	Waypoints.arrived(scene_path)         # first visit unlocks the area on the waypoint map (U)
+	GlitchDeath.prewarm(area, spot)       # its shaders compile now, not on the first kill
 
 	await _wait_for_navigation(area, use_fade)
 	await _finish(use_fade)

@@ -99,16 +99,31 @@ spawn_id = &"sweep_in"
 dungeon_level = 29
 kind = 2
 map_position = Vector2(0.92, 0.5)
-links = Array[String](["act3_mark_yards"])
+links = Array[String](["act3_mark_yards", "act3_far_side"])
 note = "Level 29  -  The Collector (GENERATIONS). Quarantine level 0"
 random_threats = Vector2i(1, 1)
 route_needs_quests = Array[String](["q06_the_mimic", "exam_strategist"])
 route_needs_text = "QUARANTINE LEVEL 1: DEFEAT THE MIMIC AND PASS THE STRATEGIST EXAM"
 
+[sub_resource type="Resource" id="Waypoint_act3_far_side"]
+script = ExtResource("2_wp")
+id = "act3_far_side"
+display_name = "Checkpoint's Far Side"
+scene = "res://scenes/map/dungeon/act_3_far_side.tscn"
+spawn_id = &"far_in"
+dungeon_level = 30
+kind = 1
+map_position = Vector2(0.92, 0.2)
+links = Array[String](["act3_sweep"])
+note = "Level 30  -  Past the Inward Gate. The Threshold is at the far end"
+random_threats = Vector2i(1, 1)
+route_needs_quests = Array[String](["q06c_root_access"])
+route_needs_text = "THE INWARD GATE IS SHUT: FINISH ROOT ACCESS"
+
 [resource]
 script = ExtResource("1_act")
 act_number = 3
 title = "ACT III"
-subtitle = "CHECKPOINT  -  Root Access  -  Levels 22-29"
-waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act3_yard"), SubResource("Waypoint_act3_registry"), SubResource("Waypoint_act3_heap"), SubResource("Waypoint_act3_mirror_dock"), SubResource("Waypoint_act3_dangling_quarter"), SubResource("Waypoint_act3_mark_yards"), SubResource("Waypoint_act3_sweep")])
+subtitle = "CHECKPOINT  -  Root Access  -  Levels 22-30"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act3_yard"), SubResource("Waypoint_act3_registry"), SubResource("Waypoint_act3_heap"), SubResource("Waypoint_act3_mirror_dock"), SubResource("Waypoint_act3_dangling_quarter"), SubResource("Waypoint_act3_mark_yards"), SubResource("Waypoint_act3_sweep"), SubResource("Waypoint_act3_far_side")])
 convoy_route = true

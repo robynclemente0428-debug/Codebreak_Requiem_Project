@@ -13,8 +13,8 @@ extends Interactable
 ## The rank exam the player should pass before taking the road (its stops are built round what
 ## it unlocks: the Architect exam's loops). Until then the route stays locked. "" = no exam.
 @export var required_exam := "exam_architect"
-## The convoy's own terminal: DOCKED once Hardfault reaches Checkpoint (Waypoints.is_docked). It
-## plots no more courses, unless an Act II quest is still open, so nothing is stranded on the road.
+## The convoy's own terminal: DOCKED once Hardfault reaches Checkpoint (Waypoints.is_docked). The
+## convoy stays moored, but the terminal still drops the player at the stops on the old route.
 @export var docks := false
 
 var _prompt: ConfirmationDialog
@@ -99,7 +99,9 @@ func _show_docked() -> void:
 	if not is_inside_tree() or not _is_docked():
 		return
 	info_title = "DOCKED AT CHECKPOINT"
-	prompt_text = "DOCKED"
+	info_description = "Hardfault stays moored. Pick a stop on the old route and the terminal drops you at its entrance."
+	if signal_ok:
+		prompt_text = "DEPLOY"
 	var glow := get_node_or_null("Glow") as OmniLight3D
 	if glow != null and signal_ok:
 		glow.light_color = Color(1.0, 0.72, 0.25)
@@ -114,18 +116,6 @@ func _show_docked() -> void:
 		_docked_tag.position = Vector3(0, prompt_height - 0.15, 0.3)
 		add_child(_docked_tag)
 	_docked_tag.visible = signal_ok
-
-
-## An Act II quest still open: the road stays open for it.
-func _open_road_quest(player: Node3D) -> bool:
-	var qm := player.get("quests") as QuestManager
-	if qm == null:
-		return false
-	for id in qm.active:
-		var def := qm.get_def(id)
-		if def != null and def.get_meta("act", "") == "II":
-			return true
-	return false
 
 
 ## No signal: the screen crawls with static and now and then a red flash.
@@ -163,10 +153,6 @@ func interact(player: Node3D) -> void:
 	if blocked != "":
 		QuestItems.toast(get_tree(), "HULL BREACH\nThe Null are on the deck: clear it before you plot a course.",
 				Color(1.0, 0.35, 0.35))
-		return
-	if _is_docked() and not _open_road_quest(player):
-		QuestItems.toast(get_tree(), "DOCKED AT CHECKPOINT\nHardfault isn't going anywhere. Use the District Gate in the Quarantine Yard.",
-				Color(1.0, 0.72, 0.25))
 		return
 	var comms = DeckSystemScript.find(get_tree(), "comms")
 	if comms != null and comms.is_offline():
@@ -234,4 +220,4 @@ func _open_route() -> void:
 	if act == null:
 		push_warning("RouteTerminal: no route act for this area")
 		return
-	panel.open_route(act)
+	panel.open_route(act, _is_docked())

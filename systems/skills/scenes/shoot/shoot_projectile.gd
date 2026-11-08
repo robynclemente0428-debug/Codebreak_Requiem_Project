@@ -10,7 +10,11 @@ signal hit_world(position: Vector3)
 
 ## Physics layers it collides with: world (layer 1) + enemies (layer 3) by default.
 @export_flags_3d_physics var hit_mask: int = 5
+## How wide the bullet is against walls.
 @export var hit_radius: float = 0.15
+## How wide the player's bullets are against enemies and barrels, so near misses still count.
+## Enemies' bullets use hit_radius for this too, so they don't get easier to land on the player.
+@export var target_radius: float = 0.5
 @export var enemy_group: StringName = &"enemies"
 
 ## Players' bullets are gold, everyone else's red (ShootBehavior sets it).
@@ -37,13 +41,17 @@ var _travelled := 0.0
 var _pierced := 0
 var _done := false
 var _started := false
-var _shape := SphereShape3D.new()
+var _wall_shape := SphereShape3D.new()
+var _target_shape := SphereShape3D.new()
 var _column := CapsuleShape3D.new()      # from the bullet down to floor_y
 
 
 func _ready() -> void:
-	_shape.radius = hit_radius
-	_column.radius = hit_radius
+	if enemy_group != &"enemies":
+		target_radius = hit_radius
+	_wall_shape.radius = hit_radius
+	_target_shape.radius = target_radius
+	_column.radius = target_radius
 	look_at(global_position + direction, Vector3.UP)     # point the tracer along its flight
 	var mesh := get_node_or_null("MeshInstance3D") as GeometryInstance3D
 	if mesh != null:
@@ -77,13 +85,16 @@ func _sweep(from: Vector3, to: Vector3, include_start: bool, walls: bool) -> boo
 	if length < 0.0001 and not include_start:
 		return false
 	var space := get_world_3d().direct_space_state
-	var query := PhysicsShapeQueryParameters3D.new()
-	query.shape = _shape
-	query.collision_mask = hit_mask
+	var wall_query := PhysicsShapeQueryParameters3D.new()
+	wall_query.shape = _wall_shape
+	wall_query.collision_mask = hit_mask
+	var target_query := PhysicsShapeQueryParameters3D.new()
+	target_query.shape = _target_shape
+	target_query.collision_mask = hit_mask
 	var drop := from.y - floor_y                     # how far below the bullet still counts
 	var column: PhysicsShapeQueryParameters3D = null
-	if drop > hit_radius:
-		_column.height = drop + 2.0 * hit_radius
+	if drop > target_radius:
+		_column.height = drop + 2.0 * target_radius
 		column = PhysicsShapeQueryParameters3D.new()
 		column.shape = _column
 		column.collision_mask = hit_mask
@@ -95,26 +106,35 @@ func _sweep(from: Vector3, to: Vector3, include_start: bool, walls: bool) -> boo
 		if column != null:
 			column.transform = Transform3D(Basis.IDENTITY, pos + Vector3.DOWN * drop * 0.5)
 			column.exclude = exclude
-			for r in space.intersect_shape(column, 8):
+			# Room for 32 results: this wide shape also touches the floor, which must not crowd
+			# enemies out of the list.
+			for r in space.intersect_shape(column, 32):
 				var c := r["collider"] as Node
-				if _is_target(c) and not exclude.has(r["rid"]):
+				if _is_target(c) and not exclude.has(r["rid"]) \
+						and SkillTargets.line_is_clear(space, pos, c, r["rid"]):
 					var at := pos                       # spark on the target, not in the air above it
 					if c is Node3D:
 						at.y = minf(pos.y, (c as Node3D).global_position.y + 0.6)
 					if _hit(c, r["rid"], at):
 						return true
-		# Then the bullet itself: enemies at its height, and walls (which always stop it)
-		query.transform = Transform3D(Basis.IDENTITY, pos)
-		query.exclude = exclude
-		for r in space.intersect_shape(query, 8):
+		# Then the bullet itself: enemies at its height...
+		target_query.transform = Transform3D(Basis.IDENTITY, pos)
+		target_query.exclude = exclude
+		for r in space.intersect_shape(target_query, 32):
 			var collider := r["collider"] as Node
-			if _is_target(collider):
-				if not exclude.has(r["rid"]) and _hit(collider, r["rid"], pos):
-					return true
-			elif walls:
-				hit_world.emit(pos)
-				_finish(pos)
+			if _is_target(collider) and not exclude.has(r["rid"]) \
+					and SkillTargets.line_is_clear(space, pos, collider, r["rid"]) \
+					and _hit(collider, r["rid"], pos):
 				return true
+		# ...and walls, which always stop it
+		if walls:
+			wall_query.transform = Transform3D(Basis.IDENTITY, pos)
+			wall_query.exclude = exclude
+			for r in space.intersect_shape(wall_query, 8):
+				if not _is_target(r["collider"] as Node):
+					hit_world.emit(pos)
+					_finish(pos)
+					return true
 	return false
 
 

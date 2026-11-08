@@ -45,6 +45,7 @@ var _next: Button
 var _hint: Label
 var _tabs: HBoxContainer              # one button per act
 var _route_act: WaypointAct           # set while open as the convoy's route terminal
+var _route_docked := false            # that terminal is docked: Hardfault stays, the player goes
 
 
 func _enter_tree() -> void:
@@ -99,10 +100,11 @@ func toggle() -> void:
 
 
 ## The route terminal's map: only `act`, and clicking a stop sails there.
-func open_route(act: WaypointAct) -> void:
+func open_route(act: WaypointAct, docked := false) -> void:
 	if act == null:
 		return
 	_route_act = act
+	_route_docked = docked
 	open()
 
 
@@ -126,6 +128,7 @@ func close() -> void:
 	visible = false
 	_map.hovered = null
 	_route_act = null
+	_route_docked = false
 
 
 func _show_act() -> void:
@@ -133,7 +136,9 @@ func _show_act() -> void:
 	var act := _route_act if _route_act != null else acts[_act_index]
 	var route := _route_act != null
 	_title.text = ("CONVOY ROUTE  //  %s" if route else "WAYPOINTS  //  %s") % act.title
-	_subtitle.text = "Pick a stop. The convoy drops you at its entrance." if route else act.subtitle
+	_subtitle.text = act.subtitle if not route \
+			else "Hardfault stays moored. Pick a stop and you're dropped at its entrance." if _route_docked \
+			else "Pick a stop. The convoy drops you at its entrance."
 	_prev.visible = acts.size() > 1 and not route
 	_next.visible = acts.size() > 1 and not route
 	_prev.disabled = _act_index == 0
@@ -179,7 +184,7 @@ func _on_hover(w: Waypoint) -> void:
 		if Waypoints.is_cleared(w):
 			_info_line.text += "   CLEARED"
 		var reason := "YOU ARE HERE" if w.kind == Waypoint.Kind.TOWN 				else Waypoints.route_blocked_reason(w, get_tree())
-		_info_status.text = "CLICK TO SET COURSE" if reason == "" else reason
+		_info_status.text = reason if reason != "" else "CLICK TO DEPLOY" if _route_docked else "CLICK TO SET COURSE"
 		_info_status.add_theme_color_override("font_color", ACCENT if reason == "" else COL_WARN)
 		_info_ctrl.text = "CTRL+CLICK: NEW INSTANCE" if reason == "" and Waypoints.is_instanced(w) else ""
 		return

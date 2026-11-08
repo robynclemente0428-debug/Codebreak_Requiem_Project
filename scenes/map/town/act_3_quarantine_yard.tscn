@@ -171,6 +171,13 @@ spawn_id = &"from_approach"
 create_room = false
 metadata/_note = "Where THE LAST MILE docks you: just inside the gate from Checkpoint Approach."
 
+[node name="from_inward" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 0, 24.5)
+script = ExtResource("6_spawn")
+spawn_id = &"from_inward"
+create_room = false
+metadata/_note = "Back through the Inward Gate from Act IV."
+
 [node name="from_district" type="Marker3D" parent="Layout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 36, 0, 29)
 script = ExtResource("6_spawn")
@@ -193,10 +200,13 @@ transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 36, 
 collision_layer = 5
 collision_mask = 3
 script = ExtResource("13_he07q")
-target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
+target_area = "res://scenes/map/dungeon/act_3_far_side.tscn"
+target_spawn = &"far_in"
+dungeon_level = 30
 sealed_by_key = "inward_gate"
+open_after_quest = "q06c_root_access"
 solid_while_sealed = true
-metadata/_note = "The Inward Gate: the far side of Checkpoint. Act IV starts past it, and it stays shut until Act IV exists."
+metadata/_note = "The Inward Gate. Root Access opens it onto Checkpoint's far side, and Act IV starts past that."
 
 [node name="Registrar" parent="." instance=ExtResource("32_registrar")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 31.5, 1.1, 27.5)

@@ -2,16 +2,22 @@ shader_type spatial;
 // An enemy glitching out of existence (GlitchDeath). Replaces the model's materials for its
 // last second: keeps its texture and colour, then jitters it in horizontal slices, snaps it to
 // a coarsening voxel grid, flickers cyan / magenta and eats it away in world-space blocks.
-// `glitch` (0..1, per enemy) drives it all.
-render_mode cull_disabled;
+// How far it has gone (0..1) comes from the shared clock and this enemy's start time, so nothing
+// is sent per frame. world_vertex_coords: VERTEX is already in world space here.
+render_mode cull_disabled, world_vertex_coords;
 
 uniform sampler2D albedo_tex : source_color, filter_nearest, hint_default_white;
 uniform vec4 albedo_color : source_color = vec4(1.0);
 uniform vec4 glitch_a : source_color = vec4(0.0, 0.9, 1.0, 1.0);
 uniform vec4 glitch_b : source_color = vec4(1.0, 0.15, 0.75, 1.0);
 uniform float block_size = 0.14;          // metres: the size of the blocks it breaks into
-instance uniform float glitch = 0.0;
+global uniform float glitch_clock;
+instance uniform float glitch_start = 0.0;
 
+const float HOLD = 0.3;                   // as GlitchDeath.HOLD: the death clip, with a few flickers
+const float GLITCH_TIME = 0.85;           // as GlitchDeath.GLITCH: whole to gone
+
+varying flat float glitch;
 varying vec3 world_pos;
 varying float band_hit;
 varying float base_y;
@@ -23,7 +29,9 @@ float hash(vec3 p) {
 }
 
 void vertex() {
-	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	float t = glitch_clock - glitch_start;
+	glitch = t < HOLD ? (mod(t, 0.12) < 0.04 ? 0.35 : 0.0) : clamp((t - HOLD) / GLITCH_TIME, 0.0, 1.0);
+	vec3 w = VERTEX;
 	float tick = floor(TIME * 18.0);
 	// Horizontal slices jump sideways, a different few every tick
 	float band = floor(w.y * 7.0);
@@ -34,8 +42,8 @@ void vertex() {
 	float snap = mix(0.0001, block_size * 0.8, smoothstep(0.15, 0.9, glitch));
 	w = floor(w / snap + 0.5) * snap;
 	world_pos = w;
-	base_y = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).y;
-	VERTEX = (inverse(MODEL_MATRIX) * vec4(w, 1.0)).xyz;
+	base_y = MODEL_MATRIX[3].y;
+	VERTEX = w;
 }
 
 void fragment() {

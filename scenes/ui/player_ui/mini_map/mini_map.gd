@@ -144,6 +144,23 @@ var _overlay_wait := 0.0                # the full-screen map redraws at most 30
 var _wants := {"kill": {}, "rarity": {}, "talk": {}, "recover": {}}
 var _wants_wait := 0.0
 var _rim: Array = []                    # [screen pos, colour] of quest targets off the map edge
+## How often the enemies are looked at (seconds). Painting uses the last look, so the map still
+## moves smoothly under the player between looks.
+const SCAN_EVERY := 0.1
+## Cells past the detection ring still kept, so the ring stays exact as the player walks.
+const SCAN_MARGIN := 2.0
+## The corner map's redraws per second, normally and on the LOW graphics preset.
+const REDRAWS_PER_SECOND := 30.0
+const REDRAWS_PER_SECOND_LOW := 20.0
+## On LOW, only this many enemy dots (the nearest) and no pulse rings.
+const MAX_DOTS_LOW := 30
+const ENEMY_GROUP := &"enemies"         # the Enemies node also holds its enemies' shots and effects
+var _scan_wait := 0.0
+var _enemy_cells := PackedVector2Array()   # enemies near the ring, in cell coordinates
+var _quest_cells: Array = []            # [cell position, name] of quest targets, at any range
+var _quest_flags := {}                  # enemy's instance id -> is a quest target (see _wants)
+var _low_detail := false                # the LOW graphics preset is on
+var _redraw_wait := 0.0
 # Enemy dots as textures (made once): every dot is the same texture, so a crowd draws in a
 # couple of batched calls instead of three anti-aliased shapes per enemy.
 static var _dot_tex: ImageTexture
@@ -282,6 +299,7 @@ func bind_dungeon(director: DungeonDirector, grid_map: GridMap, enemies_root: No
 	_last_cell = Vector2i(-99999, -99999)
 	_player = null
 	_hostiles = -1
+	_forget_enemies()
 
 
 ## Full-map zoom that fits the town's walkable cells into about 60% of the screen.
@@ -372,14 +390,25 @@ func _process(delta: float) -> void:
 	if flat.length() > 0.01:
 		_facing = flat.normalized()
 
-	_update_hostiles()
 	_wants_wait -= delta
 	if _wants_wait <= 0.0:
 		_wants_wait = 0.5
+		var before := _wants.hash()
 		_refresh_wants()
+		if _wants.hash() != before:
+			_quest_flags.clear()
+			_scan_wait = 0.0
+		_low_detail = GraphicsQuality.matching_preset() == "low"
+	_scan_wait -= delta
+	if _scan_wait <= 0.0:
+		_scan_wait = SCAN_EVERY
+		_scan_enemies()
 	_set_want(_shown)
 	if visible:
-		_view.queue_redraw()
+		_redraw_wait -= delta
+		if _redraw_wait <= 0.0:
+			_redraw_wait = maxf(_redraw_wait + redraw_every(), 0.0)
+			_view.queue_redraw()
 	if _overlay_open:
 		_overlay_wait -= delta
 		if _overlay_wait <= 0.0:
@@ -414,9 +443,26 @@ func set_alert(enemies: Node3D) -> void:
 	_alert = enemies != null
 	_enemies_root = enemies
 	_hostiles = -1
+	_forget_enemies()
 
 
-func _update_hostiles() -> void:
+func _forget_enemies() -> void:
+	_enemy_cells.clear()
+	_quest_cells.clear()
+	_quest_flags.clear()
+	_scan_wait = 0.0
+
+
+## Seconds between the corner map's redraws.
+func redraw_every() -> float:
+	return 1.0 / (REDRAWS_PER_SECOND_LOW if _low_detail else REDRAWS_PER_SECOND)
+
+
+## One look at the enemies, SCAN_EVERY seconds apart: the dots, the quest targets and the HOSTILE
+## count all come from it. Only living enemies count: not their shots, effects or corpses.
+func _scan_enemies() -> void:
+	_enemy_cells.clear()
+	_quest_cells.clear()
 	if _town and not _alert:
 		if _hostiles != -2:
 			_hostiles = -2
@@ -426,15 +472,37 @@ func _update_hostiles() -> void:
 	var n := 0
 	if _enemies_root != null and is_instance_valid(_enemies_root):
 		var limit := enemy_detect_radius * enemy_detect_radius
+		var keep := (enemy_detect_radius + SCAN_MARGIN) * (enemy_detect_radius + SCAN_MARGIN)
+		var to_local := _grid_map.global_transform.affine_inverse()   # _to_cell_f, once for all
+		var cell := _grid_map.cell_size
 		for e in _enemies_root.get_children():
 			var node := e as Node3D
-			if node != null and (_to_cell_f(node.global_position) - _center).length_squared() <= limit:
+			if node == null or not node.is_in_group(ENEMY_GROUP):
+				continue
+			var l := to_local * node.global_position
+			var at := Vector2(l.x / cell.x, l.z / cell.z)
+			var d := (at - _center).length_squared()
+			if d <= limit:
 				n += 1
+			if _is_quest_enemy(node):
+				_quest_cells.append([at, str(node.get_meta(&"base_name", ""))])
+			elif d <= keep:
+				_enemy_cells.append(at)
+	if _low_detail and _enemy_cells.size() > MAX_DOTS_LOW:
+		_keep_nearest_dots()
 	if n == _hostiles:
 		return
 	_hostiles = n
 	_hostile_label.text = ("ATTACK %02d" if _alert else "HOSTILE %02d") % n
 	_hostile_label.add_theme_color_override("font_color", COL_ENEMY if n > 0 else COL_DIM)
+
+
+## On LOW in a big crowd: only the nearest MAX_DOTS_LOW dots.
+func _keep_nearest_dots() -> void:
+	var by_distance := Array(_enemy_cells)
+	by_distance.sort_custom(func(a: Vector2, b: Vector2) -> bool:
+		return a.distance_squared_to(_center) < b.distance_squared_to(_center))
+	_enemy_cells = PackedVector2Array(by_distance.slice(0, MAX_DOTS_LOW))
 
 
 func _to_cell_f(pos: Vector3) -> Vector2:
@@ -666,33 +734,26 @@ func _paint_portals(c: Control, rot: float) -> void:
 
 
 func _paint_enemies(c: Control, rot: float, full: bool) -> void:
-	if _enemies_root == null or not is_instance_valid(_enemies_root):
+	if _enemy_cells.is_empty() and _quest_cells.is_empty():
 		return
 	var limit := enemy_detect_radius * enemy_detect_radius
 	var pulse := 0.5 + 0.5 * sin(_t * 5.0)
 	if _dot_tex == null:
 		_make_dot_textures()
-	var to_local := _grid_map.global_transform.affine_inverse()   # _to_cell_f, once for all
-	var cell := _grid_map.cell_size
+	for q in _quest_cells:
+		_quest_marker(c, (q[0] - _center) * _px, rot, str(q[1]) if full else "")
 	var dots := PackedVector2Array()
-	for e in _enemies_root.get_children():
-		var n := e as Node3D
-		if n == null or not is_instance_valid(n):
-			continue
-		var l := to_local * n.global_position
-		var rel := Vector2(l.x / cell.x, l.z / cell.z) - _center
-		if _is_quest_enemy(n):
-			_quest_marker(c, rel * _px, rot, str(n.get_meta(&"base_name", "")) if full else "")
-			continue
-		if rel.length_squared() > limit:
-			continue
-		dots.append(rel * _px)
+	for at: Vector2 in _enemy_cells:
+		var rel := at - _center
+		if rel.length_squared() <= limit:
+			dots.append(rel * _px)
 	# All the rings, then all the dots: same texture back to back, so they batch
-	var ring_r := 5.5 + pulse * 3.0 + 0.5
-	var ring_col := Color(COL_ENEMY, (0.5 - pulse * 0.35) * _map_alpha)
-	for pos in dots:
-		c.draw_texture_rect(_ring_tex, Rect2(pos - Vector2(ring_r, ring_r), Vector2(ring_r, ring_r) * 2.0),
-			false, ring_col)
+	if not _low_detail:
+		var ring_r := 5.5 + pulse * 3.0 + 0.5
+		var ring_col := Color(COL_ENEMY, (0.5 - pulse * 0.35) * _map_alpha)
+		for pos in dots:
+			c.draw_texture_rect(_ring_tex, Rect2(pos - Vector2(ring_r, ring_r), Vector2(ring_r, ring_r) * 2.0),
+				false, ring_col)
 	var dot_col := Color(COL_ENEMY, _map_alpha)
 	for pos in dots:
 		c.draw_texture_rect(_dot_tex, Rect2(pos - Vector2(4.5, 4.5), Vector2(9.0, 9.0)), false, dot_col)
@@ -884,9 +945,14 @@ func _paint_quest_spots(c: Control, rot: float, full: bool) -> void:
 
 
 func _is_quest_enemy(n: Node) -> bool:
-	return _wants["kill"].has(str(n.get_meta(&"enemy_id", ""))) \
-			or _wants["rarity"].has(str(n.get_meta(&"rarity", ""))) \
-			or _wants["recover"].has(str(n.get_meta(&"carries_key", "")))
+	var id := n.get_instance_id()
+	var flag = _quest_flags.get(id)
+	if flag == null:
+		flag = _wants["kill"].has(str(n.get_meta(&"enemy_id", ""))) \
+				or _wants["rarity"].has(str(n.get_meta(&"rarity", ""))) \
+				or _wants["recover"].has(str(n.get_meta(&"carries_key", "")))
+		_quest_flags[id] = flag
+	return flag
 
 
 ## A pulsing gold ring round a quest target at `pos` (map space), with its name over it on the
@@ -1033,6 +1099,7 @@ class MapCanvas extends Control:
 class Scan extends Control:
 	var minimap
 	var t := 0.0
+	var wait := 0.0
 
 	func _init() -> void:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1040,7 +1107,10 @@ class Scan extends Control:
 	func _process(delta: float) -> void:
 		if minimap and minimap.scanlines and is_visible_in_tree():
 			t += delta
-			queue_redraw()
+			wait -= delta
+			if wait <= 0.0:
+				wait = maxf(wait + minimap.redraw_every(), 0.0)
+				queue_redraw()
 
 	func _draw() -> void:
 		if minimap == null or not minimap.scanlines:
