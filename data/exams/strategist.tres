@@ -11,9 +11,9 @@
 script = ExtResource("1_spec")
 rank_id = "strategist"
 title = "STRATEGIST EXAM"
-brief = Array[String](["Three samples, replayed from Checkpoint's quarantine logs: a swarm of leaked memory, armoured copied processes, then fast marker drones.", "The sandbox lends you counters: x and y. They keep their value between casts.", "Keep a count: one WHEN rule adds to x, and another acts on it (x >= N), or a buff grows with it, up to its limit (drag x onto its value). Count something about the fight, not just your casts.", "Your count must pay out at least 3 times.", "Clear every wave within 120 seconds.", "Graded on: your script's efficiency tier, time (par 80 s), damage taken (par 35%). Changing a counter (x += 1, x = 0) doesn't count as a block; reading one (x >= 3) does."])
+brief = Array[String](["Three samples, replayed from Checkpoint's quarantine logs: a swarm of leaked memory, armoured copied processes, then fast marker drones.", "The sandbox lends you the Registry: a set of enemies, kept between casts. A dead enemy leaves it.", "Add to it: always: registry.add(target) adds every enemy the cast hits. Then read it: when target in registry (checked per hit, so the buff only lands on those enemies), when registry.size >= N, or a buff that grows with registry.size.", "Your registry must pay out at least 3 times.", "Clear every wave within 120 seconds.", "Graded on: your script's efficiency tier, time (par 80 s), damage taken (par 35%). Adding or removing (registry.add, registry.remove) doesn't count as a block; reading it does."])
 required_condition = ""
-required_condition_label = "count paid out"
+required_condition_label = "registry paid out"
 required_variable = true
 required_fires = 3
 lends = Array[String](["variables"])

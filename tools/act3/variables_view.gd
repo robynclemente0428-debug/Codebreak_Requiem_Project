@@ -1,6 +1,6 @@
 extends Node
 ## A look at variables in the real SCRIPTING tab. Run this scene from the editor (F6). Boots main.tscn
-## with NO character slot loaded (nothing is saved), lends variables, sockets Slam with a counter
+## with NO character slot loaded (nothing is saved), lends variables, sockets Slam with the registry
 ## on it and opens the tab. Then it adds a block from the snippets the way a click does, to show
 ## that path works, and writes what it found to variables_view_results.txt (gitignored).
 
@@ -36,27 +36,19 @@ func _run() -> void:
 	gem.definition = load("res://data/items/gem/slam_gem.tres")
 	skills.socket_skill(0, gem)
 	var program := SkillProgram.new()
-	var count := ProgramRule.new()
-	count.conditions.append(ProgramConditions.create("hit_recently"))
-	count.effects.append(ProgramEffect.make_write("x", "+=", 1))
-	program.rules.append(count)
-	var spend := ProgramRule.new()
-	spend.conditions.append(VarCondition.make("x", ">=", 3))
-	spend.effects.append(ProgramEffect.make(&"damage", 1))
-	spend.effects.append(ProgramEffect.make_write("x", "=", 0))
-	program.rules.append(spend)
-	var trip := ProgramRule.new()                               # a one-way switch: nothing lowers y
-	trip.conditions.append(ProgramConditions.create("caster_life_below"))
-	trip.effects.append(ProgramEffect.make_write("y", "=", 1))
-	program.rules.append(trip)
-	var latched := ProgramRule.new()
-	latched.conditions.append(VarCondition.make("y", "==", 1))
-	latched.effects.append(ProgramEffect.make_write("y", "=", 0))
-	var growing := ProgramEffect.make(&"damage", 1)             # damage += x * 1%
+	var count := ProgramRule.new()                             # always: registry.add(target)
+	count.effects.append(ProgramEffect.make_write("add"))
+	var growing := ProgramEffect.make(&"damage", 1)             # damage += registry.size * 1%
 	growing.ramp = 0
 	count.effects.append(growing)
-	program.rules.append(latched)
-	program.rules = [latched, trip, count, spend] as Array[ProgramRule]   # the note in view
+	var spend := ProgramRule.new()                             # when target in registry: damage, remove
+	spend.conditions.append(VarCondition.make("target", "in"))
+	spend.effects.append(ProgramEffect.make(&"leech", 1))
+	spend.effects.append(ProgramEffect.make_write("remove"))
+	var sized := ProgramRule.new()                             # when registry.size >= 3: damage
+	sized.conditions.append(VarCondition.make("size", ">=", 3))
+	sized.effects.append(ProgramEffect.make(&"radius", 1))
+	program.rules = [count, spend, sized] as Array[ProgramRule]
 	var v := skills.set_program(0, program)
 	var panel := main.find_children("*", "SkillPanel", true, false)[0] as SkillPanel
 	panel.open()
@@ -70,14 +62,14 @@ func _run() -> void:
 	var labels := PackedStringArray()
 	for l in tab.find_children("*", "Label", true, false):
 		var text: String = (l as Label).text
-		if text in ["x", "y", "=", "+=", "-=", ">=", "<", "3", "1", "0"] or "x +=" in text or "x >=" in text:
+		if "registry" in text or text in ["target", "(target)", ">=", "<", "3"]:
 			labels.append(text)
 	lines.append("labels: %s" % " | ".join(labels))
-	var scroller := tab._effect_num[tab._draft().rules[2].effects[-1]].get_parent() as Control
+	var scroller := tab._effect_num[tab._draft().rules[0].effects[-1]].get_parent() as Control
 	while scroller != null and not scroller is ScrollContainer:
 		scroller = scroller.get_parent() as Control
 	if scroller != null:
-		(scroller as ScrollContainer).ensure_control_visible(tab._effect_num[tab._draft().rules[2].effects[-1]])
+		(scroller as ScrollContainer).ensure_control_visible(tab._effect_num[tab._draft().rules[0].effects[-1]])
 	await get_tree().create_timer(10.0, true).timeout   # time for a screenshot of the growing lines
 	lines.append_array(_try_pieces(tab))
 	tab._set_palette_tab("defense")
@@ -97,68 +89,58 @@ func _run() -> void:
 		f.store_string("\n".join(lines) + "\nDONE\n")
 
 
-## Every way a counter piece can land, through the same call a real drop makes.
+## Every way a registry piece can land, through the same call a real drop makes.
 func _try_pieces(tab: SkillScriptTab) -> PackedStringArray:
 	var out := PackedStringArray()
 	var check := func(what: String, ok: bool) -> void:
 		out.append("%s  %s" % ["ok  " if ok else "FAIL", what])
-	var counter := func(i: int) -> Dictionary: return {"src": "palette", "kind": "counter", "reg": i}
-	var assign := func(i: int) -> Dictionary: return {"src": "palette", "kind": "assign_op", "op": i}
+	var set_write := func(i: int) -> Dictionary: return {"src": "palette", "kind": "set_write", "op": i}
+	var member := func(i: int) -> Dictionary: return {"src": "palette", "kind": "member", "op": i}
+	var size := {"src": "palette", "kind": "size"}
 	var compare := func(i: int) -> Dictionary: return {"src": "palette", "kind": "compare_op", "op": i}
 	var drop := func(data: Dictionary, rule: ProgramRule, line: Dictionary) -> void:
 		tab._drop_on_rule(Vector2.ZERO, data, rule, line)
 	var rules := tab._draft().rules
-	var latched: ProgramRule = rules[0]
-	var count: ProgramRule = rules[2]
-	var spend: ProgramRule = rules[3]
-	var damage: ProgramEffect = spend.effects[0]
+	var count: ProgramRule = rules[0]
+	var spend: ProgramRule = rules[1]
 	var write: ProgramEffect = count.effects[0]
 	var read: VarCondition = spend.conditions[0]
+	var leech: ProgramEffect = spend.effects[0]
 
-	drop.call(counter.call(1), spend, {"kind": "effect", "effect": damage})
-	check.call("y on damage: it grows with y (%s)" % damage.ramp_text(), damage.ramp == 1 and damage.steps == 1)
-	drop.call(counter.call(0), spend, {"kind": "effect", "effect": damage})
-	check.call("x on damage: now it grows with x (%s)" % damage.ramp_text(), damage.ramp == 0)
-	drop.call(counter.call(1), count, {"kind": "effect", "effect": write})
-	check.call("y on x += 1: %s" % write.describe_write(), write.describe_write() == "y += 1")
-	drop.call(assign.call(2), count, {"kind": "effect", "effect": write})
-	check.call("-= on that line: %s" % write.describe_write(), write.describe_write() == "y -= 1")
-	drop.call(counter.call(1), spend, {"kind": "condition", "condition": read})
+	drop.call(set_write.call(1), count, {"kind": "effect", "effect": write})
+	check.call("remove on add: %s" % write.describe_write(), write.describe_write() == "registry.remove(target)")
+	drop.call(set_write.call(0), count, {"kind": "effect", "effect": write})
+	check.call("add on remove: %s" % write.describe_write(), write.describe_write() == "registry.add(target)")
+	drop.call(member.call(1), spend, {"kind": "condition", "condition": read})
+	check.call("not in on in: %s" % read.describe(), read.describe() == "WHEN target not in registry")
 	drop.call(compare.call(5), spend, {"kind": "condition", "condition": read})
-	check.call("y and != on x >= 3: %s" % read.describe(), read.describe() == "WHEN y != 3")
+	check.call("!= on a check makes it a size check: %s" % read.describe(), read.describe() == "WHEN registry.size != 3")
+	drop.call(member.call(0), spend, {"kind": "condition", "condition": read})
+	check.call("in on it again: %s" % read.describe(), read.describe() == "WHEN target in registry")
+	drop.call(size, spend, {"kind": "effect", "effect": leech})
+	check.call(".size on leech: it grows (%s)" % leech.ramp_text(), leech.ramp == 0)
 
 	var before := spend.effects.size()
-	drop.call(assign.call(0), spend, {})
-	var added: ProgramEffect = spend.effects[-1]
-	check.call("= on a rule adds a line: %s" % added.describe_write(), spend.effects.size() == before + 1 and added.describe_write() == "x = 0")
-	drop.call(counter.call(1), spend, {})
-	check.call("y on a rule adds a line: %s" % (spend.effects[-1] as ProgramEffect).describe_write(), (spend.effects[-1] as ProgramEffect).describe_write() == "y += 1")
-	var conds := latched.conditions.size()
-	drop.call(compare.call(0), latched, {})
-	check.call("< on a rule adds a read: %s" % (latched.conditions[-1] as ProgramCondition).describe(), latched.conditions.size() == conds + 1 and (latched.conditions[-1] as ProgramCondition).describe() == "WHEN x < 3")
-	drop.call(assign.call(0), latched, {"kind": "condition", "condition": latched.conditions[0]})
-	check.call("= on a WHEN line adds a write, not a broken read", ScriptRegisters.is_write((latched.effects[-1] as ProgramEffect).knob))
+	drop.call(set_write.call(0), spend, {})
+	check.call("add on a rule adds a line", spend.effects.size() == before + 1 and (spend.effects[-1] as ProgramEffect).describe_write() == "registry.add(target)")
+	var conds := count.conditions.size()
+	drop.call(size, count, {})
+	check.call(".size on a rule adds a check: %s" % (count.conditions[-1] as ProgramCondition).describe(), count.conditions.size() == conds + 1 and (count.conditions[-1] as ProgramCondition).describe() == "WHEN registry.size >= 3")
 
 	var speed := ProgramEffect.make(&"attack_speed", 1)
-	latched.effects.append(speed)
-	drop.call(counter.call(0), latched, {"kind": "effect", "effect": speed})
-	check.call("x on attack_speed: refused", speed.ramp == -1)
-	latched.effects.erase(speed)
-
-	var value_line: ProgramEffect = tab._draft().rules[2].effects[0]
-	for _i in 9:
-		(tab._effect_num[value_line] as Control).gui_input.emit(_wheel_up())
-	check.call("clicking a counter line's value stops at %d (%s)" % [ScriptRegisters.WRITE_MAX, value_line.describe_write()], value_line.steps == ScriptRegisters.WRITE_MAX)
+	spend.effects.append(speed)
+	drop.call(size, spend, {"kind": "effect", "effect": speed})
+	check.call(".size on attack_speed: refused", speed.ramp == -1)
+	spend.effects.erase(speed)
 
 	var count_rules := tab._draft().rules.size()
 	tab._add_from_palette(compare.call(3), null)
 	check.call(">= with no rule starts a new one", tab._draft().rules.size() == count_rules + 1)
-	tab._add_from_palette(assign.call(1), null)
-	check.call("+= with no rule starts a new one", tab._draft().rules.size() == count_rules + 2)
+	tab._add_from_palette(set_write.call(0), null)
+	check.call("add with no rule starts a new one", tab._draft().rules.size() == count_rules + 2)
 	tab._draft().rules.resize(count_rules)
 	tab._changed()
 	return out
-
 
 func _wheel_up() -> InputEventMouseButton:
 	var wheel := InputEventMouseButton.new()

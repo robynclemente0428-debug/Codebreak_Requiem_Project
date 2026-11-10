@@ -178,7 +178,7 @@ func try_start() -> void:
 ## "" if the player's applied script meets the spec, otherwise what's wrong.
 func _spec_problem() -> String:
 	if spec.required_variable and not _any_applied(_keeps_a_count):
-		return "SPEC NOT MET: no applied script keeps a count.\nOne rule: when something happens, x += 1. Another: when x >= N, do something. Or make a buff grow with x. Open your skill script with [K]."
+		return "SPEC NOT MET: no applied script keeps a registry.\nOne rule adds to it: always: registry.add(target) (every enemy the cast hits). Another reads it: when target in registry, or when registry.size >= N. Or make a buff grow with registry.size. Open your skill script with [K]."
 	if spec.required_stop_loop and not _any_applied(_has_stop_loop):
 		return "SPEC NOT MET: no applied script has a loop that stops itself.\nUse a while loop, or a for loop with break. Open your skill script with [K]."
 	if spec.required_condition == "":
@@ -372,7 +372,7 @@ func _uses_condition(program: SkillProgram) -> bool:
 		return _has_stop_loop(program)
 	if spec.required_variable:
 		return _keeps_a_count(program)
-	for rule in program.rules:
+	for rule in program.flat_rules():
 		for c in rule.conditions:
 			if spec.required_condition == "" or c.type_id() == spec.required_condition:
 				return true

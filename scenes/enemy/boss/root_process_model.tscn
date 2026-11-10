@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/boss/the_collector_model.tscn" id="1_base"]
+[ext_resource type="Script" path="res://systems/enemies/boss/summoner.gd" id="2_summon"]
+[ext_resource type="Resource" path="res://data/enemies/glitchling.tres" id="3_brood"]
+[ext_resource type="Script" path="res://systems/enemies/boss/loop_charger.gd" id="4_loop"]
+
+[node name="RootProcess" instance=ExtResource("1_base")]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+metadata/_note = "PROTOTYPE. The Collector's model, larger, until the Root Process has its own. RootPhases switches its Summoner and LoopCharger on and off by phase."
+
+[node name="Summoner" type="Node" parent="."]
+script = ExtResource("2_summon")
+summon = ExtResource("3_brood")
+interval = 8.0
+first_delay = 2.5
+count = 5
+max_alive = 10
+radius = 4.0
+
+[node name="LoopCharger" type="Node" parent="."]
+script = ExtResource("4_loop")
+interval = 6.0
+first_delay = 1.5
+points = 5
+loop_radius = 7.0
+charge_speed = 14.0

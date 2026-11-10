@@ -68,7 +68,7 @@ static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: Clas
 	out.max_actions = base.max_actions
 	out.max_rules = base.max_rules + int(Ranks.perk(rank, "rules"))
 	out.max_actions += int(Ranks.perk(rank, "blocks"))
-	out.tiers = base.tiers.duplicate()
+	out.tiers = raised_tiers(base.tiers, int(Ranks.perk(rank, "tier_blocks")))
 	out.rank = rank
 	var defense := load(DEFENSE_KNOBS) as SkillProgramLimits
 	if defense != null:
@@ -94,6 +94,22 @@ static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: Clas
 		out.bonus_steps = bonus_steps
 		for i in out.knobs.size():
 			out.knobs[i] = widen_knob(out.knobs[i], bonus_steps)
+	return out
+
+
+## Copies of `tiers` that each allow `extra` more blocks (Ranks "tier_blocks"), with the block
+## count in their description raised to match ("3 blocks or fewer" -> "4 blocks or fewer"). The
+## shared .tres tiers are never changed.
+static func raised_tiers(tiers: Array[EfficiencyTier], extra: int) -> Array[EfficiencyTier]:
+	var out: Array[EfficiencyTier] = []
+	for t in tiers:
+		if extra <= 0 or t == null:
+			out.append(t)
+			continue
+		var raised := t.duplicate() as EfficiencyTier
+		raised.max_actions = t.max_actions + extra
+		raised.description = t.description.replace("%d blocks" % t.max_actions, "%d blocks" % raised.max_actions)
+		out.append(raised)
 	return out
 
 
@@ -126,8 +142,36 @@ func rule_cost_mult(rule: ProgramRule) -> float:
 
 ## How much stronger a rule's effects are than their knob steps: the class trait (Gladiator:
 ## every-Nth rules x1.5) times Variable Store's charge bonus (WHEN charge >= N rules).
-func rule_effect_mult(rule: ProgramRule) -> float:
-	return (class_trait.rule_effect_mult(rule) if class_trait else 1.0) * VariableStoreSupport.rule_effect_mult(rule)
+## `include_hit`: false for a per-hit rule's leech / barrier / guard (see ClassTrait).
+func rule_effect_mult(rule: ProgramRule, include_hit := true) -> float:
+	return (class_trait.rule_effect_mult(rule, include_hit) if class_trait else 1.0) * VariableStoreSupport.rule_effect_mult(rule)
+
+
+## The knobs a per-hit rule may change besides damage, for every class: leech heals from that
+## hit, barrier and guard are given when that hit lands (once per rule per cast, see
+## ProgramSupport.modify_hit). The rest (radius, range, pierce...) are decided before any hit.
+const HIT_DEFENSE_KNOBS: Array[StringName] = [&"leech", &"barrier", &"guard"]
+
+
+static func hit_defense_knob(knob: SkillKnob) -> bool:
+	return knob != null and knob.kind == SkillKnob.Kind.FLAG and HIT_DEFENSE_KNOBS.has(knob.id)
+
+
+## Support gem flags a per-hit rule may change for the hit it fires on (HitInfo.flag_bonus): the
+## ones a support reads during that enemy's hit or kill. Explode on Kill, Breakpoint, Tremor Chain,
+## Variable Store (charge per hit), Try Except (error damage) and Fork.
+const HIT_SUPPORT_FLAGS: Array[String] = ["explode_radius", "explode_damage", "breakpoint_bonus",
+		"breakpoint_hits", "breakpoint_burst", "tremor_max_chain", "tremor_radius", "var_store_gain",
+		"except_stack_damage", "fork_count", "fork_angle"]
+
+
+static func hit_support_knob(knob: SkillKnob) -> bool:
+	return knob != null and knob.kind == SkillKnob.Kind.FLAG and HIT_SUPPORT_FLAGS.has(knob.flag_key)
+
+
+## Every knob a per-hit rule may change besides damage: leech, barrier, guard and the support flags.
+static func per_hit_knob(knob: SkillKnob) -> bool:
+	return hit_defense_knob(knob) or hit_support_knob(knob)
 
 
 ## Loops (ProgramLoop): the most repeats one cast may run, the points discount and the mana

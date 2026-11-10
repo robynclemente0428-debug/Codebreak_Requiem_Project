@@ -7,8 +7,6 @@
 [ext_resource type="Script" path="res://dungeon_generation/layout/room_marker.gd" id="5_room"]
 [ext_resource type="Script" path="res://dungeon_generation/layout/spawn_marker.gd" id="6_spawn"]
 [ext_resource type="Script" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
-[ext_resource type="PackedScene" path="res://scenes/map/map_management/portal.tscn" id="12_20hpm"]
-[ext_resource type="Script" path="res://scenes/map/map_management/portal.gd" id="13_he07q"]
 [ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/convoy_deck_meshes.tres" id="20_hull"]
 [ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/convoy_deck.tres" id="21_hulltheme"]
 [ext_resource type="Script" path="res://scenes/map/town/convoy/convoy_dressing.gd" id="22_dressing"]
@@ -194,19 +192,6 @@ dungeon_level = 21
 arrival_spawn_id = &"approach_gate"
 room_size = Vector2i(3, 3)
 metadata/_note = "Checkpoint's outer gate, back out to the approach."
-
-[node name="YardGate" type="Area3D" parent="." instance=ExtResource("12_20hpm")]
-transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 36, 1.1, 22.4)
-collision_layer = 5
-collision_mask = 3
-script = ExtResource("13_he07q")
-target_area = "res://scenes/map/dungeon/act_3_far_side.tscn"
-target_spawn = &"far_in"
-dungeon_level = 30
-sealed_by_key = "inward_gate"
-open_after_quest = "q06c_root_access"
-solid_while_sealed = true
-metadata/_note = "The Inward Gate. Root Access opens it onto Checkpoint's far side, and Act IV starts past that."
 
 [node name="Registrar" parent="." instance=ExtResource("32_registrar")]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 31.5, 1.1, 27.5)

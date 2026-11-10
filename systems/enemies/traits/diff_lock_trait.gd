@@ -13,6 +13,12 @@ extends EnemyTrait
 ## Shown on the lock banner (LockBanner) and under the boss's quest objective.
 const LOCK_NAME := "DIFF"
 const HINT := "Swapping won't fool it. Give one skill two WHEN rules so each cast fires a different one."
+## Its tag and body (EnemyTrait): a split double image, magenta on one side and cyan on the other.
+const LOCK_COLOR := Color(1.0, 0.45, 0.8)
+const LOCK_SHAPE := "split"
+const LOCK_AURA := 2                 # EnemySilhouette.AURA_DIFF
+## Longest rule text on the tag; the hover plate shows it whole.
+const TAG_MAX := 22
 
 const COL_DIFF := Color(0.3, 0.95, 1.0)
 const COL_SAME := Color(1.0, 0.3, 0.3)
@@ -37,6 +43,14 @@ func setup(p_enemy: Node3D) -> void:
 ## What it last copied ("" = nothing yet), for tests and a HUD readout.
 func copied() -> String:
 	return _copied
+
+
+## On its tag: the rule it has copied, so the next cast must fire another ("NOT ENEMIES NEARBY").
+func tag_state() -> String:
+	if _copied == "":
+		return ""
+	var s := "NOT " + _copied.replace("_", " ").replace(",", " + ").to_upper()
+	return s if s.length() <= TAG_MAX else s.left(TAG_MAX - 3) + "..."
 
 
 func modify_incoming(info: HitInfo) -> void:

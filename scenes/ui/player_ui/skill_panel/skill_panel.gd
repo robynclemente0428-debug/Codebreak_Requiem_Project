@@ -726,6 +726,16 @@ func tutorial_script_state(condition_id: String) -> Dictionary:
 	return _script_page.tutorial_state(condition_id) if _built else {}
 
 
+## The SCRIPTING GUIDE (ScriptGuide), for the tutorial: open it on the SCRIPTING tab, and is it open.
+func open_script_guide(page := "") -> void:
+	if _built and _open and _tab == "scripting":
+		_script_page.open_guide(page)
+
+
+func script_guide_open() -> bool:
+	return _built and _open and _script_page.guide_open()
+
+
 # ---------- CLICKING ----------
 func _on_slot_clicked(slot: GemSlot, button: int) -> void:
 	if _skills == null or _inv == null:

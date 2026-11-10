@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="4_prog"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("3_rec")
+description = "Recover the first Architect log"
+kind = "recover"
+target = "architect_log_a"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_rec")
+description = "Recover the second Architect log"
+kind = "recover"
+target = "architect_log_b"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("3_rec")
+description = "Recover the third Architect log"
+kind = "recover"
+target = "architect_log_c"
+
+[resource]
+script = ExtResource("2_quest")
+id = "last_words"
+title = "LAST WORDS"
+description = "Three of the processes the Core replays in the Stack Trace still carry the Architects' own logs. The Last Log wants them back: they are the parts of itself it lost."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2")])
+ordered = false
+prerequisite_quest_ids = Array[String](["q08_null_gatekeeper"])
+reward_credits = 350
+metadata/giver = "The Last Log"
+metadata/act = "V"

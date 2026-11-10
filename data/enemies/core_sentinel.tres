@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/boss/core_sentinel_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_gem"]
+[ext_resource type="Resource" uid="uid://fknn5tyerrs2" path="res://data/skill_gems/slam.tres" id="5_0"]
+[ext_resource type="Script" path="res://systems/enemies/traits/recall_lock_trait.gd" id="6_0"]
+
+[resource]
+script = ExtResource("1_def")
+id = "core_sentinel"
+display_name = "Core Sentinel"
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+allowed_modifier_tags = Array[int]([1, 2, 6])
+capsule_radius = 0.7
+capsule_height = 2.4
+max_health = 640.0
+armour = 80.0
+move_speed = 2.3
+aggro_range = 18.0
+attack_range = 2.0
+min_attack_damage = 20.0
+max_attack_damage = 36.0
+attack_speed = 0.65
+skill_cooldown = 5.0
+cooldown_jitter = 1.5
+act_boss = true
+basic_attack_enabled = true
+skills = Array[ExtResource("4_gem")]([ExtResource("5_0")])
+innate_traits = Array[Script]([ExtResource("6_0")])
+metadata/_note = "PROTOTYPE. RECALL: borrows BROOD LINK, CHECKSUM and DIFF, one per third of its life."
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

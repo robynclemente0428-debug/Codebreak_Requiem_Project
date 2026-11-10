@@ -66,6 +66,8 @@ static func read(root: Node, grid_map: GridMap, grid_w: int, grid_h: int) -> Dun
 				"route_after_quest": m.route_after_quest,
 				"routed_area": m.routed_area,
 				"routed_spawn": m.routed_spawn,
+				"route_when_done": m.route_when_done,
+				"routed_level": m.routed_level,
 				"clears_stop": m.clears_stop,
 			})
 		elif m is EnemyMarker:

@@ -22,7 +22,8 @@ script = ExtResource("2_quest")
 id = "q07_null_weaver_prime"
 title = "NULL WEAVER PRIME"
 description = "The Weaver spins the Null's grammar.
-BOSS TRAIT: weaves traps in patterns. Read the pattern, step through the gaps.
+BOSS TRAIT: weaves traps across the floor in patterns. Read the pattern, step through the gap.
+BOSS LOCK: GRAMMAR. It speaks a rule, two conditions joined by AND; only a WHEN rule holding exactly those two gets through.
 SCRIPT TASK: write a rule with two conditions (when ... and ...)."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true

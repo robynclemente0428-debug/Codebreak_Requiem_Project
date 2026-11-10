@@ -38,6 +38,11 @@ const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 var _viewport: SubViewport
 var _entries: Array[Dictionary] = []
 var _font: Font
+## Labels are reused: a hidden one waits here for the next number instead of being freed, and
+## their look is a shared LabelSettings per size and colour (no theme overrides per label), so
+## dozens of hits a second don't build dozens of Controls.
+var _pool: Array[Label] = []
+var _settings: Dictionary = {}               # "size|colour" -> LabelSettings
 
 
 func _enter_tree() -> void:
@@ -86,22 +91,8 @@ func _on_damage(amount: float, health: HealthComponent, is_player: bool) -> void
 		max_hp = maxf(health.stats.get_stat(StatTypes.Stat.MAX_HEALTH), 1.0)
 	var weight := clampf(amount / max_hp * 4.0, 0.0, 1.0)        # 0 = tiny hit, 1 = big hit
 
-	var label := Label.new()
-	label.text = _format(amount)
-	if _font:
-		label.add_theme_font_override("font", _font)
-	label.add_theme_font_size_override("font_size", roundi(font_size * lerpf(1.0, big_hit_scale, weight)))
-	label.add_theme_color_override("font_color", player_color if is_player else enemy_color)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	label.add_theme_constant_override("outline_size", outline_size)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.visible = false
-	add_child(label)
-	label.size = label.get_combined_minimum_size()
-
-	if _entries.size() >= max_active:
-		var oldest: Dictionary = _entries.pop_front()
-		(oldest["label"] as Label).queue_free()
+	var label := _take_label(_format(amount), _size_px(lerpf(1.0, big_hit_scale, weight)),
+			player_color if is_player else enemy_color)
 	_entries.append({
 		"label": label,
 		"world": target.global_position + Vector3.UP * head_height,   # fixed point in the world
@@ -125,7 +116,7 @@ func _process(delta: float) -> void:
 		e["age"] += delta
 		var dur: float = e.get("dur", duration)
 		if e["age"] >= dur:
-			label.queue_free()
+			_release(label)
 			_entries.remove_at(i)
 			continue
 
@@ -155,21 +146,7 @@ func pop_credits(world_pos: Vector3, amount: int) -> void:
 func pop_text(world_pos: Vector3, text: String, color: Color, size_mult := 1.0, seconds := 0.0) -> void:
 	if _viewport == null:
 		return
-	var label := Label.new()
-	label.text = text
-	if _font:
-		label.add_theme_font_override("font", _font)
-	label.add_theme_font_size_override("font_size", roundi(font_size * size_mult))
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	label.add_theme_constant_override("outline_size", outline_size)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.visible = false
-	add_child(label)
-	label.size = label.get_combined_minimum_size()
-	if _entries.size() >= max_active:
-		var oldest: Dictionary = _entries.pop_front()
-		(oldest["label"] as Label).queue_free()
+	var label := _take_label(text, _size_px(size_mult), color)
 	_entries.append({
 		"label": label,
 		"world": world_pos,
@@ -178,6 +155,78 @@ func pop_text(world_pos: Vector3, text: String, color: Color, size_mult := 1.0, 
 		"half": label.size * 0.5,
 		"dur": seconds if seconds > 0.0 else duration,
 	})
+
+
+## A hidden label showing `text`, reused from the pool when one is free. Makes room first when
+## max_active numbers are already up (the oldest goes).
+## Text sizes, as multiples of font_size: normal, credits, a big hit, the biggest. Every number
+## snaps to the nearest one: each font size has its own glyphs to rasterize the first time it's
+## drawn, so a handful of sizes (warmed up by prewarm) beats a new size for every hit.
+func _size_steps() -> Array[float]:
+	return [1.0, 1.15, (1.0 + big_hit_scale) * 0.5, big_hit_scale]
+
+
+func _size_px(mult: float) -> int:
+	var best := 1.0
+	for s in _size_steps():
+		if absf(s - mult) < absf(best - mult):
+			best = s
+	return roundi(font_size * best)
+
+
+## Draws every digit (and ",+CR") once at each size and colour, nearly transparent, so their
+## glyphs are rasterized while the area loads (EffectWarmup) and not in the first fight.
+func prewarm() -> void:
+	for col in [enemy_color, player_color, Color(1.0, 0.82, 0.30)]:
+		for s in _size_steps():
+			var label := _take_label("0123456789,+ CR", roundi(font_size * s), col)
+			label.position = Vector2(4, 4)
+			label.modulate.a = 0.004                 # drawn (so rasterized), not seen
+			label.visible = true
+			get_tree().create_timer(0.5, true).timeout.connect(_release.bind(label))
+
+
+func _take_label(text: String, size_px: int, color: Color) -> Label:
+	if _entries.size() >= max_active:
+		var oldest: Dictionary = _entries.pop_front()
+		_release(oldest["label"])
+	var label: Label = _pool.pop_back() if not _pool.is_empty() else null
+	if label == null:
+		label = Label.new()
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(label)
+	label.visible = false
+	label.scale = Vector2.ONE
+	label.modulate.a = 1.0
+	label.label_settings = _settings_for(size_px, color)
+	label.text = text
+	label.size = Vector2.ZERO
+	label.size = label.get_combined_minimum_size()
+	return label
+
+
+func _release(label: Label) -> void:
+	if not is_instance_valid(label):
+		return
+	label.visible = false
+	if _pool.size() < max_active:
+		_pool.append(label)
+	else:
+		label.queue_free()
+
+
+## One LabelSettings per size and colour, shared by every label that looks like that.
+func _settings_for(size_px: int, color: Color) -> LabelSettings:
+	var key := "%d|%s" % [size_px, color.to_html()]
+	if not _settings.has(key):
+		var ls := LabelSettings.new()
+		ls.font = _font
+		ls.font_size = size_px
+		ls.font_color = color
+		ls.outline_color = Color(0, 0, 0, 0.9)
+		ls.outline_size = outline_size
+		_settings[key] = ls
+	return _settings[key]
 
 
 ## 1234 -> "1,234"

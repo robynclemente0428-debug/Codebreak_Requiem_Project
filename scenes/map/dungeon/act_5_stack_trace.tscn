@@ -1,0 +1,146 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://blbsgtjt3mdxp" path="res://scenes/map/dungeon/dungeon.gd" id="1_dun"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_portal"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/stack_trace.tres" id="4_theme"]
+[ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act5_stack_meshes.tres" id="6_mesh"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
+[ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="10_enemym"]
+[ext_resource type="Resource" uid="uid://0romkytgua4l" path="res://data/enemies/raider_boss.tres" id="e_raider"]
+[ext_resource type="Resource" uid="uid://6u4xrmsv0ii1" path="res://data/enemies/loop_hound.tres" id="e_hound"]
+[ext_resource type="Resource" path="res://data/enemies/null_weaver.tres" id="e_weaver"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_1"]
+agent_height = 1.8
+agent_radius = 0.3
+
+[node name="StackTrace" type="Node3D"]
+metadata/_note = "PROTOTYPE. Act V: the Core replays the processes of earlier acts. Three of them carry the Architects' logs (LAST WORDS)."
+script = ExtResource("1_dun")
+dungeon_level = 36
+respawn_spawn_id = &"stack_in"
+portal_scene = ExtResource("2_portal")
+metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
+
+[node name="DungeonDirector" type="Node" parent="." node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("3_dir")
+grid_width = 100
+grid_height = 100
+corridor_width = 2
+min_room_size = 6
+max_room_size = 9
+room_interval = 8
+num_branch_rooms = 2
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_theme")
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+filler_rooms = true
+random_rooms = 5
+random_room_spread = 12
+metadata/_custom_type_script = "uid://b5gwgfu4bdnrx"
+
+[node name="DungeonPopulator" type="Node" parent="." node_paths=PackedStringArray("director", "enemies_root", "loot_root")]
+script = ExtResource("5_pop")
+director = NodePath("../DungeonDirector")
+enemies_root = NodePath("../Enemies")
+loot_root = NodePath("../Loot")
+metadata/_custom_type_script = "uid://gvonfu37eay0"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_1")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D"]
+mesh_library = ExtResource("6_mesh")
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Loot" type="Node3D" parent="."]
+
+[node name="Layout" type="Node3D" parent="."]
+
+[node name="PortalBack" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 100)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/town/act_5_core.tscn"
+target_spawn = &"from_stack"
+arrival_spawn_id = &"stack_in"
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnIn" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 100)
+script = ExtResource("8_spawnm")
+spawn_id = &"stack_in"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="PortalNext" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 190, 1, 100)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/dungeon/act_5_sentinel_hall.tscn"
+target_spawn = &"hall_in"
+arrival_spawn_id = &"stack_out"
+dungeon_level = 37
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnOut" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 189, 0, 100)
+script = ExtResource("8_spawnm")
+spawn_id = &"stack_out"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="Room1" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0, 80)
+script = ExtResource("9_roomm")
+room_size = Vector2i(8, 7)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="Room2" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 110, 0, 120)
+script = ExtResource("9_roomm")
+room_size = Vector2i(8, 7)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="Room3" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 150, 0, 90)
+script = ExtResource("9_roomm")
+room_size = Vector2i(9, 8)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="LogA" type="Marker3D" parent="Layout/Room1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+script = ExtResource("10_enemym")
+enemy = ExtResource("e_raider")
+threat_traits = false
+rarity = "rare"
+drops_key = "architect_log_a"
+clear_room = false
+metadata/_custom_type_script = "uid://bri1ph1ms875r"
+
+[node name="LogB" type="Marker3D" parent="Layout/Room2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+script = ExtResource("10_enemym")
+enemy = ExtResource("e_hound")
+threat_traits = false
+rarity = "rare"
+drops_key = "architect_log_b"
+clear_room = false
+metadata/_custom_type_script = "uid://bri1ph1ms875r"
+
+[node name="LogC" type="Marker3D" parent="Layout/Room3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+script = ExtResource("10_enemym")
+enemy = ExtResource("e_weaver")
+threat_traits = false
+rarity = "rare"
+drops_key = "architect_log_c"
+clear_room = false
+metadata/_custom_type_script = "uid://bri1ph1ms875r"

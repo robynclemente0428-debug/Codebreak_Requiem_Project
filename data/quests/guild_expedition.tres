@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("3_rec")
+description = "Recover the expedition log from day 1"
+kind = "recover"
+target = "guild_log_a"
+
+[sub_resource type="Resource" id="Objective_1"]
+script = ExtResource("3_rec")
+description = "Recover the expedition log from day 9"
+kind = "recover"
+target = "guild_log_b"
+
+[sub_resource type="Resource" id="Objective_2"]
+script = ExtResource("3_rec")
+description = "Recover the expedition log from day 14"
+kind = "recover"
+target = "guild_log_c"
+
+[sub_resource type="Resource" id="Objective_3"]
+script = ExtResource("1_obj")
+description = "Defeat The Auditor"
+kind = "kill"
+target = "the_auditor"
+
+[sub_resource type="Resource" id="Objective_4"]
+script = ExtResource("1_obj")
+description = "Tell Sudo what you found"
+kind = "talk"
+target = "sudo"
+
+[resource]
+script = ExtResource("2_quest")
+id = "guild_expedition"
+title = "THE GUILD EXPEDITION"
+description = "The Compiler Guild sent an expedition into the Null before Hardfault ever left. Its examiner was Sudo's teacher. Find out what happened at The Expedition's End.
+BOSS LOCK: AUDIT. The Auditor only takes hits from a script that earns LEAN or ELEGANT."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3"), SubResource("Objective_4")])
+ordered = false
+prerequisite_quest_ids = Array[String](["q07a_learn_the_language"])
+reward_credits = 350
+metadata/giver = "Sudo"
+metadata/act = "IV"

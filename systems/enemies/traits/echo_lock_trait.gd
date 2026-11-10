@@ -11,6 +11,10 @@ extends EnemyTrait
 ## Shown on the lock banner (LockBanner) and under the boss's quest objective.
 const LOCK_NAME := "ECHO"
 const HINT := "Never hit it the same way twice: alternate skills, or swap script sets mid-fight."
+## Its tag and body (EnemyTrait): ice blue rings, like an echo running down it.
+const LOCK_COLOR := Color(0.55, 0.8, 1.0)
+const LOCK_SHAPE := "ring"
+const LOCK_AURA := 1                 # EnemySilhouette.AURA_ECHO
 
 const COL_LEARN := Color(1.0, 0.75, 0.3)
 const COL_CACHED := Color(1.0, 0.3, 0.3)
@@ -29,6 +33,11 @@ var _pending_last := 0.0
 ## The cached pattern ("" = none yet), for tests and a HUD readout.
 func cached() -> String:
 	return _cached
+
+
+## On its tag: the pattern it now shrugs off ("NOT STRIKE/A").
+func tag_state() -> String:
+	return "" if _cached == "" else "NOT " + _label(_cached).replace(" / SET ", "/")
 
 
 func modify_incoming(info: HitInfo) -> void:

@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="4_prog"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("4_prog")
+description = "Apply one script with a loop, the registry and a rule with two conditions"
+kind = "program_defrag"
+
+[resource]
+script = ExtResource("2_quest")
+id = "exam_defragmenter"
+title = "RANK EXAM: DEFRAGMENTER"
+description = "Examiner Sudo's last exam. One skill's script that uses everything: a loop, the registry, and a rule with two conditions."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
+ordered = true
+prerequisite_quest_ids = Array[String](["q09_core_sentinel"])
+reward_credits = 0
+metadata/giver = "Sudo"
+metadata/act = "V"

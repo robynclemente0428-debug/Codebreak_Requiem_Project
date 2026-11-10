@@ -1,7 +1,7 @@
 class_name TargetLifeBelowCondition
 extends ProgramCondition
 ## WHEN the target being hit is below `fraction` of its maximum life. Checked per hit,
-## so it can only change damage (an "execute" rule).
+## so it can only change damage, leech, barrier and guard (an "execute" rule).
 
 @export var fraction: float = 0.3
 

@@ -9,7 +9,8 @@ extends Resource
 ##
 ## Scope decides when it is checked:
 ##   CAST  once per cast, just before the skill releases (can change flags and damage)
-##   HIT   for every target hit (can only change damage, since targets were already chosen)
+##   HIT   for every target hit (can only change damage, leech, barrier and guard, since targets
+##         were already chosen: SkillProgramLimits.HIT_DEFENSE_KNOBS)
 
 enum Scope { CAST, HIT }
 

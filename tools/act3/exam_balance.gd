@@ -178,14 +178,13 @@ func _program(kind: String, steps: int) -> SkillProgram:
 			var always := ProgramRule.new()
 			always.effects.append(ProgramEffect.make(&"damage", steps))
 			p.rules.append(always)
-		"read":                                       # when enemies_nearby: x += 1 / when x >= 3: damage, x = 0
+		"read":                                       # always: registry.add(target) / when target in registry: damage
 			p.rules.append(_counting_rule())
 			var spend := ProgramRule.new()
-			spend.conditions.append(VarCondition.make("x", ">=", 3))
+			spend.conditions.append(VarCondition.make("target", "in"))
 			spend.effects.append(ProgramEffect.make(&"damage", steps))
-			spend.effects.append(ProgramEffect.make_write("x", "=", 0))
 			p.rules.append(spend)
-		"grow":                                       # when enemies_nearby: x += 1 / always: damage += x * N%
+		"grow":                                       # always: registry.add(target) / always: damage += registry.size * N%
 			p.rules.append(_counting_rule())
 			var grow := ProgramRule.new()
 			var e := ProgramEffect.make(&"damage", steps)
@@ -197,8 +196,7 @@ func _program(kind: String, steps: int) -> SkillProgram:
 
 func _counting_rule() -> ProgramRule:
 	var rule := ProgramRule.new()
-	rule.conditions.append(ProgramConditions.create("enemies_nearby"))
-	rule.effects.append(ProgramEffect.make_write("x", "+=", 1))
+	rule.effects.append(ProgramEffect.make_write("add"))
 	return rule
 
 

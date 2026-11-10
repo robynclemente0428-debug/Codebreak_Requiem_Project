@@ -111,6 +111,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			_hovered = null
 			_tooltip.hide_item()
 
+## The drop under the mouse while the pickup key is held, null for none (for the loot lesson).
+func hovered() -> LootPickup:
+	return _hovered if is_instance_valid(_hovered) else null
+
+
+func is_too_far(pickup: LootPickup) -> bool:
+	return _too_far(pickup)
+
+
 func _too_far(pickup: LootPickup) -> bool:
 	return _player.global_position.distance_to(pickup.global_position) > pickup_range
 

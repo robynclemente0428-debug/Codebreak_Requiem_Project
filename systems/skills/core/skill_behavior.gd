@@ -173,11 +173,15 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 
 	if not target.is_in_group(&"breakables"):      # barrels don't feed life / mana on hit
 		_apply_on_hit_stats(cast)
-		var leech := cast.flag("leech")
-		if leech > 0.0:
-			var caster_hp := cast.caster.get("health") as HealthComponent
-			if caster_hp != null:
-				caster_hp.heal(info.dealt * leech)
+		var leech := cast.flag("leech") + info.leech_bonus      # + a per-hit rule's leech
+		var caster_hp := cast.caster.get("health") as HealthComponent
+		if leech > 0.0 and caster_hp != null:
+			caster_hp.heal(info.dealt * leech)
+		if caster_hp != null:                       # barrier / guard from a per-hit rule, on landing
+			if info.barrier_bonus > 0.0 and caster_hp.stats != null:
+				caster_hp.add_barrier(info.barrier_bonus * caster_hp.stats.get_stat(StatTypes.Stat.MAX_HEALTH), BARRIER_SECONDS)
+			if info.guard_bonus > 0.0:
+				caster_hp.add_guard(info.guard_bonus, clampf(recovery_time(cast), GUARD_MIN_SECONDS, GUARD_MAX_SECONDS))
 
 	for s in cast.skill.support_behaviors:
 		s.on_hit(cast, target, info)

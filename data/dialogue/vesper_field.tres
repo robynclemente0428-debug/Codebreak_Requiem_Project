@@ -1,0 +1,102 @@
+[gd_resource type="Resource" script_class="DialogueData" format=3]
+
+[ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
+
+[resource]
+script = ExtResource("1_dlg")
+source = "# Vesper in the Null Zone (Act IV): she goes ahead of you and waits at each zone's entrance.
+# She changes as you go deeper: in The Fray she translates; in The Weaver's Loom she finishes the
+# Null's sentences before it does; at The Core's Gate she asks you not to kill the Gatekeeper.
+# Her lines also follow DECODE THE NULL (the fragments) and the Null Laws (NullLaws).
+~ start
+@ here:act_4_the_fray -> fray
+@ here:act_4_weavers_loom -> loom
+@ here:act_4_core_gate -> gate
+@ here:act_4_expedition_end -> expedition
+@ here:act_4_echo_wells -> wells
+-> idle
+
+~ fray
+@ quest_done:null_fragments -> fray_fluent
+@ recovered:null_fragment_c -> fray_halfway
+Vesper: Look at the floor. Those marks aren't damage. They're words.
+Vesper: Out here the Null rewrites one of AXIOM's rules at a time. When it does, I'll tell you what I hear.
+Vesper: Keep a script set for each rule it breaks. You'll want to swap fast.
+* WHAT IS IT SAYING? -> fray_saying
+* LET'S GO -> end
+
+~ fray_saying
+Vesper: Mostly? Ownership. Every rule it rewrites, it's signing.
+-> end
+
+~ fray_halfway
+Vesper: You're carrying three of the fragments. Can you feel them? They hum when it speaks.
+Vesper: Two more. Then I'll be able to read whole sentences, not just words.
+-> end
+
+~ fray_fluent
+Vesper: I can read all of it now. I wish I couldn't.
+Vesper: It isn't attacking AXIOM. It's correcting it. Every law it rewrites is one we got wrong.
+-> end
+
+~ loom
+@ quest_done:q07_null_weaver_prime -> loom_after
+Vesper: The Weaver speaks the grammar. It'll say a rule: two conditions, joined.
+Vesper: Answer in the same rule and it has to let you in. Anything else is just noise to it.
+Vesper: And watch the floor. It weaves before it speaks. There's always a gap.
+Vesper: ...when they're close, and you're bleeding. Sorry. I keep hearing it before it says it.
+* YOU'RE FINISHING ITS SENTENCES -> loom_sentences
+* LET'S GO -> end
+
+~ loom_sentences
+Vesper: I know. I don't think it minds.
+-> end
+
+~ loom_after
+Vesper: It's quiet in here now. Quiet in a way that sounds like waiting.
+-> end
+
+~ gate
+@ quest_done:q08_null_gatekeeper -> gate_after
+Vesper: Executor. Before you go in.
+Vesper: The Gatekeeper isn't guarding the Core from us. It's guarding the Null from us. From what we'd do to it.
+Vesper: I'm asking you not to kill it. I know you will anyway. I just needed to have asked.
+* I HAVE TO -> gate_have_to
+* I'M SORRY -> gate_sorry
+
+~ gate_have_to
+Vesper: I know. Strike it while it's fast. Don't stand in front of it when it's heavy.
+-> end
+
+~ gate_sorry
+Vesper: Don't be sorry. Be quick. It changes form every few seconds: fast is your window.
+-> end
+
+~ gate_after
+Vesper: The way is open. It didn't fight to win, at the end. It fought to be heard.
+-> end
+
+~ expedition
+@ quest_done:guild_expedition -> expedition_after
+Vesper: The Guild came this far. Look: their tents are still pitched. They meant to come back.
+Vesper: Their examiner is still out there, grading. She won't take sloppy work. Not even from the Null.
+Vesper: Lean scripts, Executor. Lean or elegant, or she won't feel a thing.
+-> end
+
+~ expedition_after
+Vesper: They didn't die here. They stopped. There's a difference, out here.
+-> end
+
+~ wells
+@ quest_done:static_from_home -> wells_after
+Vesper: Listen. Everything that ever fell in here is still talking.
+Vesper: There. That's your convoy's call sign. And that's Brack's voice, saying something in a language he doesn't speak.
+-> end
+
+~ wells_after
+Vesper: It's quieter without your packets in it. The Null kept the echo, though. It keeps everything.
+-> end
+
+~ idle
+Vesper: Listen. The silence has structure."
+metadata/_custom_type_script = "uid://dd85gxidfhqxl"

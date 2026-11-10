@@ -27,6 +27,9 @@ enum Kind { TOWN, DUNGEON, BOSS }
 ## How many MORE threats each new instance rolls at random (from the ones not listed above),
 ## min to max. (0, 0) = always exactly `threats`.
 @export var random_threats := Vector2i.ZERO
+## Convoy routes only: reached on foot through a gate in town, not by the convoy. It is on the
+## waypoint map (U) like any dungeon, and not on the route terminal (Checkpoint's Far Side).
+@export var on_foot := false
 ## Convoy routes only (WaypointAct.convoy_route): the stop whose exit opens this one on the
 ## convoy's route terminal. Empty = open from the start.
 @export var route_after: String = ""

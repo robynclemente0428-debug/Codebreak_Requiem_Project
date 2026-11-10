@@ -2,25 +2,31 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="4_prog"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Walk the Stack Trace"
+kind = "enter_area"
+target = "act_5_stack_trace"
 
 [sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
 description = "Defeat the Core Sentinel"
 kind = "kill"
 target = "core_sentinel"
-metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 
 [resource]
 script = ExtResource("2_quest")
 id = "q09_core_sentinel"
 title = "THE CORE SENTINEL"
-description = "The Sentinel remembers every enemy you have faced.
-BOSS TRAIT: combines patterns from earlier bosses (summons, loops, copies).
+description = "The Sentinel remembers every enemy you have faced. Past the Stack Trace, where the Core replays them all.
+BOSS TRAIT: RECALL. It borrows an old boss's lock for each third of its life: BROOD LINK, then CHECKSUM, then DIFF.
 No script task. Use your best build."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q08_null_gatekeeper"])
 reward_credits = 300
-metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "The Last Log"
 metadata/act = "V"

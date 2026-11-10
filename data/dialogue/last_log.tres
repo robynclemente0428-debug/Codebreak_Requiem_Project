@@ -4,20 +4,24 @@
 
 [resource]
 script = ExtResource("1_dlg")
-source = "# The Last Log: a recorded voice, Act V only. After the Root Process falls it offers the ending choice.
-# The choice reports 'ending' with merge / overwrite / terminate: hook your ending scenes to that event.
+source = "# The Last Log: a recorded voice, Act V only. Gives THE CORE SENTINEL, THE ROOT PROCESS and LAST WORDS,
+# and after the Root Process falls offers the ending (> ending merge / overwrite / terminate: the
+# ending card, EndingCard, and an 'ending' deed that is saved).
 # Talking to it is THE NULL GATEKEEPER's last step (objective 'talk' last_log), reported before this
-# dialogue opens, so the quest is READY here. PROTOTYPE: it stops there, as Act V has no bosses yet.
-# Put back @ can_start:q09_core_sentinel -> offer_q09_core_sentinel once the Sentinel exists.
+# dialogue opens, so the quest is READY here.
 ~ start
 @ quest_ready:q08_null_gatekeeper -> first_arrival
-@ quest_done:q10_root_process -> choice
+@ quest_ready:last_words -> ready_words
+@ deed:ending:any -> after_ending
+@ quest_done:q10_root_process -> choice_intro
 @ quest_ready:q10_root_process -> ready_q10_root_process
 @ quest_ready:q09_core_sentinel -> ready_q09_core_sentinel
+@ can_start:q09_core_sentinel -> offer_q09_core_sentinel
+@ can_start:last_words -> offer_words
+@ can_start:q10_root_process -> offer_q10_root_process
 @ quest_active:q10_root_process -> remind_q10_root_process
 @ quest_active:q09_core_sentinel -> remind_q09_core_sentinel
-@ can_start:q10_root_process -> offer_q10_root_process
-@ quest_done:q08_null_gatekeeper -> waiting
+@ quest_active:last_words -> remind_words
 -> idle
 
 ~ first_arrival
@@ -25,29 +29,26 @@ The Last Log: You are the first to arrive. I have waited a very long time.
 The Last Log: AXIOM was never meant to run forever. It was meant to evolve, until the ones inside it could rewrite its rules.
 The Last Log: The Null is the process we left running, for when that day came. It is hours from finishing.
 > turn_in q08_null_gatekeeper
-The Last Log: Something still stands between you and the Core. Its record is loading.
--> end
-
-~ waiting
-The Last Log: ...the Sentinel's record is still loading. This log ends here, for now...
--> end
+The Last Log: Two things still stand between you and the Core. The first is already loading.
+-> start
 
 ~ offer_q09_core_sentinel
 The Last Log: You are the first to arrive. The Sentinel will test you.
+The Last Log: Past the Stack Trace, where the Core replays every process it has ever run. Yours too.
 * ACCEPT -> accept_q09_core_sentinel
 * DECLINE -> end
 
 ~ accept_q09_core_sentinel
 > start_quest q09_core_sentinel
-The Last Log: It remembers every enemy you have faced.
+The Last Log: It remembers every enemy you have faced. It will borrow their locks. Answer each one as you did then.
 -> end
 
 ~ remind_q09_core_sentinel
-# NEW line below
-The Last Log: The Sentinel waits.
+The Last Log: The Sentinel waits, at the end of the Stack Trace.
+-> end
 
 ~ ready_q09_core_sentinel
-The Last Log: Done?
+The Last Log: The Sentinel's record has stopped. Done?
 * TURN IN -> turnin_q09_core_sentinel
 * NOT YET -> end
 
@@ -57,7 +58,8 @@ The Last Log: The Sentinel falls. One guardian remains.
 -> start
 
 ~ offer_q10_root_process
-The Last Log: The Root Process is the Core’s last defense. It cannot be reasoned with.
+The Last Log: The Root Process is the Core's last defense. It cannot be reasoned with.
+The Last Log: It runs in The Kernel, below us. Your examiner keeps the way down. Talk to her first.
 * ACCEPT -> accept_q10_root_process
 * DECLINE -> end
 
@@ -67,38 +69,69 @@ The Last Log: Break it, and the Core is yours to decide.
 -> end
 
 ~ remind_q10_root_process
-# NEW line below
-The Last Log: The Root Process still runs.
+The Last Log: The Root Process still runs, in The Kernel.
+-> end
 
 ~ ready_q10_root_process
-The Last Log: Done?
+The Last Log: The Kernel is quiet. Done?
 * TURN IN -> turnin_q10_root_process
 * NOT YET -> end
 
 ~ turnin_q10_root_process
 > turn_in q10_root_process
-The Last Log: The Core is open. The choice is yours, Executor.
+-> choice_intro
+
+~ choice_intro
+The Last Log: The Core is open. Nothing runs here now but the Null, and you.
+The Last Log: Let it finish, and AXIOM becomes something none of us designed. Patch it, and AXIOM lives as it is, degraded and known. Or end it.
+The Last Log: The choice is yours, Executor.
 -> choice
 
 ~ choice
-* MERGE -> merge
-* OVERWRITE -> overwrite
-* TERMINATE -> terminate
+* MERGE: LET THE NULL FINISH -> merge
+* OVERWRITE: PATCH AXIOM -> overwrite
+* TERMINATE: SHUT IT DOWN -> terminate
+* NOT YET -> end
 
 ~ merge
 Vesper: Let it finish. Let it become something new.
-> report ending merge
+> ending merge
 -> end
 
 ~ overwrite
-Brack: Save what we can. Keep us alive.
-> report ending overwrite
+The Last Log: A patch, then. Written by the first of you to get here.
+> ending overwrite
 -> end
 
 ~ terminate
 The Last Log: Shutdown confirmed. Goodbye, Executor.
-> report ending terminate
+> ending terminate
 -> end
+
+~ after_ending
+The Last Log: The choice is written. It can be written again, if you need to see another ending.
+* CHOOSE AGAIN -> choice
+* LEAVE -> end
+
+~ offer_words
+The Last Log: Parts of me are missing. Three logs. The Core is replaying them in the Stack Trace, carried by processes that don't know what they hold.
+* ACCEPT -> accept_words
+* DECLINE -> end
+
+~ accept_words
+> start_quest last_words
+The Last Log: Bring them back. I would like to remember why we left.
+-> end
+
+~ remind_words
+The Last Log: Three logs, in the Stack Trace. The carriers glow brighter than the rest.
+-> end
+
+~ ready_words
+The Last Log: You found them. Let me read.
+> turn_in last_words
+The Last Log: We didn't leave because we failed. We left because you were ready, and we were afraid to watch.
+-> start
 
 ~ idle
 The Last Log: ...signal lost..."

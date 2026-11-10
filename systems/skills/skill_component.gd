@@ -295,7 +295,7 @@ func _report_program(index: int) -> void:
 	var conditions := {}
 	var nested := false
 	var branches := 0
-	for rule in s.program.rules:
+	for rule in s.program.flat_rules():
 		if not rule.is_always():
 			branches += 1
 		if rule.conditions.size() >= 2:

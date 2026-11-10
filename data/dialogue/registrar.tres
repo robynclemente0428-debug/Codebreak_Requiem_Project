@@ -92,7 +92,7 @@ Registrar: Hardfault: restored. Executor: root.
 ~ turnin_root
 > turn_in q06c_root_access
 > recover quarantine_lifted
-Registrar: The quarantine is lifted. The yard is Checkpoint's newest district. The Inward Gate answers to you now.
+Registrar: The quarantine is lifted. The yard is Checkpoint's newest district. The Inward Gate, at the far end of the Sweep, answers to you now.
 -> end
 
 ~ restored

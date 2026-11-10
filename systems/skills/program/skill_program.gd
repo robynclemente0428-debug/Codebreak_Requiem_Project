@@ -19,17 +19,26 @@ extends Resource
 const EPSILON := 0.001
 
 @export var rules: Array[ProgramRule] = []
-## The script's counters (ScriptRegisters): register name -> value. They live here, so rebuilding
-## the skill keeps them and each script set has its own. Never saved. Applying a script makes a
-## new copy of it, which starts from nothing.
+## The script's Registry (ScriptRegisters): a set of enemies, instance id -> true. It lives
+## here, so rebuilding the skill keeps it and each script set has its own. Never saved. Applying a
+## script makes a new copy of it, which starts empty.
 var registers := {}
-## When the owner last landed a hit (-1 = not yet), and the area its counters belong to.
+## When the owner last landed a hit (-1 = not yet), and the area its registry belongs to.
 var last_active_msec := -1
 var area_id := 0
 
 
 func has_rules() -> bool:
 	return not rules.is_empty()
+
+
+## Every rule, then each "if" block as the rule it means (ProgramRule.flat): what pricing,
+## validation and the registry checks go through. Editing and saving use `rules`.
+func flat_rules() -> Array[ProgramRule]:
+	var out: Array[ProgramRule] = []
+	for r in rules:
+		out.append_array(r.flat())
+	return out
 
 
 func action_count() -> int:
@@ -40,6 +49,7 @@ func action_count() -> int:
 
 
 func validate(limits: SkillProgramLimits) -> ProgramValidation:
+	tag_registry_reads()
 	var v := ProgramValidation.new()
 	if limits == null:
 		v.add_error("This skill can't be programmed.")
@@ -67,27 +77,54 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 	for r in rules:
 		has_loop = has_loop or r.loop != null
 	var per_owner := {}         # owner -> rules seen so far, for "Cleave rule 2" style labels
-	for i in rules.size():
-		var rule := rules[i]
-		per_owner[rule.owner] = per_owner.get(rule.owner, 0) + 1
-		var label := "%s rule %d" % [_owner_name(rule.owner), per_owner[rule.owner]]
+	var labels := {}            # ProgramRule -> its label, so an "if" block can name its rule
+	var all := flat_rules()
+	for i in all.size():
+		var rule := all[i]
+		var label := ""
+		if rule.is_branch():
+			label = "%s, if %d" % [labels.get(rule.parent, "Rule"), rule.branch_index + 1]
+		else:
+			per_owner[rule.owner] = per_owner.get(rule.owner, 0) + 1
+			label = "%s rule %d" % [_owner_name(rule.owner), per_owner[rule.owner]]
+			labels[rule] = label
 		if rule.owner != "" and not (rule.owner in limits.knob_owner.values()):
-			v.add_issue("%s: that support isn't socketed in this skill." % label,
-				"its support gem isn't socketed in this skill",
-				"socket the gem again, or delete this rule", rule)
+			if not rule.is_branch():
+				v.add_issue("%s: that support isn't socketed in this skill." % label,
+					"its support gem isn't socketed in this skill",
+					"socket the gem again, or delete this rule", rule)
 			continue
-		if rule.effects.is_empty() and rule.loop == null:
+		if not rule.is_branch() and not rule.branches.is_empty():
+			if not limits.allows("if"):
+				v.add_issue("%s: if blocks aren't available at your rank." % label,
+					"if blocks aren't available at your rank (Strategist)", "delete the if block", rule, rule.branches[0])
+			elif rule.loop != null:
+				v.add_issue("%s: a rule with a loop can't have if blocks." % label,
+					"a rule with a loop can't have if blocks",
+					"move the if block's lines to a rule without a loop, or delete the loop", rule, rule.branches[0])
+		if rule.is_branch():
+			if rule.parent.loop != null or not limits.allows("if"):
+				continue                               # reported on the rule above
+			if rule.own_conditions().is_empty():
+				v.add_issue("%s has no condition." % label, "this if has no condition yet",
+					"drag a condition onto this if line (target in registry, target_life_below...)", rule)
+				continue
+			if rule.effects.is_empty():
+				v.add_issue("%s does nothing." % label, "this if does nothing yet",
+					"drag a knob from SNIPPETS under it, or delete the if", rule)
+				continue
+		elif rule.effects.is_empty() and rule.loop == null and rule.branches.is_empty():
 			v.add_issue("%s has no effects." % label, "this rule does nothing yet",
 				"drag a knob from SNIPPETS under it, or delete the rule", rule)
 			continue
 		var repeated := rule.repeated_condition()
-		if repeated != "":
+		if repeated != "" and not (rule.is_branch() and rule.parent.repeated_condition() == repeated):
 			v.add_issue("%s: %s() is used more than once. Each condition can appear once per rule." % [label, repeated],
 				"%s() is already used in this rule" % repeated,
 				"delete this line: each condition can appear once per rule", rule, _second_use(rule))
 			continue
 		var missing: ProgramCondition = null
-		for c in rule.conditions:
+		for c in rule.own_conditions():
 			if c.required_support() != "" and not limits.support_ids.has(c.required_support()):
 				missing = c
 		if missing != null:
@@ -99,7 +136,7 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 		# Blocks above the player's rank (Ranks.LOCKED_BLOCKS): only an old save or library
 		# script can still hold one, since the editor doesn't offer them.
 		var locked: ProgramCondition = null
-		for c in rule.conditions:
+		for c in rule.own_conditions():
 			if not limits.allows("cond:" + c.type_id()):
 				locked = c
 		if locked != null:
@@ -111,7 +148,7 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 			v.add_issue("%s: loops aren't available at your rank." % label,
 				"loops aren't available at your rank", "delete the loop", rule, rule.loop)
 			continue
-		if rule.only_on_repeats() and not has_loop:
+		if rule.only_on_repeats() and not has_loop and not (rule.is_branch() and rule.parent.only_on_repeats()):
 			var needs: ProgramCondition = null
 			for c in rule.conditions:
 				if c.needs_loop():
@@ -147,21 +184,21 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 			if e.ramps() and not ScriptRegisters.can_grow(knob):
 				var why := "it's read before the cast starts" if knob.always_only or knob.kind == SkillKnob.Kind.STAT \
 						else "it can't change gradually"
-				v.add_issue("%s: %s can't grow with a counter." % [label, knob.display_name],
-					"%s can't grow with a counter: %s" % [e.knob, why],
-					"click its %s until the line is a plain value" % e.ramp_register(), rule, e)
+				v.add_issue("%s: %s can't grow with the registry." % [label, knob.display_name],
+					"%s can't grow with the registry: %s" % [e.knob, why],
+					"click its %s until the line is a plain value" % e.ramp_text(), rule, e)
 				continue
 			if e.ramps() and knob.cost_for(e.steps) < 0.0:      # points back for a drawback that starts at nothing
-				v.add_issue("%s: only a buff can grow with a counter." % label,
-					"only a buff can grow with a counter, and this pays points back",
-					"raise its value above 0, or click its %s until the line is a plain value" % e.ramp_register(), rule, e)
+				v.add_issue("%s: only a buff can grow with the registry." % label,
+					"only a buff can grow with the registry, and this pays points back",
+					"raise its value above 0, or click its %s until the line is a plain value" % e.ramp_text(), rule, e)
 				continue
 			if e.ramps() and (e.steps > knob.max_steps or _grows_twice(e) or growth_room(e, knob) <= 0):
-				var problem := "%s grows too fast: the most is one step's worth per %d counts" % [e.knob, ScriptRegisters.RAMP_PER_STEP]
+				var problem := "%s grows too fast: the most is one step's worth per %d enemies in the registry" % [e.knob, ScriptRegisters.RAMP_PER_STEP]
 				var cure := "lower its value"
 				if _grows_twice(e):
 					problem = "only one line per knob can grow, and %s already has one" % e.knob
-					cure = "delete this line, or click its %s until the line is a plain value" % e.ramp_register()
+					cure = "delete this line, or click its %s until the line is a plain value" % e.ramp_text()
 				elif growth_room(e, knob) <= 0:
 					problem = "%s has no room left to grow: other lines reach its limit" % e.knob
 					cure = "lower the other %s lines" % e.knob
@@ -186,9 +223,10 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 						"move this line to a rule without a loop (and without target_alive, stack_overflow or loop_index)", rule, e)
 					continue
 				if rule.scope() == ProgramCondition.Scope.HIT and knob.kind != SkillKnob.Kind.DAMAGE \
-						and knob.kind != SkillKnob.Kind.VARIABLE and not limits.per_hit_any_knob():
-					v.add_issue("%s: per-hit conditions can only change damage." % label,
-						"per-hit rules can only change damage",
+						and knob.kind != SkillKnob.Kind.VARIABLE and not SkillProgramLimits.per_hit_knob(knob) \
+						and not limits.per_hit_any_knob():
+					v.add_issue("%s: per-hit conditions can't change %s." % [label, knob.display_name],
+						"per-hit rules can change damage, leech, barrier, guard and support effects that happen on a hit or kill (explosions, breakpoints, tremors, charge, error damage, forks): %s is decided before the skill hits" % e.knob,
 						"move this line to an always: rule, or to a rule without per-hit conditions", rule, e)
 					continue
 			raw_cost += line_cost(knob, e)
@@ -248,9 +286,9 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 	if cap_knob != null:
 		var capacity := VariableStoreSupport.capacity_with(int(always_steps.get(cap_knob.id, 0)), cap_knob)
 		var seen := {}
-		for rule in rules:
+		for rule in flat_rules():
 			seen[rule.owner] = seen.get(rule.owner, 0) + 1
-			for c in rule.conditions:
+			for c in rule.own_conditions():
 				var charge := c as ChargeAtLeastCondition
 				if charge == null or charge.n <= capacity:
 					continue
@@ -285,85 +323,111 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 	return v
 
 
-## Scripts that can't be what the player meant: a counter that is read but that nothing raises
-## never changes, and a comparison no value can change (x >= 0) isn't a condition at all. A counter
-## nothing lowers is fine: it's a one-way switch, until the fight ends and it clears.
+## Scripts that can't be what the player meant: reading the registry when nothing ever adds to it
+## (it would stay empty), and a size comparison no size can change (>= 0) isn't a condition at all.
 func _check_registers(v: ProgramValidation) -> void:
 	var seen := {}
-	for rule in rules:
+	var adds := _adds_to_registry()
+	var fix := "add registry.add(target) to a rule: always: adds every enemy the skill hits"
+	for rule in flat_rules():
 		seen[rule.owner] = seen.get(rule.owner, 0) + 1
-		for c in rule.conditions:
+		var label := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
+		for c in rule.own_conditions():
 			var read := c as VarCondition
 			if read == null:
 				continue
-			var reg := read.register_name()
-			var label := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
 			var constant := read.constant_answer()
 			if constant != "":
-				var text := "%s %s %d is %s true" % [reg, read.op_text(), read.value, constant]
-				v.add_issue("%s: %s." % [label, text], text, "change the operator or the value", rule, c)
-			elif not _register_rises(reg):
-				v.add_issue("%s: nothing ever raises %s, so this never changes." % [label, reg],
-					"nothing ever raises %s, so this never changes" % reg,
-					"add %s += 1 to a rule, under the WHEN you want to count" % reg, rule, c)
+				var text := "registry.size %s %d is %s true" % [read.op_text(), read.value, constant]
+				v.add_issue("%s: %s." % [label, text], text, "change the operator or the size", rule, c)
+			elif not adds:
+				v.add_issue("%s: nothing ever adds to the registry, so it stays empty." % label,
+					"nothing ever adds to the registry, so it stays empty", fix, rule, c)
 		for e in rule.effects:
-			if ScriptRegisters.is_write(e.knob) and e.steps > ScriptRegisters.WRITE_MAX:
-				var over := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
-				v.add_issue("%s: a counter line can use at most %d." % [over, ScriptRegisters.WRITE_MAX],
-					"a counter line can use at most %d" % ScriptRegisters.WRITE_MAX,
-					"lower its value to %d or less" % ScriptRegisters.WRITE_MAX, rule, e)
-			if e.ramps() and e.steps != 0 and not _register_rises(e.ramp_register()):
-				var line := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
-				v.add_issue("%s: nothing ever raises %s, so this buff stays at nothing." % [line, e.ramp_register()],
-					"nothing ever raises %s, so this buff stays at nothing" % e.ramp_register(),
-					"add %s += 1 to a rule, under the WHEN you want to count" % e.ramp_register(), rule, e)
+			if e.ramps() and e.steps != 0 and not adds:
+				v.add_issue("%s: nothing ever adds to the registry, so this buff stays at nothing." % label,
+					"nothing ever adds to the registry, so this buff stays at nothing", fix, rule, e)
 
 
-func _register_rises(reg: String) -> bool:
-	for e in _writes_of(reg):
-		if ScriptRegisters.raises(e):
-			return true
+## Tells every "target in registry" check whether this script spends marks (has a
+## registry.remove), which sets its discount (VarCondition.cost_multiplier). Called by validate,
+## so pricing, the editor and the applied skill all agree.
+func tag_registry_reads() -> void:
+	var spends := false
+	for rule in flat_rules():
+		for e in rule.effects:
+			spends = spends or (ScriptRegisters.is_write(e.knob) and e.write_op() == "remove")
+	for rule in flat_rules():
+		for c in rule.conditions:
+			if c is VarCondition:
+				(c as VarCondition).spent = spends
+
+
+## True when a line adds enemies to the registry.
+func _adds_to_registry() -> bool:
+	for rule in flat_rules():
+		for e in rule.effects:
+			if ScriptRegisters.raises(e):
+				return true
 	return false
 
 
-func _writes_of(reg: String) -> Array[ProgramEffect]:
-	var out: Array[ProgramEffect] = []
-	for rule in rules:
-		for e in rule.effects:
-			if ScriptRegisters.is_write(e.knob) and e.register_name() == reg:
-				out.append(e)
-	return out
-
-
-## True when this script keeps a count of something: a WHEN rule about the fight raises a register
-## that another rule reads or grows with. (Counting every cast is just every_nth_cast.)
+## True when this script keeps a registry: something adds enemies to it, and a rule reads it (target
+## in registry, registry.size) or a buff grows with its size. What the Strategist exam asks for.
+## Adds only ever happen as hits land, so they are always about the fight.
 func keeps_a_count() -> bool:
-	for rule in rules:
+	if not _adds_to_registry():
+		return false
+	for rule in flat_rules():
 		for c in rule.conditions:
-			var read := c as VarCondition
-			if read != null and _counted_by_a_when(read.register_name()):
+			if c is VarCondition:
 				return true
 		for e in rule.effects:
-			if e.ramps() and _counted_by_a_when(e.ramp_register()):
+			if e.ramps():
 				return true
 	return false
 
 
 ## What a line costs before any rule discount. A growing buff is priced on the room it can fill, and
-## is cheaper only if it has to be earned in the fight: always: x = 5 pays for it all.
+## is cheaper because the registry only fills as the skill hits enemies.
+## Buff steps get pricier the more a knob has (SkillKnob.STEP_COST_GROWTH), counting every buff
+## line on it in the script, so splitting a buff over lines doesn't dodge it. Each line pays the
+## average step price for its share, so the order of lines doesn't matter. Drawbacks stay flat.
 func line_cost(knob: SkillKnob, e: ProgramEffect) -> float:
-	if not e.ramps() or e.steps <= 0:
+	if e.ramps() and e.steps > 0:
+		var room := maxi(growth_room(e, knob), 0)
+		var full := room * _avg_buff_step_cost(knob)
+		return full * ScriptRegisters.ramp_cost_share(e.steps, room)
+	if not knob.is_buff(e.steps):
 		return knob.cost_for(e.steps)
-	var room := growth_room(e, knob)
-	var full := knob.cost_for(maxi(room, 0))
-	return full * ScriptRegisters.ramp_cost_share(e.steps, room) if _counted_by_a_when(e.ramp_register()) else full
+	return absi(e.steps) * _avg_buff_step_cost(knob)
+
+
+## Every buff step this script puts on `knob`: flat buff lines, plus the room each growing line fills.
+func buff_steps_on(knob: SkillKnob) -> int:
+	var n := 0
+	for rule in flat_rules():
+		for e in rule.effects:
+			if e.knob != knob.id or ScriptRegisters.is_write(e.knob):
+				continue
+			if e.ramps():
+				if e.steps > 0:
+					n += maxi(growth_room(e, knob), 0)
+			elif knob.is_buff(e.steps):
+				n += absi(e.steps)
+	return n
+
+
+func _avg_buff_step_cost(knob: SkillKnob) -> float:
+	var n := buff_steps_on(knob)
+	return knob.buff_cost(n) / n if n > 0 else knob.first_step_cost()
 
 
 ## How many steps a growing buff can reach: the knob's limit, less this script's flat buffs on it.
 ## They all count, active or not, the same way the knob's limit counts them.
 func growth_room(e: ProgramEffect, knob: SkillKnob) -> int:
 	var room := knob.max_steps
-	for rule in rules:
+	for rule in flat_rules():
 		for other in rule.effects:
 			if other.knob == e.knob and not other.ramps() and other.steps > 0:
 				room -= other.steps
@@ -371,24 +435,11 @@ func growth_room(e: ProgramEffect, knob: SkillKnob) -> int:
 
 
 func _grows_twice(e: ProgramEffect) -> bool:
-	for rule in rules:
+	for rule in flat_rules():
 		for other in rule.effects:
 			if other == e:
 				return false
 			if other.knob == e.knob and other.ramps():
-				return true
-	return false
-
-
-func _counted_by_a_when(reg: String) -> bool:
-	for rule in rules:
-		var about_the_fight := false
-		for c in rule.conditions:
-			about_the_fight = about_the_fight or not c is VarCondition
-		if not about_the_fight:
-			continue
-		for e in rule.effects:
-			if ScriptRegisters.raises(e) and e.register_name() == reg:
 				return true
 	return false
 

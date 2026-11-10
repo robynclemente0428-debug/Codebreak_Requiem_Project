@@ -8,7 +8,7 @@
 [ext_resource type="Resource" uid="uid://c5w0dbasi6aqc" path="res://data/items/equipment/shield/scrap_shield.tres" id="6_mywbb"]
 [ext_resource type="Resource" uid="uid://c6ba8tmmiqaah" path="res://data/items/weapons/assault_rifle/service_rifle.tres" id="7_jur4a"]
 [ext_resource type="Resource" uid="uid://bkrblaghcl1ep" path="res://data/items/weapons/sniper/hunting_rifle.tres" id="8_em106"]
-[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act3_district_meshes.tres" id="10_4y11d"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act4_null_meshes.tres" id="10_4y11d"]
 [ext_resource type="Resource" uid="uid://yo5adppnm8wq" path="res://data/enemies/eye_drone.tres" id="e_drone"]
 [ext_resource type="Resource" path="res://data/enemies/null_weaver.tres" id="e_weaver"]
 [ext_resource type="Resource" uid="uid://0snu8whe2s7u" path="res://data/enemies/enchanter_boss.tres" id="e_enchanter"]

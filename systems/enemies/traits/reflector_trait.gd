@@ -6,6 +6,14 @@ extends EnemyTrait
 
 const COL := Color(0.80, 0.45, 1.0)
 
+## A lock (EnemyTrait): its tag, hover plate row and body, a chrome sheen.
+const LOCK_NAME := "REFLECT"
+const HINT := "Every hit you land zaps you back, however light. Fewer, bigger hits."
+const LOCK_COLOR := COL
+const LOCK_SHAPE := "diamond"
+const LOCK_AURA := 4                 # EnemySilhouette.AURA_REFLECT
+const BANNER := false                # it pops on every hit: the tag is enough
+
 ## Damage of each zap at level 1.
 @export var zap_base := 5.0
 ## Added for every level above 1.
@@ -19,6 +27,11 @@ var _zapped_at := -10.0
 func zap_damage() -> float:
 	var lvl: int = enemy.get("level") if is_instance_valid(enemy) and enemy.get("level") != null else 1
 	return zap_base + zap_per_level * maxi(lvl - 1, 0)
+
+
+## On its tag: what each of your hits costs you.
+func tag_state() -> String:
+	return "ZAP %d" % roundi(zap_damage()) if is_instance_valid(enemy) else ""
 
 
 func after_hit(info: HitInfo) -> void:

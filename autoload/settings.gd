@@ -57,6 +57,7 @@ const DEFAULTS := {
 		"auto_bind_skills": true,         # new skill gems go on a free hotkey
 		"hud_shake": true,                # life bar shakes when you are hit
 		"aim_line": true,                 # line on the ground showing where ranged skills will go
+		"script_tips": true,              # one-line tips in the SCRIPTING editor (ScriptTips)
 	},
 	# Not shown in the settings menu: remembered from play
 	"camera": {

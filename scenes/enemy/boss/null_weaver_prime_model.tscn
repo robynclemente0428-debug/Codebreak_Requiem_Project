@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://assets/models/enemy/eye_drone/eye_drone_model.tscn" id="1_base"]
+[ext_resource type="Script" path="res://systems/enemies/boss/woven_traps.gd" id="2_weave"]
+
+[node name="NullWeaverPrime" instance=ExtResource("1_base")]
+transform = Transform3D(1.6, 0, 0, 0, 1.6, 0, 0, 0, 1.6, 0, 0, 0)
+metadata/_note = "PROTOTYPE. The eye drone, larger, until Weaver Prime has its own model. Its WovenTraps weave the floor."
+
+[node name="WovenTraps" type="Node" parent="."]
+script = ExtResource("2_weave")

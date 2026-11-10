@@ -9,12 +9,50 @@ id = "act5_core"
 display_name = "The Core"
 scene = "res://scenes/map/town/act_5_core.tscn"
 kind = 0
-map_position = Vector2(0.5, 0.5)
-note = "The Last Log, Vesper. The end of the road so far"
+map_position = Vector2(0.12, 0.5)
+links = Array[String](["act5_stack", "act5_kernel"])
+note = "The Last Log, Vesper, Sudo, Hex"
+
+[sub_resource type="Resource" id="Waypoint_act5_stack"]
+script = ExtResource("2_wp")
+id = "act5_stack"
+display_name = "The Stack Trace"
+scene = "res://scenes/map/dungeon/act_5_stack_trace.tscn"
+spawn_id = &"stack_in"
+dungeon_level = 36
+kind = 1
+map_position = Vector2(0.5, 0.3)
+links = Array[String](["act5_core", "act5_hall"])
+note = "Level 36  -  The Core replays every process you have fought"
+random_threats = Vector2i(1, 1)
+
+[sub_resource type="Resource" id="Waypoint_act5_hall"]
+script = ExtResource("2_wp")
+id = "act5_hall"
+display_name = "Sentinel's Hall"
+scene = "res://scenes/map/dungeon/act_5_sentinel_hall.tscn"
+spawn_id = &"hall_in"
+dungeon_level = 37
+kind = 2
+map_position = Vector2(0.88, 0.3)
+links = Array[String](["act5_stack"])
+note = "Level 37  -  Core Sentinel (RECALL)"
+
+[sub_resource type="Resource" id="Waypoint_act5_kernel"]
+script = ExtResource("2_wp")
+id = "act5_kernel"
+display_name = "The Kernel"
+scene = "res://scenes/map/dungeon/act_5_kernel.tscn"
+spawn_id = &"kernel_in"
+dungeon_level = 40
+kind = 2
+map_position = Vector2(0.5, 0.78)
+links = Array[String](["act5_core"])
+note = "Level 40  -  The Root Process"
 
 [resource]
 script = ExtResource("1_act")
 act_number = 5
 title = "ACT V"
-subtitle = "THE CORE  -  Final Execution"
-waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act5_core")])
+subtitle = "THE CORE  -  Final Execution  -  Levels 36-40"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act5_core"), SubResource("Waypoint_act5_stack"), SubResource("Waypoint_act5_hall"), SubResource("Waypoint_act5_kernel")])

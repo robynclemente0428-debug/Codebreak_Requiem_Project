@@ -2,25 +2,31 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
+[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="4_prog"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Pass Examiner Sudo's last exam"
+kind = "quest_done"
+target = "exam_defragmenter"
 
 [sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
-description = "Defeat the Root Process"
+description = "Defeat the Root Process in The Kernel"
 kind = "kill"
 target = "root_process"
-metadata/_custom_type_script = "uid://bo3sbbxgckkre"
 
 [resource]
 script = ExtResource("2_quest")
 id = "q10_root_process"
 title = "THE ROOT PROCESS"
-description = "The Core's last defense. It cannot be reasoned with.
-BOSS TRAIT: three phases. Each phase changes its attack pattern.
+description = "The Core's last defense. It cannot be reasoned with. It waits in The Kernel, below the Core, and Sudo won't open the way down until you're ranked Defragmenter.
+BOSS TRAIT: three phases. It calls adds, then charges a loop, then swaps forms fast.
 No script task. Use your best build."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q09_core_sentinel"])
 reward_credits = 500
-metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "The Last Log"
 metadata/act = "V"

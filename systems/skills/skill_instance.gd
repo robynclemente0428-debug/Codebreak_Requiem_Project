@@ -99,7 +99,7 @@ func _apply_program() -> void:
 		if not rule.is_baked():
 			has_conditional = true         # WHEN rules and loops run per cast in ProgramSupport
 			continue
-		has_conditional = has_conditional or rule.uses_registers()   # always: x += 1 runs per cast too
+		has_conditional = has_conditional or rule.uses_registers()   # always: registry.add(target) runs per cast too
 		for e in rule.effects:
 			var knob := limits.get_knob(e.knob)
 			if knob == null or e.steps == 0 or knob.kind == SkillKnob.Kind.VARIABLE or e.ramps():

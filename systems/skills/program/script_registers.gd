@@ -1,59 +1,59 @@
 class_name ScriptRegisters
 extends RefCounted
-## Counters (what players call them; the code says registers): a script's memory. Every skill's
-## script has two, x and y, whole numbers
-## that keep their value between casts. They live on the script (SkillProgram.registers), so each
-## script set keeps its own and rebuilding the skill leaves them alone. They start at 0, and clear
-## when the script is applied, on a change of area, or CLEAR_AFTER seconds out of combat.
+## The Registry (what players call it; the code still says registers): a script's memory, and the
+## Strategist rank's unlock. It is a set of enemies: an enemy is either in it or not. The set
+## lives on the script (SkillProgram.registers, enemy instance id -> true), so each script set
+## keeps its own and rebuilding the skill leaves it alone. It starts empty, and clears when the
+## script is applied, on a change of area, or CLEAR_AFTER seconds out of combat. An enemy that
+## dies leaves it (prune), so it only ever holds the living.
 ##
-##   when hit_recently(3.0s):
-##       x += 1
-##   when x >= 3:
-##       damage += 25%
-##       x = 0
-##
-## Both blocks are modular, like the Act II patch puzzles: every part is a token you click.
-##   READ   when [x] [>=] [3]:   a VarCondition. Variable x / y, any of OPS, value 0 to MAX_VALUE.
-##   WRITE  [x] [+=] [1]         a ProgramEffect on the one knob WRITE_KNOB (Kind.VARIABLE), holding
-##                               its variable and operator; its steps are the value.
-## Writes cost no points and don't count as blocks: a counter should never push a script out of
-## its efficiency tier.
-##
-## A buff can also grow with a counter, its value token set to x or y:
-##   when hit_recently(2.0s):
-##       x += 1
 ##   always:
-##       damage += x * 2%         (ProgramEffect.ramp)
-## The buff keeps growing until it reaches the knob's limit, less the script's flat lines on that
-## knob (SkillProgram.growth_room). A knob can have one growing line. Its value sets how fast it gets
-## there, and the price follows: a share of what the whole room would cost flat, from RAMP_COST_SLOW
-## for the slowest line to RAMP_COST_FAST for the fastest, if a WHEN about the fight raises the
-## counter. Otherwise (always: x = 5) nothing has to be earned, so it pays for the room in full.
-## A counter a buff grows with can only rise once per cast, however many hits or rules raise it.
-## Only values that can change gradually can grow (can_grow), not whole numbers like pierce.
+##       registry.add(target)            every enemy this cast hits joins the set
+##   when target in registry:            checked per hit, against the enemy being hit
+##       damage += 50%                   so only hits on enemies already in the set get it
 ##
-## A cast reads first and writes after: every WHEN rule of a cast sees the registers as they were
-## when it started, then the writes land in rule order. So the order of the rules never changes
-## what they mean. Loop repeats and per-hit rules write straight away, one repeat or hit at a time,
-## which is what lets  while x < 3:  stop itself.
+## WRITE  registry.add(target), registry.remove(target): a ProgramEffect on the one knob WRITE_KNOB
+##        (Kind.VARIABLE); its op is the operation (WRITE_OPS). Written from a cast rule (always:,
+##        a WHEN, a loop), it acts on every enemy the cast hits, as each hit lands. Written from a
+##        per-hit rule, it acts on the enemy being hit. Writes cost no points and don't count as
+##        blocks: the registry should never push a script out of its efficiency tier.
+## READ   a VarCondition, two forms (READ_KEYS):
+##          when target in registry:        / not in: membership, checked per hit (Scope.HIT),
+##                                            so the rule can only change damage, leech, barrier
+##                                            and guard
+##          when registry.size >= 3:        how many enemies are in the set, checked per cast,
+##                                            any of OPS, 0 to MAX_VALUE. It changes mid-cast as
+##                                            hits land, so  while registry.size < 3:  stops itself.
+## GROW   a buff can grow with registry.size (ProgramEffect.ramp):
+##          damage += registry.size * 2%       more enemies in the set, more damage
+##        It keeps growing until it reaches the knob's limit, less the script's flat lines on that
+##        knob (SkillProgram.growth_room). A knob can have one growing line. Its value sets how fast
+##        it gets there, and the price follows: a share of what the whole room would cost flat,
+##        from RAMP_COST_SLOW for the slowest line to RAMP_COST_FAST for the fastest. Only values
+##        that can change gradually can grow (can_grow), not whole numbers like pierce.
 ##
-## A read needs a line that raises the register, and can't be a comparison that no value changes
-## (SkillProgram.validate). If nothing lowers the register, the script is fine (a one-way switch:
-## when y == 1:) and the read keeps its discount: the switch clears after the fight, so it has to be
-## earned again each time.
+## A hit reads first and writes after: its per-hit rules see the set as it was before that hit,
+## then the hit's adds and removes land. So  always: registry.add(target)  with
+## when target in registry:  pays out from the second hit on an enemy, not the first.
+##
+## A read needs a line that adds to the set, and a size comparison can't be one no size changes
+## (SkillProgram.validate).
 
-const NAMES := ["x", "y"]
-const MAX_VALUE := 99
-## The most one write can name (x += 5, x = 5). The counter climbs past it a write at a time.
-const WRITE_MAX := 5
-## The comparison operators, in the Act II patch puzzles' order.
+## The write operations, in the op slot of a write (ProgramEffect.op).
+const WRITE_OPS := ["add", "remove"]
+## The two kinds of read (VarCondition.key): membership of the enemy being hit, or the set's size.
+const READ_KEYS := ["target", "size"]
+## Membership operators (VarCondition.op when key is "target").
+const MEMBER_OPS := ["in", "not in"]
+## Size comparison operators (VarCondition.op when key is "size"), in the Act II patch puzzles' order.
 const OPS := ["<", ">", "<=", ">=", "==", "!="]
-const WRITE_OPS := ["=", "+=", "-="]
+## The largest size a comparison can name.
+const MAX_VALUE := 99
 const WRITE_KNOB := &"var"
-## Seconds without landing a hit or being hit before a script's counters clear.
+## Seconds without landing a hit or being hit before a script's registry clears.
 const CLEAR_AFTER := 10.0
-## How many counts of a growing buff make one of its knob's steps, at a value of 1: damage has 5%
-## steps, so x * 1% takes 5 counts to add a step.
+## How many enemies of a growing buff make one of its knob's steps, at a value of 1: damage has 5%
+## steps, so registry.size * 1% takes 5 enemies to add a step.
 const RAMP_PER_STEP := 5
 ## What a growing buff costs, as a share of its room's flat price (SkillProgram.line_cost).
 const RAMP_COST_SLOW := 0.3
@@ -69,11 +69,11 @@ static func knobs() -> Array[SkillKnob]:
 	if _knobs.is_empty():
 		var k := SkillKnob.new()
 		k.id = WRITE_KNOB
-		k.display_name = "counter"
+		k.display_name = "registry"
 		k.kind = SkillKnob.Kind.VARIABLE
 		k.step = 1.0
 		k.min_steps = 0
-		k.max_steps = 9999                      # the steps are values here, not a limited resource
+		k.max_steps = 9999                      # writes carry no amount: steps is always 1
 		k.cost_per_step = 0.0
 		k.unit = ""
 		_knobs.append(k)
@@ -84,9 +84,9 @@ static func is_write(knob_id: StringName) -> bool:
 	return knob_id == WRITE_KNOB
 
 
-## True for a line that can push its register up.
+## True for a line that adds enemies to the set.
 static func raises(e: ProgramEffect) -> bool:
-	return is_write(e.knob) and e.steps > 0 and e.write_op() != "-="
+	return is_write(e.knob) and e.write_op() == "add"
 
 
 static func can_grow(knob: SkillKnob) -> bool:
@@ -94,31 +94,21 @@ static func can_grow(knob: SkillKnob) -> bool:
 			and (knob.kind == SkillKnob.Kind.DAMAGE or GROW_KNOBS.has(knob.id))
 
 
-## How many knob steps a growing buff of `value` gives at this count, up to `room`.
+## How many knob steps a growing buff of `value` gives at this size, up to `room`.
 static func ramp_steps(count: int, value: int, room: int) -> float:
 	return clampf(float(count) * value / RAMP_PER_STEP, 0.0, float(maxi(room, 0)))
 
 
-## The count at which a growing buff of `value` fills `room`.
+## The size at which a growing buff of `value` fills `room`.
 static func ramp_reach(value: int, room: int) -> int:
 	return ceili(float(room) * RAMP_PER_STEP / maxi(value, 1))
 
 
-## The share of its room's flat price a growing buff pays when it has to be earned in the fight.
+## The share of its room's flat price a growing buff pays.
 static func ramp_cost_share(value: int, room: int) -> float:
 	if room <= 1:
 		return RAMP_COST_FAST
 	return lerpf(RAMP_COST_SLOW, RAMP_COST_FAST, clampf(float(value - 1) / (room - 1), 0.0, 1.0))
-
-
-## `value` after this write.
-static func written(e: ProgramEffect, value: int) -> int:
-	match e.write_op():
-		"=":
-			return clampi(e.steps, 0, MAX_VALUE)
-		"-=":
-			return clampi(value - e.steps, 0, MAX_VALUE)
-	return clampi(value + e.steps, 0, MAX_VALUE)
 
 
 static func compare(value: int, op: String, n: int) -> bool:
@@ -130,3 +120,44 @@ static func compare(value: int, op: String, n: int) -> bool:
 		"==": return value == n
 		"!=": return value != n
 	return false
+
+
+# ---------- THE SET ----------
+
+## The key an enemy has in the set, or null for something that isn't an enemy (a prop, nothing).
+static func entry_key(target: Node) -> Variant:
+	if target == null or not is_instance_valid(target) or target.is_in_group(&"breakables"):
+		return null
+	return target.get_instance_id()
+
+
+static func has(store: Dictionary, target: Node) -> bool:
+	var at: Variant = entry_key(target)
+	return at != null and store.has(at)
+
+
+## Applies a write to `target`. Returns true when the set changed.
+static func write(store: Dictionary, e: ProgramEffect, target: Node) -> bool:
+	var at: Variant = entry_key(target)
+	if at == null:
+		return false
+	if e.write_op() == "add":
+		if store.has(at) or SkillBehavior.is_dead(target):
+			return false
+		store[at] = true
+		return true
+	return store.erase(at)
+
+
+## How many enemies are in the set.
+static func size_of(store: Dictionary) -> int:
+	prune(store)
+	return store.size()
+
+
+## Drops enemies that died or left: the set only holds the living.
+static func prune(store: Dictionary) -> void:
+	for k in store.keys():
+		var node := instance_from_id(k) as Node if k is int else null
+		if node == null or not node.is_inside_tree() or SkillBehavior.is_dead(node):
+			store.erase(k)

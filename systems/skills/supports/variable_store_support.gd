@@ -30,7 +30,7 @@ func on_hit(cast: SkillCast, target: Node, _hit: HitInfo) -> void:
 	var cap := int(cast.flag("var_store_max"))
 	var now := read(owner, cast.skill)
 	if now < cap:
-		owner.set_meta(_key(cast.skill), mini(now + maxi(int(cast.flag("var_store_gain")), 1), cap))
+		owner.set_meta(_key(cast.skill), mini(now + maxi(int(_hit.flag("var_store_gain")), 1), cap))   # + a per-hit rule's
 
 
 ## The character whose charge this is (a Multicast hologram stores on its owner).

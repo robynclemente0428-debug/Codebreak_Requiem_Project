@@ -1,0 +1,300 @@
+[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="Shader" id="Shader_jb42q"]
+code = "shader_type spatial;
+// CodeBreak Requiem - Act V tiles: the Core, the Architects' original machine. White source-stone
+// laid in perfect order, gold Architect circuitry, and the Core's heartbeat: gold rings rolling
+// out across the rooms. Over it the Null is building: violet construction lattice spreading in
+// patches, its edge still being written, block by block. The walls are white pillars with gold
+// channels carrying light down toward the Core, and the lattice climbs some of them.
+// `replay` (the Stack Trace): the same stone, played back. The gold goes cold, playback bands
+// roll across everything, and now and then a tile skips a frame.
+// `piece`: 0 Floor, 1 Room_Floor, 2 Wall (the same pieces as the other libraries).
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform int piece = 0;
+uniform vec3 source : source_color = vec3(0.74, 0.72, 0.68);     // the Architects' white stone
+uniform vec3 seam : source_color = vec3(0.24, 0.23, 0.25);
+uniform vec3 deep : source_color = vec3(0.03, 0.03, 0.05);
+uniform vec3 gold : source_color = vec3(1.0, 0.7, 0.28);         // Architect light
+uniform vec3 null_col : source_color = vec3(0.72, 0.25, 1.0);    // the Null's construction
+uniform vec3 replay_col : source_color = vec3(0.4, 0.85, 1.0);   // the Stack Trace's playback
+uniform float glow = 1.0;
+// 0 = the Core; 1 = the Stack Trace (played back)
+uniform float replay = 0.0;
+// How much the Null has built over the floor (0 none .. 1 most)
+uniform float lattice = 0.3;
+
+// Wall cutaway (as the other tiles): wall pixels between the camera and the player dither away.
+global uniform vec3 player_world_pos;
+// GRAPHICS > TILE DETAIL (GraphicsQuality): 0 = simple (no fine grain, no motion)
+global uniform float gfx_detail;
+uniform float cutaway_radius = 3.2;
+uniform float cutaway_keep = 0.12;
+
+varying vec3 lp;
+varying vec3 ln;
+varying flat vec3 tile;      // world position of this tile's centre: one random pick per tile
+
+void vertex() {
+	lp = VERTEX;
+	ln = NORMAL;
+	tile = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+}
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = x + y * 4;
+	float m[16] = { 0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0 };
+	return (m[i] + 0.5) / 16.0;
+}
+// Distance to the nearest line of a triangle grid (the Null's lattice), in world metres.
+float tri_lines(vec2 p, float scale) {
+	p *= scale;
+	float a = abs(fract(p.y) - 0.5);
+	float b = abs(fract(p.y * 0.5 + p.x * 0.866) - 0.5);
+	float c = abs(fract(p.y * 0.5 - p.x * 0.866) - 0.5);
+	return (0.5 - max(a, max(b, c))) / scale;
+}
+// Where the Null has built: 1 inside the lattice, with `edge` the band still being written.
+float built(vec2 w, float amount, float t, out float edge) {
+	float n = noise(w * 0.22 + vec2(3.7, 1.9)) * 0.65 + noise(w * 0.9) * 0.35;
+	float cut = 1.0 - amount;
+	edge = smoothstep(cut - 0.07, cut, n) * (1.0 - step(cut, n));
+	return step(cut, n);
+}
+// The Core's heartbeat: gold rings rolling out from the middle of the world, about one a second.
+float heartbeat(vec3 wp, float t) {
+	float f = fract(length(wp.xz) * 0.07 - t * 0.3);                // 0 at the ring's leading edge
+	return smoothstep(0.0, 0.015, f) * (1.0 - smoothstep(0.015, 0.09, f));
+}
+
+void fragment() {
+	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (piece == 2 && !IN_SHADOW_PASS) {
+		vec3 pv = (VIEW_MATRIX * vec4(player_world_pos + vec3(0.0, 1.0, 0.0), 1.0)).xyz;
+		if (VERTEX.z > pv.z + 0.3) {
+			float d = length(VERTEX.xy - pv.xy);
+			float fade = 1.0 - smoothstep(cutaway_radius * 0.55, cutaway_radius, d);
+			if (bayer4(FRAGCOORD.xy) < fade * (1.0 - cutaway_keep)) {
+				discard;
+			}
+		}
+	}
+	vec3 an = abs(ln);
+	bool top = an.y > 0.5;
+	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
+	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
+	float th = hash(tile.xz * 0.37 + vec2(tile.y * 0.11));       // this tile's random number
+	bool detail = gfx_detail > 0.5;
+	float t = detail ? TIME : 0.0;
+	float grain = detail ? noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5 : 0.5;
+	// the Stack Trace's light is the Architects' gold, played back cold
+	vec3 lit = mix(gold, replay_col, replay);
+
+	vec3 col = source;
+	vec3 em = vec3(0.0);
+	float metal = 0.05;
+	float rough = 0.35;
+	float m = max(abs(uv.x), abs(uv.y));
+
+	if (piece == 0 || piece == 1) {
+		if (!top) {
+			col = seam;
+		} else {
+			if (piece == 0) {
+				// Corridor: white panels in fours, a gold inlay cross joining every tile to the next
+				vec2 q = abs(fract(uv * 0.5 + 0.5) - 0.5);
+				col = source * (0.88 + grain * 0.18 + th * 0.05);
+				float groove = step(0.46, max(q.x, q.y));
+				col = mix(col, seam, groove * 0.85);
+				col = mix(col, seam, step(0.97, m));
+				float inlay = step(min(abs(uv.x), abs(uv.y)), 0.035) * step(m, 0.97);
+				float node = 1.0 - smoothstep(0.1, 0.13, length(uv));
+				col = mix(col, lit * 0.6, max(inlay, node));
+				float flow = detail ? 0.6 + 0.4 * sin((uv.x + uv.y) * 4.0 - t * 3.0 + th * 6.28) : 0.8;
+				em += lit * glow * (inlay * 0.5 * flow + node * 0.7);
+				metal = mix(metal, 0.9, max(inlay, node));
+			} else {
+				// Room floor: hexagonal source-stone, laid across the whole room, with gold seams
+				vec2 h = wp.xz * 0.55;
+				vec2 r = vec2(1.0, 1.732);
+				vec2 a = mod(h, r) - r * 0.5;
+				vec2 b = mod(h - r * 0.5, r) - r * 0.5;
+				vec2 g = dot(a, a) < dot(b, b) ? a : b;
+				vec2 cell_id = h - g;
+				vec2 ag = abs(g);
+				float hex_d = max(dot(ag, normalize(vec2(1.0, 1.732))), ag.x);  // 0 centre .. 0.5 edge
+				float edge_line = smoothstep(0.462, 0.478, hex_d);
+				col = source * (0.9 + 0.1 * hash(cell_id) + grain * 0.12);
+				col = mix(col, mix(seam, lit, 0.35), edge_line);
+				em += lit * glow * edge_line * 0.18;
+				metal = mix(metal, 0.8, edge_line);
+			}
+			// the Core's heartbeat crossing the floor
+			float beat = detail ? heartbeat(wp, t) : 0.0;
+			em += lit * glow * beat * (piece == 1 ? 0.45 : 0.25);
+			// the Null's construction: violet lattice over the stone, its edge written block by block
+			float edge;
+			float inside = built(wp.xz, lattice * (1.0 - replay * 0.5), t, edge);
+			float dl = tri_lines(wp.xz, 1.6);
+			float line = 1.0 - smoothstep(0.012, 0.03, dl);
+			col = mix(col, mix(col, deep, 0.55), inside);
+			col = mix(col, null_col * 0.5, line * inside);
+			em += null_col * glow * line * inside * 0.75;
+			vec2 blk = floor(wp.xz * 3.0);
+			float writing = step(0.55, hash(blk + vec2(floor(t * 4.0))));
+			em += null_col * glow * edge * writing * 0.9;
+			col = mix(col, null_col * 0.35, edge * writing);
+		}
+	} else {
+		// Wall: white pillars. A gold channel down the middle carries light toward the Core
+		if (top) {
+			col = source * (0.7 + grain * 0.15);
+			float cap = step(0.86, m) * step(m, 0.92);
+			col = mix(col, lit * 0.5, cap);
+			em += lit * glow * cap * 0.5;
+		} else {
+			float y = uv.y;                                          // -1 bottom .. 1 top of the block
+			col = source * (0.82 + grain * 0.2 + th * 0.06);
+			float band = step(0.92, abs(y));                         // the joint between blocks
+			col = mix(col, seam, band * 0.8);
+			float flute = step(0.6, abs(uv.x)) * step(abs(uv.x), 0.66);  // fluting either side
+			col = mix(col, seam, flute * 0.6);
+			float channel = step(abs(uv.x), 0.07);
+			float pulse = detail ? smoothstep(0.75, 1.0, fract(-wp.y * 0.35 - t * 0.6 + th)) : 0.3;
+			col = mix(col, lit * 0.55, channel);
+			em += lit * glow * channel * (0.35 + pulse * 1.1);
+			metal = mix(metal, 0.9, channel);
+			// the Null's lattice climbing from the floor, higher on some pillars than others
+			float climb = 0.4 + th * th * 3.4;
+			float reach = climb + (noise(vec2(wuv.x * 2.0, th * 30.0)) - 0.5) * 0.8;
+			float on = step(wp.y, reach) * step(0.35, th) * (1.0 - replay * 0.6);
+			float dl = tri_lines(wuv, 1.6);
+			float line = 1.0 - smoothstep(0.012, 0.03, dl);
+			float front = smoothstep(reach - 0.25, reach, wp.y) * on;
+			col = mix(col, mix(col, deep, 0.5), on);
+			col = mix(col, null_col * 0.5, line * on);
+			em += null_col * glow * (line * on * 0.7 + front * 0.6);
+			col = mix(col, seam, step(y, -0.9) * step(tile.y, 1.5));   // plinth, bottom block only
+		}
+	}
+
+	// THE STACK TRACE: playback bands rolling over everything, and a tile now and then skipping a frame
+	if (replay > 0.5) {
+		float bands = detail ? step(0.5, fract(wp.y * 0.0 + (wp.x + wp.z) * 0.08 - t * 0.25)) : 0.0;
+		col *= 1.0 - bands * 0.12;
+		em *= 1.0 - bands * 0.25;
+		float tick = detail ? step(0.985, hash(tile.xz * 0.37 + vec2(floor(t * 6.0)))) : 0.0;
+		col = mix(col, replay_col * 0.4, tick * 0.6);
+		em += replay_col * glow * tick * 0.5;
+		col = mix(col, col * vec3(0.85, 0.95, 1.05), 0.6);      // a cold cast over the white stone
+	}
+
+	ALBEDO = col;
+	METALLIC = metal;
+	ROUGHNESS = rough;
+	EMISSION = em;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nqxis"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 0
+shader_parameter/source = Color(0.74, 0.72, 0.68, 1)
+shader_parameter/seam = Color(0.24, 0.23, 0.25, 1)
+shader_parameter/deep = Color(0.03, 0.03, 0.05, 1)
+shader_parameter/gold = Color(1, 0.7, 0.28, 1)
+shader_parameter/null_col = Color(0.72, 0.25, 1, 1)
+shader_parameter/replay_col = Color(0.4, 0.85, 1, 1)
+shader_parameter/glow = 1.0
+shader_parameter/replay = 1.0
+shader_parameter/lattice = 0.2
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
+material = SubResource("ShaderMaterial_nqxis")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_1c3s2"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_j70o3"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 2
+shader_parameter/source = Color(0.74, 0.72, 0.68, 1)
+shader_parameter/seam = Color(0.24, 0.23, 0.25, 1)
+shader_parameter/deep = Color(0.03, 0.03, 0.05, 1)
+shader_parameter/gold = Color(1, 0.7, 0.28, 1)
+shader_parameter/null_col = Color(0.72, 0.25, 1, 1)
+shader_parameter/replay_col = Color(0.4, 0.85, 1, 1)
+shader_parameter/glow = 1.0
+shader_parameter/replay = 1.0
+shader_parameter/lattice = 0.2
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
+material = SubResource("ShaderMaterial_j70o3")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_52fan"]
+data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bcrlo"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 1
+shader_parameter/source = Color(0.74, 0.72, 0.68, 1)
+shader_parameter/seam = Color(0.24, 0.23, 0.25, 1)
+shader_parameter/deep = Color(0.03, 0.03, 0.05, 1)
+shader_parameter/gold = Color(1, 0.7, 0.28, 1)
+shader_parameter/null_col = Color(0.72, 0.25, 1, 1)
+shader_parameter/replay_col = Color(0.4, 0.85, 1, 1)
+shader_parameter/glow = 1.0
+shader_parameter/replay = 1.0
+shader_parameter/lattice = 0.2
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
+material = SubResource("ShaderMaterial_bcrlo")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_fjas6"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[resource]
+item/0/name = "Floor"
+item/0/mesh = SubResource("BoxMesh_thlkj")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = [SubResource("ConcavePolygonShape3D_1c3s2"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1
+item/1/name = "Wall"
+item/1/mesh = SubResource("BoxMesh_okwpl")
+item/1/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/mesh_cast_shadow = 1
+item/1/shapes = [SubResource("ConcavePolygonShape3D_52fan"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/1/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/navigation_layers = 1
+item/2/name = "Room_Floor"
+item/2/mesh = SubResource("BoxMesh_gs8hm")
+item/2/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/mesh_cast_shadow = 1
+item/2/shapes = [SubResource("ConcavePolygonShape3D_fjas6"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/2/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/navigation_layers = 1

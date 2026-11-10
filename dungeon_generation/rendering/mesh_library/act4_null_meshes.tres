@@ -1,0 +1,307 @@
+[gd_resource type="MeshLibrary" format=3 uid="uid://cuol8yq6mt1gb"]
+
+[sub_resource type="Shader" id="Shader_jb42q"]
+code = "shader_type spatial;
+// CodeBreak Requiem - Act IV tiles: the Null Zone, where AXIOM's rules come apart. Obsidian slabs
+// that don't line up any more, patches of the world deleted down to the void (stars and a violet
+// rim where the data ends), the Null's own glyphs etched into the room floors and read by a slow
+// sweep, and walls of black monolith with the glyphs streaming down them.
+// `piece`: 0 Floor, 1 Room_Floor, 2 Wall (the same pieces as the other libraries).
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform int piece = 0;
+uniform vec3 slab : source_color = vec3(0.16, 0.14, 0.22);
+uniform vec3 stone : source_color = vec3(0.13, 0.11, 0.19);
+uniform vec3 void_col : source_color = vec3(0.01, 0.01, 0.03);
+uniform vec3 accent : source_color = vec3(0.72, 0.25, 1.0);      // Null violet (the hubs' lights)
+uniform vec3 pale : source_color = vec3(0.9, 0.84, 1.0);         // the glyphs, read
+uniform vec3 ice : source_color = vec3(0.35, 0.9, 1.0);          // what's left of AXIOM, rarely
+uniform float glow = 1.0;
+// How much of the world is deleted (0 none .. 1 most): the noise level above which it's void.
+uniform float deleted = 0.22;
+
+// Wall cutaway (as the other tiles): wall pixels between the camera and the player dither away.
+global uniform vec3 player_world_pos;
+// GRAPHICS > TILE DETAIL (GraphicsQuality): 0 = simple (no fine grain, no motion)
+global uniform float gfx_detail;
+uniform float cutaway_radius = 3.2;
+uniform float cutaway_keep = 0.12;
+
+varying vec3 lp;
+varying vec3 ln;
+varying flat vec3 tile;      // world position of this tile's centre: one random pick per tile
+
+void vertex() {
+	lp = VERTEX;
+	ln = NORMAL;
+	tile = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+}
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = x + y * 4;
+	float m[16] = { 0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0 };
+	return (m[i] + 0.5) / 16.0;
+}
+// One Null glyph in a 0..1 cell: a 3x3 block of strokes picked by `seed`, with a margin round it.
+// The middle stroke is always on, so every glyph reads as a mark and not as an empty cell.
+float glyph(vec2 f, float seed) {
+	if (f.x < 0.14 || f.x > 0.86 || f.y < 0.14 || f.y > 0.86) {
+		return 0.0;
+	}
+	vec2 g = (f - 0.14) / 0.72 * 3.0;
+	vec2 id = floor(g);
+	vec2 sf = fract(g);
+	float on = step(0.52, hash(id + vec2(seed * 7.13, seed * 3.71)));
+	if (id.x == 1.0 && id.y == 1.0) {
+		on = 1.0;
+	}
+	float pad = step(0.16, sf.x) * step(sf.x, 0.84) * step(0.16, sf.y) * step(sf.y, 0.84);
+	return on * pad;
+}
+// Deleted ground: 0 solid, 1 void. `rim` is the glowing edge where the data ends.
+float deletion(vec2 w, float t, out float rim) {
+	float n = noise(w * 0.32 + vec2(t * 0.015, -t * 0.01)) * 0.7 + noise(w * 1.1) * 0.3;
+	float cut = 1.0 - deleted;
+	rim = smoothstep(cut - 0.06, cut, n) * (1.0 - step(cut, n));
+	return step(cut, n);
+}
+// The void under the world: black, with a few stars that come and go.
+vec3 void_stars(vec2 w, float t, out vec3 em) {
+	vec2 c = floor(w * 9.0);
+	float star = step(0.975, hash(c));
+	float twinkle = 0.5 + 0.5 * sin(t * (1.0 + hash(c + 3.0) * 3.0) + hash(c) * 40.0);
+	em = mix(pale, ice, hash(c + 9.0)) * star * twinkle * glow * 0.6;
+	return void_col;
+}
+
+void fragment() {
+	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (piece == 2 && !IN_SHADOW_PASS) {
+		vec3 pv = (VIEW_MATRIX * vec4(player_world_pos + vec3(0.0, 1.0, 0.0), 1.0)).xyz;
+		if (VERTEX.z > pv.z + 0.3) {
+			float d = length(VERTEX.xy - pv.xy);
+			float fade = 1.0 - smoothstep(cutaway_radius * 0.55, cutaway_radius, d);
+			if (bayer4(FRAGCOORD.xy) < fade * (1.0 - cutaway_keep)) {
+				discard;
+			}
+		}
+	}
+	vec3 an = abs(ln);
+	bool top = an.y > 0.5;
+	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
+	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
+	float th = hash(tile.xz * 0.37 + vec2(tile.y * 0.11));       // this tile's random number
+	bool detail = gfx_detail > 0.5;
+	float t = detail ? TIME : 0.0;
+	float grain = detail ? noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5 : 0.5;
+
+	vec3 col = slab;
+	vec3 em = vec3(0.0);
+	float metal = 0.05;
+	float rough = 0.3;
+	float m = max(abs(uv.x), abs(uv.y));
+
+	if (piece == 0 || piece == 1) {
+		if (!top) {
+			col = void_col;                                          // the slab's side: nothing under it
+		} else {
+			float rim;
+			float gone = deletion(wp.xz, t, rim);
+			if (piece == 0) {
+				// Corridor: obsidian slabs knocked out of line. Each tile's seam is shifted and
+				// tilted a little, and a fault runs across some of them.
+				col = slab * (0.8 + grain * 0.35);
+				vec2 sh = (vec2(hash(tile.xz + 1.3), hash(tile.xz + 4.1)) - 0.5) * 0.24;
+				float sm = max(abs(uv.x + sh.x), abs(uv.y + sh.y));
+				col = mix(col, void_col, step(0.955, sm));
+				em += accent * glow * step(0.955, sm) * step(sm, 0.975) * 0.25;
+				float a = th * 3.14159;
+				float fault = abs(dot(uv, vec2(cos(a), sin(a))) - (hash(tile.xz + 7.7) - 0.5));
+				float crack = (1.0 - smoothstep(0.01, 0.03, fault)) * step(0.55, th);
+				col = mix(col, void_col, crack);
+				em += accent * glow * crack * (0.6 + (detail ? 0.4 * sin(t * 2.0 + th * 30.0) : 0.0));
+				// a short line of glyphs on some tiles, as if something wrote across the road
+				if (th < 0.3) {
+					vec2 g = uv * 2.5;
+					float row = step(abs(uv.y), 0.2);
+					float gl = glyph(vec2(fract(g.x), (uv.y + 0.2) / 0.4), floor(g.x) + th * 31.0) * row;
+					col = mix(col, accent * 0.3, gl);
+					em += accent * glow * gl * 0.35;
+				}
+			} else {
+				// Room floor: the Null's glyphs on a 4x4 grid, etched dark; a slow sweep reads them,
+				// lighting each one pale as it passes
+				col = stone * (0.85 + grain * 0.3);
+				vec2 g = uv * 2.0 + 2.0;
+				vec2 id = floor(g);
+				float seed = hash(id + tile.xz * 0.37) * 97.0;
+				float gl = glyph(fract(g), seed);
+				float sweep = detail
+					? smoothstep(0.9, 1.0, fract(dot(wp.xz, vec2(0.05, 0.03)) - t * 0.06))
+					: step(0.93, hash(id + tile.xz));
+				col = mix(col, accent * 0.22, gl);
+				em += mix(accent * 0.5, pale, sweep) * glow * gl * (0.22 + sweep * 0.8);
+				// the slab's frame
+				float ring = step(0.94, m) * step(m, 0.975);
+				em += accent * glow * ring * 0.15;
+				col = mix(col, void_col, step(0.975, m));
+			}
+			// the world deleted in patches, across tiles: void below, a violet rim at the edge
+			vec3 vem;
+			vec3 vc = void_stars(wp.xz, t, vem);
+			col = mix(col, vc, gone);
+			em = mix(em, vem, gone);
+			col = mix(col, accent * 0.3, rim);
+			em += accent * glow * rim * 0.7;
+			rough = mix(rough, 1.0, gone);
+		}
+	} else {
+		// Wall: black monoliths. Glyphs stream down them in columns; some carry a white crack
+		if (top) {
+			col = stone * (0.5 + grain * 0.2);
+			float line = step(0.86, m) * step(m, 0.92);
+			em += accent * glow * line * 0.45;
+			col = mix(col, accent * 0.35, line);
+		} else {
+			float y = uv.y;                                          // -1 bottom .. 1 top of the block
+			col = stone * (0.55 + grain * 0.25);
+			// six glyph columns across the face, each falling at its own speed; only some run
+			float cx = (uv.x + 1.0) * 3.0;
+			float column = floor(cx);
+			float ch = hash(vec2(column, th * 13.0) + tile.xz * 0.37);
+			if (ch > 0.35) {
+				float speed = 0.4 + ch * 1.2;
+				float gy = (wp.y * 1.5) + t * speed + ch * 10.0;     // world height: columns join across blocks
+				float cell = floor(gy);
+				float trail = pow(fract(-cell * 0.19 + ch * 3.0), 4.0);   // the bright head moves with the cells
+				float gl = glyph(vec2(fract(cx), fract(gy)), cell + column * 17.0 + th * 5.0);
+				col = mix(col, accent * 0.15, gl * 0.6);
+				em += mix(accent, pale, trail) * glow * gl * (0.08 + trail * 0.9);
+			}
+			// a white crack down some blocks, wandering
+			if (th > 0.7) {
+				float cxp = (th - 0.85) * 4.0 + (noise(vec2(y * 2.5, th * 40.0)) - 0.5) * 0.5;
+				float crack = 1.0 - smoothstep(0.008, 0.03, abs(uv.x - cxp));
+				col = mix(col, pale, crack);
+				em += pale * glow * crack * 0.9;
+			}
+			// deleted chunks of wall: the void behind, with its rim
+			float rim;
+			float gone = deletion(wuv + vec2(tile.y * 3.0), t, rim);
+			vec3 vem;
+			vec3 vc = void_stars(wuv, t, vem);
+			col = mix(col, vc, gone);
+			em = mix(em, vem, gone);
+			em += accent * glow * rim * 0.6;
+			col = mix(col, void_col, step(0.95, abs(uv.x)));       // the seam between monoliths
+			col = mix(col, void_col, step(y, -0.9));                // plinth
+			metal = 0.2;
+			rough = 0.22;
+		}
+	}
+
+	ALBEDO = col;
+	METALLIC = metal;
+	ROUGHNESS = rough;
+	EMISSION = em;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nqxis"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 0
+shader_parameter/slab = Color(0.16, 0.14, 0.22, 1)
+shader_parameter/stone = Color(0.13, 0.11, 0.19, 1)
+shader_parameter/void_col = Color(0.01, 0.01, 0.03, 1)
+shader_parameter/accent = Color(0.72, 0.25, 1, 1)
+shader_parameter/pale = Color(0.9, 0.84, 1, 1)
+shader_parameter/ice = Color(0.35, 0.9, 1, 1)
+shader_parameter/glow = 1.0
+shader_parameter/deleted = 0.18
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
+material = SubResource("ShaderMaterial_nqxis")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_1c3s2"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_j70o3"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 2
+shader_parameter/slab = Color(0.16, 0.14, 0.22, 1)
+shader_parameter/stone = Color(0.13, 0.11, 0.19, 1)
+shader_parameter/void_col = Color(0.01, 0.01, 0.03, 1)
+shader_parameter/accent = Color(0.72, 0.25, 1, 1)
+shader_parameter/pale = Color(0.9, 0.84, 1, 1)
+shader_parameter/ice = Color(0.35, 0.9, 1, 1)
+shader_parameter/glow = 1.0
+shader_parameter/deleted = 0.18
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
+material = SubResource("ShaderMaterial_j70o3")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_52fan"]
+data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bcrlo"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 1
+shader_parameter/slab = Color(0.16, 0.14, 0.22, 1)
+shader_parameter/stone = Color(0.13, 0.11, 0.19, 1)
+shader_parameter/void_col = Color(0.01, 0.01, 0.03, 1)
+shader_parameter/accent = Color(0.72, 0.25, 1, 1)
+shader_parameter/pale = Color(0.9, 0.84, 1, 1)
+shader_parameter/ice = Color(0.35, 0.9, 1, 1)
+shader_parameter/glow = 1.0
+shader_parameter/deleted = 0.18
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
+material = SubResource("ShaderMaterial_bcrlo")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_fjas6"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[resource]
+item/0/name = "Floor"
+item/0/mesh = SubResource("BoxMesh_thlkj")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = [SubResource("ConcavePolygonShape3D_1c3s2"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1
+item/1/name = "Wall"
+item/1/mesh = SubResource("BoxMesh_okwpl")
+item/1/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/mesh_cast_shadow = 1
+item/1/shapes = [SubResource("ConcavePolygonShape3D_52fan"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/1/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/navigation_layers = 1
+item/2/name = "Room_Floor"
+item/2/mesh = SubResource("BoxMesh_gs8hm")
+item/2/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/mesh_cast_shadow = 1
+item/2/shapes = [SubResource("ConcavePolygonShape3D_fjas6"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/2/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/navigation_layers = 1

@@ -19,7 +19,7 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 			out.append("I pulled you out before they did. A rule that fires earlier keeps them off you.")
 		"SPEC NOT MET":
 			if spec.required_variable:
-				out.append("Your count paid out %d times. I asked for %d. Count something that happens more often, or ask for less." \
+				out.append("Your registry paid out %d times. I asked for %d. Add to it on every hit, or ask for less." \
 						% [fires, spec.required_fires])
 			elif spec.required_stop_loop:
 				out.append("Your loop repeated %d times. I asked for %d. Let it run longer before it stops, or raise its count." \
@@ -33,9 +33,9 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 	# The rule against the casts (a loop: its repeats against the casts)
 	if spec.required_variable:
 		if casts > 0 and fires == 0:
-			out.append("You cast %d times and never spent what you counted. Memory you don't use is just a leak." % casts)
+			out.append("You cast %d times and never read what you wrote down. Records nobody reads are just a leak." % casts)
 		elif casts > 0:
-			out.append("%d casts, and your count paid out %d times. It remembered what you'd have forgotten." % [casts, fires])
+			out.append("%d casts, and your records paid out %d times. It remembered each of them, so you didn't have to." % [casts, fires])
 	elif spec.required_stop_loop:
 		if casts > 0 and fires == 0:
 			out.append("You cast %d times and your loop never repeated once." % casts)
@@ -61,14 +61,18 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 	if spec.required_variable and r["passed"] and r["grade"] < 2:
 		out.append("Those were recordings. The real ones are past the District Gate, and I can't pull you out of there.")
 
-	# The script itself
+	# The script itself, against the tiers of the rank the exam is sat at (they grow with rank)
+	var tree := Engine.get_main_loop() as SceneTree
+	var extra := int(Ranks.perk(Ranks.of_player(tree), "tier_blocks"))
+	var elegant := _number(3 + extra)
+	var lean := _number(6 + extra)
 	match r["tier"]:
 		"elegant":
-			out.append("Elegant script. Three blocks or fewer.")
+			out.append("Elegant script. %s blocks or fewer." % elegant.capitalize())
 		"lean":
-			out.append("A lean script. Cut it to three blocks and I'll call it elegant.")
+			out.append("A lean script. Cut it to %s blocks and I'll call it elegant." % elegant)
 		_:
-			out.append("It works, but it's long. Six blocks or fewer earns a tier, and a better grade.")
+			out.append("It works, but it's long. %s blocks or fewer earns a tier, and a better grade." % lean.capitalize())
 
 	# The points it missed
 	if r["passed"]:
@@ -78,3 +82,9 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 			out.append("You lost %d%% of your health. Keep it under %d%% for the last point." \
 					% [roundi(r["damage"] * 100.0), roundi(spec.par_damage * 100.0)])
 	return out
+
+
+## 4 -> "four", the way Sudo says a block count.
+static func _number(n: int) -> String:
+	var words := ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"]
+	return words[n] if n >= 0 and n < words.size() else str(n)

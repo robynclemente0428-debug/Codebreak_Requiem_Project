@@ -1,6 +1,8 @@
 class_name EnemyHover
 extends Node
-## Child of the player. Hover an enemy to see its name, rarity, health and modifier names.
+## Child of the player. Hover an enemy to see its name, rarity, health and modifier names, and
+## each of its locks (puzzles: EnemyTrait with LOCK_NAME) with its icon, what it knows right now
+## and, from rank OPERATOR, how to beat it (the lock's HINT). Same icons as LockTags.
 ##
 ## Same idea as PickupController:
 ##  - the mouse ray uses THIS node's viewport (the small pixelated 3D one);
@@ -33,6 +35,8 @@ extends Node
 @export var hide_while_pickup_held: bool = true    # F is for loot, so no enemy plate then
 
 const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
+const LockTagsUI := preload("res://scenes/ui/player_ui/lock_tags/lock_tags.gd")   # LockTags, by path
+const COL_STATE := Color(1.0, 0.45, 0.45)
 const PLATE_OFFSET := Vector2(24, 24)              # from the mouse pointer
 const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_DIM := Color(0.55, 0.78, 0.85)
@@ -40,6 +44,7 @@ const COL_LIFE := Color(1.0, 0.30, 0.37)
 
 var _plate: Plate
 var _hovered: Node3D
+var _hovered_locks: Array = []
 var _font: Font
 
 @onready var _player: Node3D = get_parent()
@@ -90,9 +95,24 @@ func _process(_delta: float) -> void:
 	var health := enemy.get("health") as HealthComponent
 	if enemy != _hovered:                              # new target: rebuild the text once
 		_hovered = enemy
-		_plate.set_enemy(_enemy_name(enemy), _enemy_rarity(enemy), _modifier_names(enemy))
+		_hovered_locks = _locks_of(enemy)
+		var hints: bool = Ranks.perk(Ranks.of_player(get_tree()), "hints") == true   # null below OPERATOR
+		_plate.set_enemy(_enemy_name(enemy), _enemy_rarity(enemy), _modifier_names(enemy),
+				_hovered_locks, hints)
 	_plate.set_health(health.current_health, _max_health(health))   # live every frame
+	_plate.set_lock_states(_hovered_locks)                          # what each lock knows now
 	_place_plate()
+
+
+## The enemy's locks (EnemyTrait with a LOCK_NAME): Firewalled, ECHO, a boss's lock...
+func _locks_of(enemy: Node) -> Array:
+	var out: Array = []
+	var traits = enemy.get("traits")
+	if traits is Array:
+		for t in traits:
+			if t is EnemyTrait and (t as EnemyTrait).is_lock():
+				out.append(t)
+	return out
 
 
 ## The 3D view is a SubViewportContainer covering the screen, so its cursor shape is the one
@@ -178,6 +198,10 @@ func _modifier_names(enemy: Node) -> PackedStringArray:
 		if m is String or m is StringName:
 			out.append(String(m).capitalize())
 		elif m is Object:
+			var spawn_script = m.get("on_spawn_script")
+			if spawn_script is Script and (spawn_script as Script).get_script_constant_map().has("LOCK_NAME"):
+				continue                                   # a lock (Firewalled): it has its own row
+
 			var label = m.get("display_name")
 			if label == null or str(label) == "":
 				label = m.get("display_name_prefix")      # your EnemyModifierDefinition's name field
@@ -210,6 +234,8 @@ class Plate extends PanelContainer:
 	var _name_label: Label
 	var _sub_label: Label
 	var _bar: Bar
+	var _locks_box: VBoxContainer
+	var _state_labels: Array[Label] = []           # one per lock, updated live
 	var _mods_box: VBoxContainer
 
 	func setup(p_accent: Color, p_font: Font, p_scale: float, p_width: float, p_max: float) -> void:
@@ -251,12 +277,19 @@ class Plate extends PanelContainer:
 		_bar.custom_minimum_size = Vector2(plate_width - 24.0, 22.0 * font_scale)
 		box.add_child(_bar)
 
+		_locks_box = VBoxContainer.new()
+		_locks_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_locks_box.add_theme_constant_override("separation", 3)
+		box.add_child(_locks_box)
+
 		_mods_box = VBoxContainer.new()
 		_mods_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_mods_box.add_theme_constant_override("separation", 2)
 		box.add_child(_mods_box)
 
-	func set_enemy(enemy_name: String, rarity: String, mods: PackedStringArray) -> void:
+	## locks: the enemy's lock traits (EnemyTrait); hints: show how to beat each (rank OPERATOR).
+	func set_enemy(enemy_name: String, rarity: String, mods: PackedStringArray,
+			locks: Array = [], hints := false) -> void:
 		var col: Color = LootPickup.RARITY_COLORS.get(rarity, LootPickup.RARITY_COLORS["normal"])
 		_name_label.text = enemy_name
 		_name_label.add_theme_color_override("font_color", col)
@@ -275,8 +308,18 @@ class Plate extends PanelContainer:
 		for m in mods:
 			widest = maxf(widest, f.get_string_size("> " + m, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				roundi(15 * font_scale)).x)
+		var any_hint := false
+		for t in locks:
+			var lock := t as EnemyTrait
+			var line := "%s  %s" % [lock.lock_name(), lock.tag_state()]
+			widest = maxf(widest, 22.0 + f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1,
+				roundi(15 * font_scale)).x)
+			any_hint = any_hint or (hints and lock.lock_hint() != "")
 		var width := clampf(widest + pad + 4.0, plate_width, max_width)
+		if any_hint:
+			width = max_width                              # room for the hints to wrap
 		var inner := width - pad
+		_build_locks(locks, hints, inner)
 
 		# Wrapping labels need a real width up front, or they stack one word per line
 		custom_minimum_size.x = width
@@ -294,6 +337,49 @@ class Plate extends PanelContainer:
 		size = Vector2(width, 0.0)              # shrink to the new content
 		reset_size.call_deferred()
 
+	## One row per lock: its icon, name and what it knows now; its hint under it.
+	func _build_locks(locks: Array, hints: bool, inner: float) -> void:
+		for child in _locks_box.get_children():
+			_locks_box.remove_child(child)
+			child.queue_free()
+		_state_labels.clear()
+		for t in locks:
+			var lock := t as EnemyTrait
+			var col := lock.lock_color()
+			var row := HBoxContainer.new()
+			row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_theme_constant_override("separation", 6)
+			var icon := LockIcon.new()
+			icon.shape = lock.lock_shape()
+			icon.col = col
+			icon.custom_minimum_size = Vector2(14, 14) * font_scale
+			icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			row.add_child(icon)
+			row.add_child(_label(lock.lock_name(), 15, col))
+			var state := _label(lock.tag_state(), 15, COL_STATE)
+			row.add_child(state)
+			_state_labels.append(state)
+			_locks_box.add_child(row)
+			if hints and lock.lock_hint() != "":
+				var hint := _label(lock.lock_hint(), 13, COL_DIM)
+				hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				hint.custom_minimum_size.x = inner
+				_locks_box.add_child(hint)
+		_locks_box.visible = not locks.is_empty()
+
+	## Live: what each lock knows right now (ECHO's learned pattern...).
+	func set_lock_states(locks: Array) -> void:
+		var changed := false
+		for i in mini(locks.size(), _state_labels.size()):
+			if not is_instance_valid(locks[i]):
+				continue
+			var s := (locks[i] as EnemyTrait).tag_state()
+			if _state_labels[i].text != s:
+				_state_labels[i].text = s
+				changed = true
+		if changed:
+			reset_size.call_deferred()
+
 	func set_health(current: float, maximum: float) -> void:
 		_bar.set_values(current, maximum)
 
@@ -309,6 +395,18 @@ class Plate extends PanelContainer:
 		l.add_theme_color_override("font_color", col)
 		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		return l
+
+
+## A lock's icon on the plate: the same shapes as its tag (LockTags.draw_icon).
+class LockIcon extends Control:
+	var shape := "square"
+	var col := Color.WHITE
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		LockTagsUI.draw_icon(self, shape, Rect2(Vector2.ONE, size - Vector2.ONE * 2.0), col)
 
 
 ## Segmented health bar with "current / max" over it.

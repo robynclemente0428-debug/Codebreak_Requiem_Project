@@ -1,10 +1,10 @@
 shader_type spatial;
-// The Shoot bullet (ShootProjectile): one QuadMesh, stretched along the flight path and turned
-// to face the camera round that line, so it reads the same from any angle. Bright head at the
-// bullet, fading into a tail behind it. `tint` is per bullet (gold for players, red for enemies).
+// The Shoot bullets (ShootProjectile), all drawn by one MultiMesh (ShootTracers): each instance
+// is a QuadMesh stretched along its bullet's flight path and turned to face the camera round that
+// line, so it reads the same from any angle. Bright head at the bullet, fading into a tail behind
+// it. The instance colour is the bullet's tint (gold for players, red for enemies).
 render_mode unshaded, blend_add, cull_disabled, depth_draw_never, shadows_disabled, fog_disabled;
 
-instance uniform vec4 tint : source_color = vec4(1.0, 0.85, 0.4, 1.0);
 uniform float width = 0.2;                // metres across
 uniform float tail = 1.0;                 // metres from the head back to the tail's end
 
@@ -25,7 +25,7 @@ void fragment() {
 	float core = 1.0 - smoothstep(0.0, 1.0, across);
 	float fade = pow(1.0 - t, 1.6);
 	float a = core * fade;
-	vec3 col = mix(tint.rgb, vec3(1.0), pow(core, 5.0) * (1.0 - t));   // white-hot middle
+	vec3 col = mix(COLOR.rgb, vec3(1.0), pow(core, 5.0) * (1.0 - t));   // white-hot middle
 	ALBEDO = col * a * 2.5;
 	ALPHA = a;
 }

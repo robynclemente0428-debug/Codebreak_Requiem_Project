@@ -28,6 +28,9 @@ extends DungeonMarker
 @export var route_after_quest: String = ""
 @export_file("*.tscn") var routed_area: String = ""
 @export var routed_spawn: StringName = &"default"
+## ...only once that quest is turned in (not when it starts), and into this dungeon level.
+@export var route_when_done := false
+@export var routed_level: int = 0
 ## Convoy stops: the waypoint id this portal marks cleared when used (its exit), which opens the
 ## next stop on the route terminal (Waypoints.clear_stop). Empty = none.
 @export var clears_stop: String = ""

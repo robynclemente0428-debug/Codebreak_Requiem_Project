@@ -90,6 +90,9 @@ func _add_waypoint_panel() -> void:
 	var stim_layer := CanvasLayer.new()
 	stim_layer.name = "StimLayer"
 	stim_layer.layer = 19                 # under the HUD panels, so open menus cover it
+	var lock_tags: Control = preload("res://scenes/ui/player_ui/lock_tags/lock_tags.gd").new()   # puzzle enemies' tags
+	lock_tags.name = "LockTags"
+	stim_layer.add_child(lock_tags)       # first, so every panel on this layer draws over the tags
 	var stims := STIM_HUD.new()
 	stims.name = "StimHud"
 	stim_layer.add_child(stims)
@@ -176,6 +179,7 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 		area.on_player_arrived(player)
 	Waypoints.arrived(scene_path)         # first visit unlocks the area on the waypoint map (U)
 	GlitchDeath.prewarm(area, spot)       # its shaders compile now, not on the first kill
+	EffectWarmup.run(area, spot)          # likewise bullets, hit rings, flashes and damage numbers
 
 	await _wait_for_navigation(area, use_fade)
 	await _finish(use_fade)

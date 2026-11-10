@@ -2,7 +2,8 @@
 
 [ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
 [ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
-[ext_resource type="PackedScene" path="res://assets/models/enemy/eye_drone/eye_drone_model.tscn" id="3_model"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/boss/null_weaver_prime_model.tscn" id="3_model"]
+[ext_resource type="Script" path="res://systems/enemies/traits/grammar_lock_trait.gd" id="6_lock"]
 [ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="4_gem"]
 [ext_resource type="Resource" uid="uid://dg2sp662md7hi" path="res://data/skill_gems/shoot.tres" id="5_shoot"]
 
@@ -36,5 +37,6 @@ skill_flag_overrides = {
 basic_attack_enabled = false
 skill_cooldown = 0.0
 act_boss = true
-metadata/_note = "PROTOTYPE. A slow, wide fan of shots with gaps to step through, in place of the woven traps the campaign describes. No boss lock yet."
+innate_traits = Array[Script]([ExtResource("6_lock")])
+metadata/_note = "PROTOTYPE. GRAMMAR lock (answer its sentence with a two-condition WHEN rule), woven floor traps (WovenTraps, in its model), and a wide fan of shots."
 metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

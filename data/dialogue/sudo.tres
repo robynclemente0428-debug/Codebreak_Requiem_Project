@@ -5,22 +5,28 @@
 [resource]
 script = ExtResource("1_dlg")
 source = "# Examiner Sudo: rank examiner. Dry, patient.
-# Exams are quests (exam_operator, exam_architect, exam_engineer). Passing reports 'rank_up' for the rank system.
+# Exams are quests (exam_operator, exam_architect, exam_engineer, exam_defragmenter). Passing reports 'rank_up' for the rank system.
 # The Operator and Architect exams are sat in the sandbox (> exam operator, > exam architect, see
 # ExamChamber), and can be retaken for a better grade once passed.
 ~ start
+@ quest_ready:guild_expedition -> ready_guild
+@ quest_ready:exam_defragmenter -> pass_defragmenter
 @ quest_ready:exam_engineer -> pass_engineer
 @ quest_ready:exam_operator -> pass_operator
 @ quest_ready:exam_architect -> pass_architect
 @ quest_ready:exam_strategist -> pass_strategist
+@ quest_active:exam_defragmenter -> remind_defragmenter
 @ quest_active:exam_engineer -> fail
 @ quest_active:exam_operator -> ready_operator
 @ quest_active:exam_architect -> ready_architect
 @ quest_active:exam_strategist -> ready_strategist
+@ can_start:exam_defragmenter -> offer_defragmenter
 @ can_start:exam_engineer -> offer_engineer
 @ can_start:exam_operator -> offer_operator
 @ can_start:exam_architect -> offer_architect
 @ can_start:exam_strategist -> offer_strategist
+@ can_start:guild_expedition -> offer_guild
+@ quest_active:guild_expedition -> remind_guild
 @ quest_done:exam_strategist -> retake_strategist
 @ quest_done:exam_architect -> retake_architect
 @ quest_done:exam_operator -> retake_operator
@@ -62,7 +68,7 @@ Sudo: Three samples from out there, and one new tool: a script that remembers.
 
 ~ accept_strategist
 > start_quest exam_strategist
-Sudo: I'll lend you two counters, x and y. Count something with one rule, use it with another. They clear themselves when the fight ends. In the middle of one, though, a count nobody spends is just a leak.
+Sudo: I'll lend you a registry. A list of every process you've touched, like the Registrar's books. Add to it with one rule, check it with another. A dead process drops off it, and the whole thing clears when the fight ends. In the middle of one, though, a list nobody reads is just a leak.
 -> ready_strategist
 
 ~ ready_strategist
@@ -77,7 +83,7 @@ Sudo: The bay is sealed and the samples are loaded. Ready when you are.
 > turn_in exam_strategist
 > report rank_up strategist
 Sudo: It remembered, and it let go. Rank up. Strategist.
-Sudo: x and y are yours now, and so is set C. A plan is just a loop you haven't run yet.
+Sudo: The registry is yours now, and so is set C. A plan is just a loop you haven't run yet.
 -> end
 
 ~ retake_strategist
@@ -111,6 +117,51 @@ Sudo: Structure is just patience written down.
 * RETAKE THE OPERATOR EXAM -> go_operator
 * LEAVE -> end
 
+~ offer_guild
+Sudo: The Compiler Guild sent an expedition into the Null, years before your convoy. My examiner went with them.
+Sudo: She graded everything. Campsites. Weather. Me. The last log came from a place the Guild called the Expedition's End.
+Sudo: Find out what happened. Bring me their logs.
+* ACCEPT -> accept_guild
+* DECLINE -> end
+
+~ accept_guild
+> start_quest guild_expedition
+Sudo: South-west of here. If she's still there, she'll want to see your work. Bring a lean script.
+-> end
+
+~ remind_guild
+Sudo: Three logs, and whatever is left of her. South-west portal.
+-> end
+
+~ ready_guild
+Sudo: You found her.
+> turn_in guild_expedition
+Sudo: She called the Null the best-written code she'd ever audited. She wasn't wrong. That was the problem.
+Sudo: Thank you. I'll grade the rest of your exams a little more kindly. No, I won't.
+-> end
+
+~ offer_defragmenter
+Sudo: The last exam. After this there's nothing left for me to grade.
+Sudo: One script. A loop, the registry, and a rule with two conditions. Everything you've learned, in one place.
+* ACCEPT -> accept_defragmenter
+* DECLINE -> end
+
+~ accept_defragmenter
+> start_quest exam_defragmenter
+Sudo: Pass it and I'll open the way down to The Kernel.
+-> end
+
+~ remind_defragmenter
+Sudo: A loop, the registry, two conditions. One script. Apply it and come back.
+-> end
+
+~ pass_defragmenter
+> turn_in exam_defragmenter
+> report rank_up defragmenter
+Sudo: Defragmenter. I've never written that rank on anyone.
+Sudo: The Kernel is open. Whatever you decide down there, decide it efficiently.
+-> end
+
 ~ offer_engineer
 # NEW line below
 Sudo: The advanced exam. Fewer steps, deeper logic.
@@ -120,7 +171,7 @@ Sudo: The advanced exam. Fewer steps, deeper logic.
 ~ accept_engineer
 > start_quest exam_engineer
 # NEW line below
-Sudo: Three blocks. Two conditions. Show me.
+Sudo: Four blocks. Two conditions. Show me.
 -> end
 
 ~ fail

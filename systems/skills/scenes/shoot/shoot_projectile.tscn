@@ -1,22 +1,7 @@
 [gd_scene format=3 uid="uid://vflkkayeqdok"]
 
 [ext_resource type="Script" uid="uid://b0e82d3pmihap" path="res://systems/skills/scenes/shoot/shoot_projectile.gd" id="1_shoot"]
-[ext_resource type="Shader" path="res://systems/skills/scenes/shoot/shoot_tracer.gdshader" id="2_tracer"]
-
-[sub_resource type="ShaderMaterial" id="Mat_tracer"]
-render_priority = 0
-shader = ExtResource("2_tracer")
-shader_parameter/width = 0.2
-shader_parameter/tail = 1.0
-
-[sub_resource type="QuadMesh" id="Mesh_tracer"]
-material = SubResource("Mat_tracer")
 
 [node name="ShootProjectile" type="Node3D" unique_id=667770095]
 script = ExtResource("1_shoot")
 hit_radius = 0.25
-
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=567573791]
-cast_shadow = 0
-extra_cull_margin = 2.0
-mesh = SubResource("Mesh_tracer")

@@ -27,10 +27,15 @@ extends Area3D
 ##                      Hardfault's way onto the convoy waits for THE ROAD OUT
 ##   route_after_quest  from then on it leads to routed_area / routed_spawn instead: The Gate's
 ##                      exit goes on to the convoy rather than back to Hardfault
+##   route_when_done    route only once that quest is turned in, not when it starts: the Sweep's
+##                      exit goes home until Root Access is done, then on to Checkpoint's Far Side
+##   routed_level       the dungeon level of routed_area (0 = a town)
 @export var shown_after_quest: String = ""
 @export var route_after_quest: String = ""
 @export_file("*.tscn") var routed_area: String = ""
 @export var routed_spawn: StringName = &"default"
+@export var route_when_done := false
+@export var routed_level: int = 0
 ## A convoy stop's exit: walking through marks this waypoint id cleared, which opens the next
 ## stop on the convoy's route terminal (Waypoints.clear_stop).
 @export var clears_stop: String = ""
@@ -44,6 +49,7 @@ var _turned_back := 0.0          # seconds until the "sealed" message may show a
 var _quest_check := 0.0
 var _home_area := ""             # target_area / target_spawn before routing
 var _home_spawn: StringName = &""
+var _home_level := 0
 var _barrier: StaticBody3D       # solid_while_sealed
 
 
@@ -65,12 +71,21 @@ static func quest_started(tree: SceneTree, quest_id: String) -> bool:
 	return qm != null and (qm.is_active(quest_id) or qm.is_completed(quest_id))
 
 
+## True once the player has turned this quest in.
+static func quest_done(tree: SceneTree, quest_id: String) -> bool:
+	var player := tree.get_first_node_in_group("players") if tree != null else null
+	var qm = player.get("quests") if player != null else null
+	return qm != null and qm.is_completed(quest_id)
+
+
 ## Copies the story routing from a PortalMarker's layout entry (DungeonLayoutReader).
 func set_routing(d: Dictionary) -> void:
 	shown_after_quest = str(d.get("shown_after_quest", ""))
 	route_after_quest = str(d.get("route_after_quest", ""))
 	routed_area = str(d.get("routed_area", ""))
 	routed_spawn = StringName(str(d.get("routed_spawn", "default")))
+	route_when_done = bool(d.get("route_when_done", false))
+	routed_level = int(d.get("routed_level", 0))
 	clears_stop = str(d.get("clears_stop", ""))
 	if is_inside_tree():
 		_update_routing()
@@ -86,9 +101,12 @@ func _update_routing() -> void:
 		if _home_area == "":
 			_home_area = target_area
 			_home_spawn = target_spawn
-		var routed := quest_started(get_tree(), route_after_quest)
+			_home_level = dungeon_level
+		var routed := quest_done(get_tree(), route_after_quest) if route_when_done \
+				else quest_started(get_tree(), route_after_quest)
 		target_area = routed_area if routed else _home_area
 		target_spawn = routed_spawn if routed else _home_spawn
+		dungeon_level = routed_level if routed else _home_level
 
 
 func _process(delta: float) -> void:

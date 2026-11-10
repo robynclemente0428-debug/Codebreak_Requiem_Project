@@ -16,10 +16,60 @@ const REMOVED_KNOBS: Array[StringName] = [&"max_targets", &"cleave_targets"]
 @export var effects: Array[ProgramEffect] = []
 ## null = no loop.
 @export var loop: ProgramLoop
+## "if" blocks nested in this rule (ProgramBranch). Not allowed with a loop.
+@export var branches: Array[ProgramBranch] = []
+
+## Set only on the rule branch_rule() builds for a branch: the rule it is nested in, and which
+## of its branches it is. Such a rule's conditions are the outer rule's followed by the branch's.
+var parent: ProgramRule
+var branch_index := -1
+var _own_count := 0                       # how many of `conditions` belong to the branch itself
 
 
 func is_always() -> bool:
 	return conditions.is_empty()
+
+
+func is_branch() -> bool:
+	return parent != null
+
+
+## The rule a branch means: the outer rule's conditions AND the branch's, doing the branch's
+## lines. Built fresh each call; its condition and effect objects are the real ones.
+func branch_rule(i: int) -> ProgramRule:
+	var b := branches[i]
+	var r := ProgramRule.new()
+	r.owner = owner
+	r.conditions.assign(conditions + b.conditions)
+	r.effects.assign(b.effects)
+	r.parent = self
+	r.branch_index = i
+	r._own_count = b.conditions.size()
+	return r
+
+
+## This rule, then one rule per branch (branch_rule): what pricing, validation and ProgramSupport
+## go through.
+func flat() -> Array[ProgramRule]:
+	var out: Array[ProgramRule] = [self]
+	for i in branches.size():
+		out.append(branch_rule(i))
+	return out
+
+
+## The branch a branch rule stands for (null for an ordinary rule).
+func branch() -> ProgramBranch:
+	return parent.branches[branch_index] if parent != null else null
+
+
+## The conditions that are this rule's own: a branch's, without the outer rule's. They are the
+## ones a branch announces when it fires (the outer rule announced its own already).
+func own_conditions() -> Array[ProgramCondition]:
+	if parent == null:
+		return conditions
+	var out: Array[ProgramCondition] = []
+	out.assign(conditions.slice(conditions.size() - _own_count))
+	return out
 
 
 ## HIT if any condition needs a target, otherwise CAST.
@@ -30,7 +80,22 @@ func scope() -> ProgramCondition.Scope:
 	return ProgramCondition.Scope.CAST
 
 
+## A branch rule doesn't judge the outer rule's per-cast conditions again: it asks whether the
+## outer rule fired for this cast (ProgramSupport.rule_fired), so a condition that spends
+## something (Variable Store's charge) is only spent once. Per-hit outer conditions are read again
+## for each hit, since they are about the enemy being hit.
 func all_true(cast: SkillCast, target: Node) -> bool:
+	if parent != null:
+		if not parent.is_always():
+			if parent.scope() == ProgramCondition.Scope.CAST:
+				if not ProgramSupport.rule_fired(cast, parent):
+					return false
+			elif not parent.all_true(cast, target):
+				return false
+		for c in own_conditions():
+			if not c.is_true(cast, target):
+				return false
+		return true
 	for c in conditions:
 		if not c.is_true(cast, target):
 			return false
@@ -40,9 +105,12 @@ func all_true(cast: SkillCast, target: Node) -> bool:
 ## Stacked conditions never make buffs cheaper than this. It's the lowest any single condition
 ## goes on its own (every_nth_cast(7+)), so it only limits stacking several conditions.
 const MIN_COST_MULT := 0.25
+## A cash-in rule (spends_marks) may stack further, down to this: each of its marks pays out once,
+## so a rare one (every_nth_cast(4) and target in registry) keeps getting cheaper.
+const CASH_IN_MIN_COST_MULT := 0.18
 
 ## Different conditions stack: two 0.6 conditions make the effects cost 0.36 of the price
-## (down to MIN_COST_MULT).
+## (down to min_cost_mult()).
 ## The same kind of condition counts once, at its strictest (cheapest) setting: repeating
 ## target_life_below(90%) changes nothing about when the rule fires, so it can't be a discount.
 func cost_multiplier() -> float:
@@ -50,16 +118,36 @@ func cost_multiplier() -> float:
 	for c in conditions:
 		var t := c.type_id()
 		best[t] = minf(best.get(t, 1.0), c.cost_multiplier())
-	return maxf(raw_cost_multiplier_of(best), MIN_COST_MULT)
+	return maxf(raw_cost_multiplier_of(best), min_cost_mult())
 
 
-## True when the conditions would stack below MIN_COST_MULT (the editor says so).
+## True when the conditions would stack below min_cost_mult() (the editor says so).
 func is_discount_capped() -> bool:
 	var best := {}
 	for c in conditions:
 		var t := c.type_id()
 		best[t] = minf(best.get(t, 1.0), c.cost_multiplier())
-	return raw_cost_multiplier_of(best) < MIN_COST_MULT
+	return raw_cost_multiplier_of(best) < min_cost_mult()
+
+
+## The lowest this rule's conditions can stack to: CASH_IN_MIN_COST_MULT for a cash-in rule.
+func min_cost_mult() -> float:
+	return CASH_IN_MIN_COST_MULT if spends_marks() else MIN_COST_MULT
+
+
+## True for a cash-in rule: it checks "target in registry" and spends that mark itself, with a
+## registry.remove(target) in the same rule. A remove in another rule doesn't count.
+func spends_marks() -> bool:
+	var checks := false
+	for c in conditions:
+		var read := c as VarCondition
+		checks = checks or (read != null and read.is_membership() and read.op_text() == "in")
+	if not checks:
+		return false
+	for e in effects:
+		if ScriptRegisters.is_write(e.knob) and e.write_op() == "remove":
+			return true
+	return false
 
 
 static func raw_cost_multiplier_of(best: Dictionary) -> float:
@@ -91,17 +179,27 @@ func only_on_repeats() -> bool:
 	return false
 
 
-## Writing a register doesn't count as a block (ScriptRegisters).
+## Writing the registry doesn't count as a block (ScriptRegisters).
+## An "if" block costs its conditions and lines, like the rule's own: the outer conditions are
+## written once, which is what makes nesting cheaper than repeating them in another rule.
 func action_count() -> int:
 	var n := conditions.size() + (loop.action_count() if loop != null else 0)
 	for e in effects:
 		if not ScriptRegisters.is_write(e.knob):
 			n += 1
+	for b in branches:
+		n += b.conditions.size()
+		for e in b.effects:
+			if not ScriptRegisters.is_write(e.knob):
+				n += 1
 	return n
 
 
-## True when part of this rule has to run per cast even in always: (x += 1, damage += x * 1%).
+## True when part of this rule has to run per cast even in always: (registry.add(target),
+## damage += registry.size * 1%, or an "if" block).
 func uses_registers() -> bool:
+	if not branches.is_empty():
+		return true
 	for e in effects:
 		if ScriptRegisters.is_write(e.knob) or e.ramps():
 			return true
@@ -132,6 +230,18 @@ func describe(limits: SkillProgramLimits) -> String:
 		if not dos.is_empty():
 			body += " with " + ", ".join(dos)
 		return "%s -> %s" % [head, body]
+	for b in branches:
+		var ifs: Array[String] = []
+		for c in b.conditions:
+			ifs.append(c.describe().trim_prefix("WHEN "))
+		var bdos: Array[String] = []
+		for e in b.effects:
+			if ScriptRegisters.is_write(e.knob):
+				bdos.append(e.describe_write())
+			else:
+				var bk := limits.get_knob(e.knob) if limits != null else null
+				bdos.append(bk.describe(e.steps) if bk != null else "%s %+d" % [e.knob, e.steps])
+		dos.append("IF %s -> [%s]" % [" AND ".join(ifs), ", ".join(bdos)])
 	return "%s -> %s" % [head, ", ".join(dos)]
 
 
@@ -147,6 +257,11 @@ func to_dict() -> Dictionary:
 		d["owner"] = owner
 	if loop != null:
 		d["loop"] = loop.to_dict()
+	if not branches.is_empty():
+		var bs: Array = []
+		for b in branches:
+			bs.append(b.to_dict())
+		d["branches"] = bs
 	return d
 
 
@@ -163,4 +278,7 @@ static func from_dict(d: Dictionary) -> ProgramRule:
 			r.effects.append(e)
 	if d.get("loop") is Dictionary:
 		r.loop = ProgramLoop.from_dict(d["loop"])
+	for bd in d.get("branches", []):
+		if bd is Dictionary:
+			r.branches.append(ProgramBranch.from_dict(bd))
 	return r

@@ -47,12 +47,22 @@ func add_issue(full: String, text: String, hint: String, rule: ProgramRule, part
 	valid = false
 	if count:
 		errors.append(full)
-	issues.append({"text": text, "hint": hint, "rule": rule, "part": part, "kind": "error", "dup": not count})
+	var at := _at(rule, part)
+	issues.append({"text": text, "hint": hint, "rule": at[0], "part": at[1], "kind": "error", "dup": not count})
 
 
 ## Not an error: extra information pinned to a line (shown in amber).
 func add_note(text: String, hint: String, rule: ProgramRule, part: Object = null) -> void:
-	issues.append({"text": text, "hint": hint, "rule": rule, "part": part, "kind": "note", "dup": true})
+	var at := _at(rule, part)
+	issues.append({"text": text, "hint": hint, "rule": at[0], "part": at[1], "kind": "note", "dup": true})
+
+
+## A problem found on an "if" block's rule (ProgramRule.branch_rule) belongs to the real rule the
+## editor shows; with no line of its own, it goes on the block's "if" line (the ProgramBranch).
+static func _at(rule: ProgramRule, part: Object) -> Array:
+	if rule != null and rule.is_branch():
+		return [rule.parent, part if part != null else rule.branch()]
+	return [rule, part]
 
 
 ## Number of distinct errors (extra lines of the same error and notes don't count).

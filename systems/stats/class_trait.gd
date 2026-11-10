@@ -33,7 +33,7 @@ static func for_class(class_id: String) -> ClassTrait:
 @export var nth_rule_effect_per_n: float = 0.0
 ## Rules with a per-hit condition (WHEN target life below...) cost x this... Assassin: 0.5
 @export var hit_rule_cost_mult: float = 1.0
-## ...and their knob steps change x this (per-hit rules can only change damage). Assassin: 2.0
+## ...and their damage steps change x this (not their leech, barrier or guard). Assassin: 2.0
 @export var hit_rule_effect_mult: float = 1.0
 ## Per-hit rules (target life below) may change any flag knob too, not only damage.
 ## (Not used by any class right now.)
@@ -72,8 +72,11 @@ func rule_cost_mult(rule: ProgramRule) -> float:
 	return (nth_rule_cost_mult if _is_nth(rule) else 1.0) * (hit_rule_cost_mult if _is_per_hit(rule) else 1.0)
 
 
-func rule_effect_mult(rule: ProgramRule) -> float:
-	return (nth_effect_mult(rule) if _is_nth(rule) else 1.0) * (hit_rule_effect_mult if _is_per_hit(rule) else 1.0)
+## `include_hit`: false for a per-hit rule's leech / barrier / guard, which the per-hit bonus
+## (Assassin: damage steps count double) doesn't cover.
+func rule_effect_mult(rule: ProgramRule, include_hit := true) -> float:
+	return (nth_effect_mult(rule) if _is_nth(rule) else 1.0) \
+			* (hit_rule_effect_mult if include_hit and _is_per_hit(rule) else 1.0)
 
 
 ## Gladiator: every-Nth rules get stronger the rarer they fire.

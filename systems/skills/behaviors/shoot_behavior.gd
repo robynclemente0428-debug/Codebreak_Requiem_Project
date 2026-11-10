@@ -96,23 +96,30 @@ func _on_hit_enemy(target: Node, position: Vector3, pierced_so_far: int,
 		return
 	# Each enemy already pierced makes the bullet weaker: 20% falloff -> 100%, 80%, 64%, ...
 	var keep := maxf(1.0 - cast.flag("pierce_falloff"), 0.0)
-	ImpactEffect.spawn(cast.effect_parent(), position, 0.3, projectile.tint if is_instance_valid(projectile) 			else Color(1.0, 0.85, 0.4))
-	cast.hit(target, pow(keep, pierced_so_far))
+	# Bullet hits come many a second (pierce, forks): batched rings, no light (the muzzle flash has one)
+	ShootTracers.spark(cast.effect_parent(), position, 0.3, projectile.tint if is_instance_valid(projectile) \
+			else ShootProjectile.TINT_PLAYER)
+	var info := cast.hit(target, pow(keep, pierced_so_far))
 	# A per-hit rule may just have raised pierce for this cast (Assassin: WHEN target life < X ->
 	# pierce +1). The bullet only decides whether to stop after this returns, so it can still
 	# pick that up and fly on.
 	if is_instance_valid(projectile):
 		projectile.pierce = maxi(projectile.pierce, int(cast.flag("pierce")))
-	if pierced_so_far == 0 and cast.flag("fork_count") >= 1.0 and not cast.extra.get("forked", false) \
+	if pierced_so_far == 0 and info.flag("fork_count") >= 1.0 and not cast.extra.get("forked", false) \
 			and not target.is_in_group(&"breakables") and is_instance_valid(projectile):
-		_fork(cast, projectile, position)
+		_fork(cast, projectile, position, info)
 
 
-## Splits a bullet where it hit its first enemy (Fork support).
-func _fork(cast: SkillCast, projectile: ShootProjectile, at: Vector3) -> void:
+## Splits a bullet where it hit its first enemy (Fork support). `info`: that hit, whose per-hit
+## script rules may have added forks or fork angle (a bullet hitting a marked enemy splits wider).
+func _fork(cast: SkillCast, projectile: ShootProjectile, at: Vector3, info: HitInfo = null) -> void:
 	var child := cast.spawn_child()
 	child.extra = cast.extra.duplicate()
 	child.extra["forked"] = true
+	if info != null:
+		for k in ["fork_count", "fork_angle"]:
+			if info.flag_bonus.has(k):
+				child.flag_bonus[k] = float(child.flag_bonus.get(k, 0.0)) + float(info.flag_bonus[k])
 	child.damage_mult *= maxf(cast.flag("fork_damage"), 0.0)
 	for s in cast.skill.support_behaviors:
 		if s is ProgramSupport:
@@ -120,11 +127,11 @@ func _fork(cast: SkillCast, projectile: ShootProjectile, at: Vector3) -> void:
 	var reach := maxf(projectile.max_distance - projectile.travelled(), cast.flag("range") * 0.5)
 	var dirs := SkillDeliveries.fan_directions(projectile.direction,
 			int(round(child.flag("fork_count"))), child.flag("fork_angle"))
-	ImpactEffect.spawn(cast.effect_parent(), at, 0.45, Color(0.4, 0.95, 1.0))
+	ShootTracers.spark(cast.effect_parent(), at, 0.45, Color(0.4, 0.95, 1.0))
 	for d in dirs:
 		_spawn_projectile(child, at, d, projectile.exclude, reach)
 
 
 func _on_hit_world(position: Vector3, cast: SkillCast) -> void:
 	if cast.is_valid():
-		ImpactEffect.spawn(cast.effect_parent(), position, 0.25, Color(0.8, 0.8, 0.8))
+		ShootTracers.spark(cast.effect_parent(), position, 0.25, Color(0.8, 0.8, 0.8))

@@ -27,8 +27,9 @@ var input_locked := false               # set by UI windows that need the player
 var _interactable: Interactable
 var save_slot := -1          # put this next to your other vars at the top of the file
 
+## The mouse aims on a flat plane this many metres above the player's feet, whatever is under
+## it (walls included). 0 = the floor the player stands on.
 @export var aim_height: float = 1.0
-@export_flags_3d_physics var aim_mask: int = 1
 
 ## Rotation ease speed
 @export var ease_speed: float = 5.0
@@ -108,6 +109,7 @@ func _ready() -> void:
 		base[StatTypes.Stat.INTELLIGENCE] = float(c.intelligence)
 	stats.base_stats = base          # assign the whole dict: the setter doesn't fire on mutation
 	add_child(AimLine.new())         # ground line for ranged skills (gameplay setting "aim_line")
+	add_child(RegistryMarkers.new()) # a ring under each enemy in a skill's Registry
 	if c != null:
 		apply_movement_trait(c.get_trait())        # Rogue: phases through enemies
 
@@ -476,17 +478,12 @@ func _handle_rotation(delta: float) -> void:
 	var from := camera.project_ray_origin(mouse_pos)
 	var dir := camera.project_ray_normal(mouse_pos)
 
-	var query := PhysicsRayQueryParameters3D.create(from, from + dir * 200.0, aim_mask)
-	var hit := get_world_3d().direct_space_state.intersect_ray(query)
-
-	var aim_point: Vector3
-	if hit:
-		aim_point = hit.position
-	else:
-		var p = Plane(Vector3.UP, global_position.y + aim_height).intersects_ray(from, dir)
-		if p == null:
-			return
-		aim_point = p
+	# Always a flat plane at the player's own height: walls, crates and anything else the mouse is
+	# over never pull the aim towards the camera, so the cursor aims the same way everywhere.
+	var p = Plane(Vector3.UP, global_position.y + aim_height).intersects_ray(from, dir)
+	if p == null:
+		return
+	var aim_point: Vector3 = p
 
 	_cursor_point = aim_point
 	var to_aim := aim_point - global_position

@@ -449,9 +449,10 @@ class _MapView extends Control:
 
 	## Lit and clickable: discovered on the waypoint map; on the route map, open on the route
 	## (the convoy itself once visited).
-	## The U map leaves out a convoy act's stops (the route terminal lists them).
+	## The U map leaves out a convoy act's stops (the route terminal lists them); the route map
+	## leaves out the places reached on foot (Waypoint.on_foot).
 	func shown(w: Waypoint) -> bool:
-		return route or not Waypoints.is_convoy_stop(w)
+		return not w.on_foot if route else not Waypoints.is_convoy_stop(w)
 
 	func _shown_list() -> Array[Waypoint]:
 		var out: Array[Waypoint] = []
@@ -633,7 +634,10 @@ class _MapView extends Control:
 			name_y = _above_y(w)
 		elif side == LOWER:
 			name_y += LINE_DROP
-		draw_string(font, p + Vector2(-110, name_y), name, HORIZONTAL_ALIGNMENT_CENTER, 220, NAME_SIZE,
+		# As wide as the name needs (draw_string cuts off what doesn't fit), kept inside the map
+		var name_w := maxf(220.0, font.get_string_size(name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_SIZE).x + 8.0)
+		var name_x := clampf(p.x - name_w * 0.5, 0.0, maxf(0.0, size.x - name_w))
+		draw_string(font, Vector2(name_x, p.y + name_y), name, HORIZONTAL_ALIGNMENT_CENTER, name_w, NAME_SIZE,
 				WaypointPanel.COL_TEXT if lit else col)
 		if here:
 			draw_string(font, p + Vector2(-110, -r - 16), "YOU ARE HERE", HORIZONTAL_ALIGNMENT_CENTER,

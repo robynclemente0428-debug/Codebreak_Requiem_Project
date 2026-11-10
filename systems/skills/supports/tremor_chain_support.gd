@@ -12,9 +12,9 @@ extends SupportBehavior
 
 func on_kill(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 	var link: int = cast.extra.get("tremor", 0)
-	if link >= int(round(cast.flag("tremor_max_chain"))):
+	if link >= int(round(hit.flag("tremor_max_chain"))):     # hit.flag: + a per-hit rule's
 		return
-	var radius := cast.flag("radius") * cast.flag("tremor_radius")
+	var radius := cast.flag("radius") * hit.flag("tremor_radius")
 	if radius <= 0.1:
 		return
 	_tremor(cast, target, hit.position, radius, link + 1)

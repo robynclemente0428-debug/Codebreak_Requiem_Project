@@ -99,7 +99,7 @@ spawn_id = &"sweep_in"
 dungeon_level = 29
 kind = 2
 map_position = Vector2(0.92, 0.5)
-links = Array[String](["act3_mark_yards", "act3_far_side"])
+links = Array[String](["act3_mark_yards"])
 note = "Level 29  -  The Collector (GENERATIONS). Quarantine level 0"
 random_threats = Vector2i(1, 1)
 route_needs_quests = Array[String](["q06_the_mimic", "exam_strategist"])
@@ -113,12 +113,11 @@ scene = "res://scenes/map/dungeon/act_3_far_side.tscn"
 spawn_id = &"far_in"
 dungeon_level = 30
 kind = 1
-map_position = Vector2(0.92, 0.2)
+map_position = Vector2(0.5, 0.5)
 links = Array[String](["act3_sweep"])
-note = "Level 30  -  Past the Inward Gate. The Threshold is at the far end"
+note = "Level 30  -  Through the Inward Gate at the end of the Sweep. The Threshold is at the far end"
 random_threats = Vector2i(1, 1)
-route_needs_quests = Array[String](["q06c_root_access"])
-route_needs_text = "THE INWARD GATE IS SHUT: FINISH ROOT ACCESS"
+on_foot = true
 
 [resource]
 script = ExtResource("1_act")

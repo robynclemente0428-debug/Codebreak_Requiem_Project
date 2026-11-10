@@ -11,6 +11,10 @@ extends CanvasLayer
 ##                  a stop, then what the route map shows. Ends when the route map is closed.
 ##   RANK EXAMS     once the first exam (Operator) opens up: what exams are, what a rank gives,
 ##                  then sitting it in Sudo's sandbox and handing it in. Ends when it's passed.
+##   LOOT           the first time a drop lies near the player: hold the pickup key, point at it,
+##                  left-click. Ends on the first drop picked up.
+##   SCRIPTING GUIDE opens by itself (ScriptGuide) the first time the scripting lesson reaches the
+##                  editor; the lesson waits until it's closed.
 ##   AREA CLEARS    in a dungeon, once training is done: clearing every enemy in an area gives
 ##                  every skill a script point (ScriptBudget). Shown for CLEAR_HINT_TIME seconds.
 ## Shows a banner with the next thing to do and a second line saying why, outlines the UI to
@@ -33,7 +37,11 @@ const LESSON_QUESTS := "quest_tracker"
 const LESSON_EXAMS := "rank_exams"
 const LESSON_ROUTE := "route_terminal"
 const LESSON_CLEARS := "area_clears"
+const LESSON_GUIDE := "script_guide"       # the SCRIPTING GUIDE opened once, at the scripting lesson
+const LESSON_LOOT := "loot_pickup"
 const CLEAR_HINT_TIME := 12.0             # seconds the area-clear lesson stays up
+const LOOT_ARROW_HEIGHT := 1.6            # metres: over a drop and its name
+const LOOT_HINT_RANGE := 14.0              # metres: a drop this close starts the loot lesson
 const FIRST_EXAM := "exam_operator"
 const EXAMINER_NPC_ID := "sudo"
 const FONT_PATH := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
@@ -65,6 +73,7 @@ const WORLD_LAYER := 6
 var _world_canvas: Control
 var _targets: Array[Control] = []
 var _world_target: Node3D
+var _world_height := ARROW_HEIGHT          # metres above the world target ("world_height" in a hint)
 var _time := 0.0
 ## Hands-on steps of the scripting lesson, done once tried (even if the player changes the
 ## values back afterwards): "raised_knob", "changed_condition", "lowered_knob", "spent_points".
@@ -161,6 +170,7 @@ func _process(delta: float) -> void:
 		_banner.position = Vector2((screen.x - _banner.size.x) * 0.5, BANNER_Y).round()
 	_targets.assign(hint.get("targets", []))
 	_world_target = hint.get("world")
+	_world_height = hint.get("world_height", ARROW_HEIGHT)
 	_canvas.queue_redraw()
 	_world_canvas.queue_redraw()
 
@@ -178,6 +188,11 @@ func _current_hint() -> Dictionary:
 	var quests_hint := _quests_hint(qm)
 	if not quests_hint.is_empty():
 		return quests_hint
+
+	# The first drop near the player: how to pick it up. Short, so it goes before the rest
+	var loot_hint := _loot_hint()
+	if not loot_hint.is_empty():
+		return loot_hint
 
 	# Short and only in a dungeon, so it goes before a quest step that may be waiting there
 	var waypoint_hint := _waypoint_hint()
@@ -266,6 +281,79 @@ func _clear_hint(qm: QuestManager) -> Dictionary:
 func _minimap_target() -> Array:
 	var mm := get_tree().get_first_node_in_group("minimap") as Control
 	return [mm] if mm != null and mm.is_visible_in_tree() else []
+
+
+# ---------- THE LOOT LESSON ----------
+## The first time loot lies on the ground near the player: an arrow over the nearest drop, then
+## hold the pickup key, point at it, left-click. Ends (for good) on the first drop picked up,
+## which also ends it for a player who found out by themselves before it ever showed.
+func _loot_hint() -> Dictionary:
+	if _lesson_seen(LESSON_LOOT):
+		return {}
+	if LootPickup.taken > 0:
+		_mark_lesson_seen(LESSON_LOOT)
+		return {}
+	var player := _get_player() as Node3D
+	if player == null:
+		return {}
+	var drop := _nearest_drop(player)
+	if drop == null:
+		return {}
+	for group in ["inventory_panel", "skill_panel"]:
+		var p := get_tree().get_first_node_in_group(group)
+		if p != null and p.has_method("is_open") and p.is_open():
+			return {}                                 # not over the menus
+	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
+	if dialogue != null and dialogue.is_open():
+		return {}
+	var key := GemText.key_label(PickupController.PICKUP_ACTION)
+	var pc := player.get_node_or_null("PickupController") as PickupController
+	var hovered: LootPickup = pc.hovered() if pc != null else null
+	if hovered != null:
+		var inv: InventoryComponent = player.get("inventory")
+		if inv != null and inv.is_full():
+			var inv_panel := get_tree().get_first_node_in_group("inventory_panel") as InventoryPanel
+			return {"text": "Your backpack is full",
+				"sub": "Open it [%s] and sell or drop something to make room, then come back for this."
+					% (OS.get_keycode_string(inv_panel.toggle_key) if inv_panel != null else "I"),
+				"world": hovered, "world_height": LOOT_ARROW_HEIGHT}
+		if pc.is_too_far(hovered):
+			return {"text": "Walk closer to pick it up",
+				"sub": "Drops can be picked up from %s m away. Keep holding [%s]." % [_num(pc.pickup_range), key],
+				"world": hovered, "world_height": LOOT_ARROW_HEIGHT}
+		return {"text": "Left-click to pick it up",
+			"sub": "It goes into your backpack. Its stats are in the card next to the mouse: hover gear there later and hold CTRL to compare it with what you wear.",
+			"world": hovered, "world_height": LOOT_ARROW_HEIGHT}
+	if Input.is_action_pressed(PickupController.PICKUP_ACTION):
+		return {"text": "Keep holding [%s] and point at the drop" % key,
+			"sub": "Its name lights up and its stats show when the mouse is on it.",
+			"world": drop, "world_height": LOOT_ARROW_HEIGHT}
+	var labels := get_tree().get_first_node_in_group("loot_labels")
+	var names_shown: bool = labels != null and bool(labels.get("always_show"))
+	return {"text": "Loot dropped: hold [%s] and point at it" % key,
+		"sub": ("Names of drops are on the ground already. " if names_shown
+				else "Holding [%s] shows the names of the drops around you. " % key)
+			+ "Gear, gems and items for your build come from enemies and chests.",
+		"world": drop, "world_height": LOOT_ARROW_HEIGHT}
+
+
+## The closest drop within LOOT_HINT_RANGE of the player, null for none.
+func _nearest_drop(player: Node3D) -> LootPickup:
+	var best: LootPickup = null
+	var best_d := LOOT_HINT_RANGE
+	for n in get_tree().get_nodes_in_group(LootPickup.GROUP):
+		var p := n as LootPickup
+		if p == null or not p.is_inside_tree() or p.is_queued_for_deletion():
+			continue
+		var d := player.global_position.distance_to(p.global_position)
+		if d < best_d:
+			best_d = d
+			best = p
+	return best
+
+
+static func _num(v: float) -> String:
+	return str(roundi(v)) if is_equal_approx(v, roundf(v)) else "%.1f" % v
 
 
 # ---------- THE ROUTE TERMINAL LESSON ----------
@@ -493,6 +581,14 @@ func _script_hint(obj: Objective, sp: SkillPanel, sp_open: bool, sp_key: String,
 		return {"text": "Open the SCRIPTING tab",
 			"sub": "A script is a few small rules that change how a skill behaves.",
 			"targets": sp.tutorial_target("tab_script")}
+	# The first time the lesson reaches the editor: the SCRIPTING GUIDE opens by itself
+	if not _lesson_seen(LESSON_GUIDE):
+		_mark_lesson_seen(LESSON_GUIDE)
+		sp.open_script_guide("start")
+	if sp.script_guide_open():
+		return {"text": "Read the SCRIPTING GUIDE, or press [ESC] to skip it",
+			"sub": "Skipping is fine: tips show in OUTPUT as you build. guide() at the top of the editor opens the guide any time.",
+			"targets": sp.tutorial_target("script:guide")}
 	var st: Dictionary = sp.tutorial_script_state(cond)
 	if not st.get("has_socket", false):
 		return {"text": "Socket a skill gem first",
@@ -925,7 +1021,7 @@ func _on_canvas_draw() -> void:
 func _on_world_canvas_draw() -> void:
 	var line := Color(COL_HINT, 0.55 + 0.45 * (0.5 + 0.5 * sin(_time * 5.0)))
 	if _world_target != null and is_instance_valid(_world_target):
-		_draw_world_arrow(_world_target.global_position + Vector3.UP * ARROW_HEIGHT, line,
+		_draw_world_arrow(_world_target.global_position + Vector3.UP * _world_height, line,
 				NpcNameplates.top_of(_world_target))
 
 

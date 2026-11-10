@@ -12,27 +12,33 @@ const LOOP_KEY := "program_loop"
 ## The condition ids of every WHEN rule that fired for this cast ("enemies_nearby", ...), so
 ## something it hits can tell which rules answered (ChallengeLock). See fired_conditions().
 const FIRED_KEY := "program_fired"
+## registry.add / remove from this cast's rules, waiting for its hits (_write_hit_entries).
+const HIT_WRITES_KEY := "registry_hit_writes"
+## The rules (instance ids) whose WHEN fired for this cast, so their "if" blocks can tell
+## (rule_fired). Repeats, copies and follow-up casts (SkillCast.spawn_child) keep it.
+const RULES_FIRED_KEY := "program_rules_fired"
 
 var program: SkillProgram
 var limits: SkillProgramLimits
+## The program's rules with each "if" block as the rule it means (SkillProgram.flat_rules),
+## rebuilt for every cast.
+var _flat: Array[ProgramRule] = []
 var _cast_count := 0
-## The script's memory: register name -> value (ScriptRegisters). It lives on the program, so it
-## outlasts this support when the skill is rebuilt.
+## The script's memory, the Registry (ScriptRegisters): a set of enemies, instance id -> true.
+## It lives on the program, so it outlasts this support when the skill is rebuilt.
 var registers: Dictionary:
 	get:
 		return program.registers
 var _caster: Node3D
-## While a cast's rules are being judged, writes wait here, so every rule reads the same values.
-var _pending_writes: Array[ProgramEffect] = []
-var _judging := false
-## The counters a growing buff reads that have already risen this cast: they only rise once.
-var _raised := {}
 ## Loops still running (kept here so they live until they finish).
 var _runners: Array[ProgramLoopRunner] = []
 ## Assassin: attack speed from per-hit rules, for the skill's next cast (see speed_mult).
 const HIT_SPEED_WINDOW := 2.5     # seconds the bonus waits for the next attack
 var _hit_speed := 0.0
 var _hit_speed_msec := 0
+var _law_hit_msec := -1                    # REGISTRY FORGETS ON HIT: the last hit already forgotten
+
+const NullLawsRef := preload("res://systems/world/null_laws.gd")   # Act IV's Null Laws
 
 
 func _init(p_program: SkillProgram = null, p_limits: SkillProgramLimits = null) -> void:
@@ -48,7 +54,6 @@ func before_release(cast: SkillCast) -> void:
 		return                                   # Multicast copy / repeat: rules already applied
 	_caster = cast.caster
 	_clear_stale_registers()
-	_raised.clear()
 	# This cast started with any per-hit attack speed bonus (its cooldown and animation were set
 	# before now): it's used up. Hits from this cast can earn the next one.
 	_hit_speed = 0.0
@@ -63,8 +68,8 @@ func before_release(cast: SkillCast) -> void:
 	var tickets: Array[ProgramRule] = []
 	var whiles: Array[ProgramRule] = []
 	var late_fors: Array[ProgramRule] = []
-	_judging = true
-	for rule in program.rules:
+	_flat = program.flat_rules()
+	for rule in _flat:
 		if rule.scope() != ProgramCondition.Scope.CAST:
 			continue
 		if rule.loop != null:
@@ -75,20 +80,16 @@ func before_release(cast: SkillCast) -> void:
 			elif rule.is_always() or rule.all_true(cast, null):
 				if not rule.is_always():
 					announce(cast, rule)
-				for i in rule.loop.count:
+				for i in NullLawsRef.loop_count(rule.loop, cast.caster):   # LOOPS RUN ONCE MORE
 					tickets.append(rule)
 			continue
 		if rule.is_always():
-			_write_registers(rule)               # the rest of an always: rule is baked into the skill
+			_write_registers(rule, cast)         # the rest of an always: rule is baked into the skill
 			_apply_effects(cast, rule, {}, true)
 			continue
 		if not rule.all_true(cast, null):
 			continue
 		_fire_cast_rule(cast, rule, undo if _is_repeat_rule(rule) else {})
-	_judging = false
-	for e in _pending_writes:
-		_write_register(e)
-	_pending_writes.clear()
 	cast.extra[REPEAT_UNDO_KEY] = undo
 	if tickets.is_empty() and whiles.is_empty() and late_fors.is_empty():
 		return
@@ -108,7 +109,7 @@ func apply_repeat_rules(child: SkillCast, loop_rule: ProgramRule = null) -> void
 		for k in undo["flags"]:
 			child.flag_bonus[k] = child.flag_bonus.get(k, 0.0) - float(undo["flags"][k])
 	child.extra[REPEAT_UNDO_KEY] = {}
-	for rule in program.rules:
+	for rule in _rules():
 		if rule.loop != null or rule.is_always() or rule.scope() != ProgramCondition.Scope.CAST \
 				or not _is_repeat_rule(rule):
 			continue
@@ -130,7 +131,7 @@ static func _counts_swings(skill: SkillInstance) -> bool:
 ## Fork (Shoot): a forked bullet's cast. It starts from the cast it split off (whose WHEN rules
 ## already applied), then the rules about forks (WHEN forked ...) apply on top.
 func apply_fork_rules(child: SkillCast) -> void:
-	for rule in program.rules:
+	for rule in _rules():
 		if rule.loop != null or rule.is_always() or rule.scope() != ProgramCondition.Scope.CAST:
 			continue
 		var about_forks := false
@@ -153,12 +154,35 @@ static func _is_repeat_rule(rule: ProgramRule) -> bool:
 
 
 ## A WHEN (or loop) rule fired: quests, class trait, and conditions that spend something.
+## An "if" block announces only its own conditions: its rule announced the rest.
 func announce(cast: SkillCast, rule: ProgramRule) -> void:
 	_mark_fired(cast, rule)
 	_report_triggered(rule, cast)
 	_trait_fired(cast, rule)
-	for c in rule.conditions:
+	var fired: Array = cast.extra.get(RULES_FIRED_KEY, [])
+	if not rule.is_branch() and not rule.get_instance_id() in fired:
+		cast.extra[RULES_FIRED_KEY] = fired + [rule.get_instance_id()]     # a new array: copies share
+	for c in rule.own_conditions():
 		c.on_fired(cast)                                    # Variable Store spends its charge
+
+
+## True when `rule`'s WHEN fired for this cast (or for the cast it repeats or follows up).
+static func rule_fired(cast: SkillCast, rule: ProgramRule) -> bool:
+	return cast != null and rule != null and rule.get_instance_id() in cast.extra.get(RULES_FIRED_KEY, [])
+
+
+## The rules to run: this cast's flat list (built in before_release), or a fresh one.
+func _rules() -> Array[ProgramRule]:
+	if _flat.is_empty() and program != null:
+		_flat = program.flat_rules()
+	return _flat
+
+
+## A rule's place in the program, stable across casts: "2", or "2.0" for its first if block.
+func _rule_key(rule: ProgramRule) -> String:
+	if rule.is_branch():
+		return "%d.%d" % [program.rules.find(rule.parent), rule.branch_index]
+	return str(program.rules.find(rule))
 
 
 ## Applies one CAST rule. `record` (optional) collects what it added: {"damage", "flags"}.
@@ -179,7 +203,7 @@ func _apply_effects(cast: SkillCast, rule: ProgramRule, record: Dictionary, only
 		var v := knob.step * _steps_now(e, knob, cast) * mult
 		match knob.kind:
 			SkillKnob.Kind.VARIABLE:
-				_queue_write(e)
+				_queue_write(e, cast, null)
 			SkillKnob.Kind.DAMAGE:
 				cast.damage_mult *= 1.0 + v
 				if not record.is_empty():
@@ -190,45 +214,28 @@ func _apply_effects(cast: SkillCast, rule: ProgramRule, record: Dictionary, only
 					record["flags"][knob.flag_key] = float(record["flags"].get(knob.flag_key, 0.0)) + v
 
 
-# ---------- REGISTERS (ScriptRegisters) ----------
-func _write_registers(rule: ProgramRule) -> void:
+# ---------- THE REGISTRY (ScriptRegisters) ----------
+func _write_registers(rule: ProgramRule, cast: SkillCast) -> void:
 	for e in rule.effects:
 		if ScriptRegisters.is_write(e.knob):
-			_queue_write(e)
+			_queue_write(e, cast, null)
 
 
-func _queue_write(e: ProgramEffect) -> void:
-	if _judging:
-		_pending_writes.append(e)
-	else:
-		_write_register(e)
+## `target`: the enemy a per-hit rule is about, written at once. Without one (a cast rule), the
+## write waits on the cast and acts on every enemy it hits (_write_hit_entries).
+func _queue_write(e: ProgramEffect, cast: SkillCast, target: Node) -> void:
+	if target != null:
+		ScriptRegisters.write(registers, e, target)
+	elif cast != null:                           # a new array: repeats and copies share the old one
+		cast.extra[HIT_WRITES_KEY] = (cast.extra.get(HIT_WRITES_KEY, []) as Array) + [e]
 
 
-func _write_register(e: ProgramEffect) -> void:
-	var reg := e.register_name()
-	var before := int(registers.get(reg, 0))
-	var after := ScriptRegisters.written(e, before)
-	if after > before and _grows_with(reg):
-		if _raised.has(reg):
-			return
-		_raised[reg] = true
-	registers[reg] = after
-
-
-func _grows_with(reg: String) -> bool:
-	for rule in program.rules:
-		for e in rule.effects:
-			if e.ramps() and e.ramp_register() == reg:
-				return true
-	return false
-
-
-## How many of its knob's steps an effect gives now: its value, unless it grows with a counter. The
-## exam counts a counter paying out here like a rule reading it.
-func _steps_now(e: ProgramEffect, knob: SkillKnob, cast: SkillCast) -> float:
+## How many of its knob's steps an effect gives now: its value, unless it grows with registry.size.
+## The exam counts the set paying out here like a rule reading it.
+func _steps_now(e: ProgramEffect, knob: SkillKnob, cast: SkillCast, _target: Node = null) -> float:
 	if not e.ramps():
 		return float(e.steps)
-	var count := int(registers.get(e.ramp_register(), 0))
+	var count := ScriptRegisters.size_of(registers)
 	if count > 0 and not SkillTargets.is_enemy(cast.caster):
 		GameEvents.report("rule_triggered", "var_growth")
 	return ScriptRegisters.ramp_steps(count, e.steps, program.growth_room(e, knob))
@@ -252,6 +259,15 @@ func _clear_stale_registers() -> void:
 	if area != program.area_id or now - active > int(ScriptRegisters.CLEAR_AFTER * 1000.0):
 		registers.clear()
 		program.area_id = area
+	# REGISTRY FORGETS ON HIT: a hit since the last cast clears it
+	if hp != null and NullLawsRef.on("counters_forget", _caster):
+		if _law_hit_msec < 0:
+			_law_hit_msec = hp.last_damaged_msec           # hits from before the law don't count
+		elif hp.last_damaged_msec > _law_hit_msec:
+			_law_hit_msec = hp.last_damaged_msec
+			registers.clear()
+	else:
+		_law_hit_msec = -1
 
 
 ## The ProgramSupport running a skill's script (null = none).
@@ -263,34 +279,15 @@ static func of(skill: SkillInstance) -> ProgramSupport:
 	return null
 
 
-static func register_value(skill: SkillInstance, reg: String) -> int:
-	var support := of(skill)
-	return int(support.registers.get(reg, 0)) if support != null else 0
-
-
-## What the skill bar shows for a script using registers: "x=3", or "3|1" with both. "" = none.
+## What the skill bar shows for a script using the registry: "[n]", the enemies in the set.
+## "" = none.
 func registers_badge() -> String:
 	_clear_stale_registers()
-	var used: Array[String] = []
-	for reg in ScriptRegisters.NAMES:
-		if _uses_register(reg):
-			used.append(reg)
-	match used.size():
-		1:
-			return "%s=%d" % [used[0], int(registers.get(used[0], 0))]
-		2:
-			return "%d|%d" % [int(registers.get("x", 0)), int(registers.get("y", 0))]
-	return ""
-
-
-func _uses_register(reg: String) -> bool:
-	for rule in program.rules:
+	for rule in _rules():
 		for e in rule.effects:
-			if ScriptRegisters.is_write(e.knob) and e.register_name() == reg:
-				return true
-			if e.ramps() and e.ramp_register() == reg:
-				return true
-	return false
+			if ScriptRegisters.is_write(e.knob):
+				return "[%d]" % ScriptRegisters.size_of(registers)
+	return ""
 
 
 ## Loops count what each cast and repeat hit (for break and target_alive).
@@ -310,7 +307,8 @@ func on_area_impact(cast: SkillCast, center: Vector3, direction: Vector3) -> voi
 ## HIT rules: checked for every target, before damage is applied.
 func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 	program.last_active_msec = Time.get_ticks_msec()
-	for rule in program.rules:
+	var hit_writes: Array[ProgramEffect] = []    # land after every per-hit rule has read the set
+	for rule in _rules():
 		if rule.is_always() or rule.loop != null or rule.scope() != ProgramCondition.Scope.HIT:
 			continue
 		if not rule.all_true(cast, target):
@@ -319,15 +317,21 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 		_report_triggered(rule, cast)
 		_trait_fired(cast, rule)
 		var mult := limits.rule_effect_mult(rule)
-		var flags_key := "program_hit_flags_%d" % program.rules.find(rule)
+		var flags_key := "program_hit_flags_%s" % _rule_key(rule)
 		for e in rule.effects:
 			var knob := limits.get_knob(e.knob)
 			if knob == null:
 				continue
 			if knob.kind == SkillKnob.Kind.VARIABLE:
-				_write_register(e)
+				hit_writes.append(e)               # per hit: on the enemy being hit
 			elif knob.kind == SkillKnob.Kind.DAMAGE:
-				hit.damage *= 1.0 + knob.step * _steps_now(e, knob, cast) * mult
+				hit.damage *= 1.0 + knob.step * _steps_now(e, knob, cast, target) * mult
+			elif SkillProgramLimits.hit_defense_knob(knob) and not limits.per_hit_any_knob():
+				_hit_defense(cast, rule, knob, e, hit)
+			elif SkillProgramLimits.hit_support_knob(knob) and not limits.per_hit_any_knob():
+				# a support gem's flag, for this hit only (a marked enemy explodes bigger...)
+				var add := knob.step * _steps_now(e, knob, cast, target) * limits.rule_effect_mult(rule, false)
+				hit.flag_bonus[knob.flag_key] = float(hit.flag_bonus.get(knob.flag_key, 0.0)) + add
 			elif limits.per_hit_attack_speed(knob) and not cast.extra.has(flags_key):
 				# Assassin: the next cast of this skill is faster (once per rule per cast)
 				_hit_speed += knob.value_for(e.steps) * mult
@@ -335,9 +339,40 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 			elif knob.kind == SkillKnob.Kind.FLAG and limits.per_hit_any_knob() \
 					and not cast.extra.has(flags_key):
 				# Assassin: a per-hit flag change lasts for the rest of this cast, added once
-				cast.flag_bonus[knob.flag_key] = cast.flag_bonus.get(knob.flag_key, 0.0) + knob.step * _steps_now(e, knob, cast) * mult
+				cast.flag_bonus[knob.flag_key] = cast.flag_bonus.get(knob.flag_key, 0.0) + knob.step * _steps_now(e, knob, cast, target) * mult
 		if limits.per_hit_any_knob():
 			cast.extra[flags_key] = true
+	_write_hit_entries(cast, target, hit_writes)
+
+
+## The cast's registry.add / remove (from always:, WHEN and loop rules), then this hit's own from
+## per-hit rules, act on the enemy just hit, after its per-hit rules have read the set.
+func _write_hit_entries(cast: SkillCast, target: Node, hit_writes: Array[ProgramEffect]) -> void:
+	for e in cast.extra.get(HIT_WRITES_KEY, []):
+		ScriptRegisters.write(registers, e, target)
+	for e in hit_writes:
+		ScriptRegisters.write(registers, e, target)
+
+
+## A per-hit rule's leech, barrier or guard. Leech adds to this hit's own leech. Barrier and guard
+## go to the caster when the hit lands, once per rule per cast (a repeat or copy of the cast
+## shares the original's), so one swing through ten enemies shields you once, not ten times.
+## The per-hit damage bonus (Assassin) doesn't apply; every-Nth (Gladiator) does.
+func _hit_defense(cast: SkillCast, rule: ProgramRule, knob: SkillKnob, e: ProgramEffect, hit: HitInfo) -> void:
+	var v := knob.step * _steps_now(e, knob, cast, hit.target) * limits.rule_effect_mult(rule, false)
+	if v <= 0.0:
+		return
+	if knob.id == &"leech":
+		hit.leech_bonus += v
+		return
+	var once := "program_hit_def_%s_%s" % [_rule_key(rule), knob.id]
+	if cast.extra.has(once):
+		return
+	cast.extra[once] = true
+	if knob.id == &"barrier":
+		hit.barrier_bonus += v
+	else:
+		hit.guard_bonus += v
 
 
 ## Assassin: a per-hit rule with attack speed fired on the last cast's hits. The skill's next
@@ -351,7 +386,7 @@ func speed_mult(_skill: SkillInstance) -> float:
 ## Notes on the cast which conditions this rule fired on (FIRED_KEY).
 static func _mark_fired(cast: SkillCast, rule: ProgramRule) -> void:
 	var fired: Array = cast.extra.get(FIRED_KEY, [])
-	for c in rule.conditions:
+	for c in rule.own_conditions():
 		if not c.fired_id() in fired:
 			fired.append(c.fired_id())
 	cast.extra[FIRED_KEY] = fired
@@ -374,7 +409,7 @@ static func fired_conditions(cast: SkillCast) -> Array:
 ## Class trait reaction to a WHEN rule firing (Paladin's armour buff). One buff per rule.
 func _trait_fired(cast: SkillCast, rule: ProgramRule) -> void:
 	if limits.class_trait != null and not SkillTargets.is_enemy(cast.caster):
-		limits.class_trait.on_rule_fired(cast.caster, "%d_%d" % [get_instance_id(), program.rules.find(rule)])
+		limits.class_trait.on_rule_fired(cast.caster, "%d_%s" % [get_instance_id(), _rule_key(rule)])
 
 
 ## Quest event: a WHEN rule actually fired in combat ("rule_triggered", condition id).
@@ -382,8 +417,8 @@ func _trait_fired(cast: SkillCast, rule: ProgramRule) -> void:
 func _report_triggered(rule: ProgramRule, cast: SkillCast) -> void:
 	if SkillTargets.is_enemy(cast.caster):
 		return
-	for c in rule.conditions:
+	for c in rule.own_conditions():
 		GameEvents.report("rule_triggered", c.type_id())
 	# Which rule of which skill: "<gem id>#<rule index>" (the exam debrief counts these)
 	if cast.skill != null and cast.skill.gem != null:
-		GameEvents.report("rule_fired", "%s#%d" % [cast.skill.gem.id, program.rules.find(rule)])
+		GameEvents.report("rule_fired", "%s#%s" % [cast.skill.gem.id, _rule_key(rule)])

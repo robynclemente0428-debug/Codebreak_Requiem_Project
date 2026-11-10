@@ -31,11 +31,11 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 	var n := mark_count(cast.caster, target) + 1     # this hit's number on the mark
 	if n <= 1:
 		return                                       # no mark yet: this hit sets it
-	if n >= _hits_needed(cast):
-		hit.damage *= 1.0 + maxf(cast.flag("breakpoint_burst"), 0.0)
+	if n >= _hits_needed(cast, hit):                 # hit.flag: + a per-hit rule's, for this hit
+		hit.damage *= 1.0 + maxf(hit.flag("breakpoint_burst"), 0.0)
 		hit.set_meta(&"breakpoint_consume", true)
 	else:
-		hit.damage *= 1.0 + maxf(cast.flag("breakpoint_bonus"), 0.0)
+		hit.damage *= 1.0 + maxf(hit.flag("breakpoint_bonus"), 0.0)
 	hit.set_meta(&"breakpoint_n", n)
 
 
@@ -61,7 +61,7 @@ func on_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 	var n: int = hit.get_meta(&"breakpoint_n", 1)
 	target.set_meta(key, {"n": n, "msec": Time.get_ticks_msec(),
 			"duration": maxf(cast.flag("breakpoint_duration"), 0.5)})
-	_show_marker(target, n, _hits_needed(cast), maxf(cast.flag("breakpoint_duration"), 0.5), key)
+	_show_marker(target, n, _hits_needed(cast, hit), maxf(cast.flag("breakpoint_duration"), 0.5), key)
 
 
 ## How many hits the caster's mark on `target` has taken (0 = not marked, or it wore off).
@@ -95,8 +95,9 @@ static func last_target(caster: Node) -> Node:
 	return n as Node if is_instance_valid(n) else null
 
 
-func _hits_needed(cast: SkillCast) -> int:
-	return maxi(int(round(cast.flag("breakpoint_hits"))), 2)
+## `hit`: the hit being judged, so a per-hit rule's change to hits-to-break counts for it.
+func _hits_needed(cast: SkillCast, hit: HitInfo = null) -> int:
+	return maxi(int(round(hit.flag("breakpoint_hits") if hit != null else cast.flag("breakpoint_hits"))), 2)
 
 
 static func _key(owner: Node) -> String:

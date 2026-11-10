@@ -25,7 +25,10 @@ extends VBoxContainer
 ##                     Right-click a line to delete it. Click a line to select its rule.
 ##  - SNIPPETS (right): conditions and the selected file's knobs. Drag one into the editor, or
 ##                     click it to add it to the selected rule (or start a new rule).
-##                     Counters come as pieces: x and y, the assign operators, the compare operators.
+##                     The registry comes as pieces: registry.add / remove(target), target in /
+##                     not in registry, registry.size and the compare operators.
+##                     "if" (Strategist) nests a block in a rule: its header takes conditions, its
+##                     lines sit one step further in, and drops on any of its lines go into it.
 ##                     Dropped on a line they fit, they change it; anywhere else they add a whole line.
 ##                     Two tabs: OFFENSE (damage, reach, loops, the gem blocks) and DEFENSE
 ##                     (staying alive: my_life_below, hit_recently, leech, barrier, guard...).
@@ -40,6 +43,8 @@ extends VBoxContainer
 ##                     Sets past the player's rank aren't shown (Ranks.PERKS: B at OPERATOR, C at STRATEGIST),
 ##                     nor are blocks above it (Ranks.LOCKED_BLOCKS: loops need ARCHITECT).
 ##  - save_as() / load() (OUTPUT, rank ARCHITECT): the script library (SkillComponent.library).
+##  - guide() (top of the editor): the SCRIPTING GUIDE (ScriptGuide), laid over the tab: rules,
+##                     always / when, blocks, knobs, points, discounts, with this skill's numbers.
 ##
 ## The panes are resizable: drag the bars between EXPLORER, the editor and SNIPPETS, and between
 ## the editor and OUTPUT. The sizes are saved (Settings "layout/script_panes"), so they stay as
@@ -61,6 +66,10 @@ const COL_DRAW := Color(1.0, 0.45, 0.45)        # gutter "-": pays points
 const COL_OK := Color(0.30, 0.95, 0.60)
 const COL_PENDING := Color(1.0, 0.85, 0.35)
 const CODE_SIZE := 13
+## The widest a tooltip in this tab gets, in pixels. Longer lines wrap, so a tooltip only grows
+## taller (_wrap_hovered_tooltip).
+const TOOLTIP_MAX_WIDTH := 380.0
+const WRAPPED_TIP_META := &"_wrapped_tip"
 
 ## Set by SkillPanel before build().
 var panel: SkillPanel
@@ -123,6 +132,15 @@ var _file_headers: Dictionary = {}  # owner id ("" = the skill) -> its header li
 var _end_pad: Control              # room after the last file, so its header can reach the top
 var _pad_height := 0.0
 var _jump_serial := 0              # a newer jump cancels an older one still waiting for layout
+# The SCRIPTING GUIDE (ScriptGuide), laid over the tab by guide()
+var _guide: ScriptGuide
+var _guide_btn: Button
+# One-line tips in OUTPUT, the first time the player runs into an idea (ScriptTips)
+var _tip_row: HBoxContainer
+var _tip_label: Label
+var _tip_page_btn: Button
+var _tip_shown: Dictionary = {}    # {id, text, page} on screen now, {} for none
+var _tip_hold := false             # apply() just showed one: the rebuild after it keeps it
 
 
 # ---------- BUILDING ----------
@@ -162,6 +180,9 @@ func build() -> void:
 	_shrinkable(_title)
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(_title)
+	_guide_btn = _code_button("guide()", "The SCRIPTING GUIDE: rules, always and when, blocks, knobs, points and discounts.")
+	_guide_btn.pressed.connect(toggle_guide)
+	head.add_child(_guide_btn)
 	_set_note = panel._label("", _sz(11), COL_DRAW)
 	head.add_child(_set_note)
 	for i in SkillComponent.SCRIPT_SETS:
@@ -241,6 +262,46 @@ func build() -> void:
 
 ## A draggable split. `key` remembers where the player left its bar; `default_offset` is where
 ## it starts (from the side that doesn't expand: + grows the first pane, - the second).
+## Tooltips: Godot sizes the box to the longest line, so the control under the mouse gets its
+## tooltip word-wrapped to TOOLTIP_MAX_WIDTH before the tooltip delay runs out and it shows.
+func _input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion and is_visible_in_tree():
+		_wrap_hovered_tooltip()
+
+
+func _wrap_hovered_tooltip() -> void:
+	var c := get_viewport().gui_get_hovered_control()
+	if c == null or c.tooltip_text == "" or not (c == self or is_ancestor_of(c)):
+		return
+	if c.get_meta(WRAPPED_TIP_META, "") == c.tooltip_text:
+		return                                   # already wrapped, and not changed since
+	c.tooltip_text = wrap_tooltip(c.tooltip_text, c.get_theme_font(&"font", &"TooltipLabel"),
+		c.get_theme_font_size(&"font_size", &"TooltipLabel"))
+	c.set_meta(WRAPPED_TIP_META, c.tooltip_text)
+
+
+## `text` with each line broken at spaces so no line is wider than TOOLTIP_MAX_WIDTH. Existing
+## line breaks stay, and a single word longer than the limit keeps a line to itself.
+static func wrap_tooltip(text: String, font: Font, size: int) -> String:
+	if font == null:
+		return text
+	var out: PackedStringArray = []
+	for para in text.split("\n"):
+		if font.get_string_size(para, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= TOOLTIP_MAX_WIDTH:
+			out.append(para)
+			continue
+		var line := ""
+		for word in para.split(" "):
+			var trial := word if line == "" else line + " " + word
+			if line != "" and font.get_string_size(trial, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > TOOLTIP_MAX_WIDTH:
+				out.append(line)
+				line = word
+			else:
+				line = trial
+		out.append(line)
+	return "\n".join(out)
+
+
 func _split(vertical: bool, key: String, default_offset: float) -> SplitContainer:
 	var s: SplitContainer = VSplitContainer.new() if vertical else HSplitContainer.new()
 	s.add_theme_constant_override("separation", roundi(8.0 * _k()))
@@ -309,6 +370,7 @@ func _build_output() -> Control:
 	_load_btn = _code_button("load()", "")
 	_load_btn.pressed.connect(_toggle_library)
 	head.add_child(_load_btn)
+	box.add_child(_build_tip_row())
 	_library_box = VBoxContainer.new()
 	_library_box.visible = false
 	_library_box.add_theme_constant_override("separation", 2)
@@ -413,6 +475,29 @@ func _is_dirty(socket: int) -> bool:
 	return JSON.stringify((_drafts[socket] as SkillProgram).to_dict()) != applied_json
 
 
+## Opens the SCRIPTING GUIDE over the tab, on `page` ("" = the last one read), with the open
+## skill's numbers (budget, blocks, rules, tiers).
+func open_guide(page := "") -> void:
+	if _guide == null:
+		_guide = ScriptGuide.new()
+		_guide.tab = self
+		add_child(_guide)
+		_guide.build()
+	var limits := _limits()
+	_guide.open(limits, _bonus_sources() if limits != null else "", page)
+
+
+func toggle_guide() -> void:
+	if guide_open():
+		_guide.close()
+	else:
+		open_guide()
+
+
+func guide_open() -> bool:
+	return _guide != null and _guide.is_open()
+
+
 ## Called by SkillPanel when the tab is shown or the skills change.
 ## Controls the tutorial hints can outline (see SkillPanel.tutorial_target).
 ## ids: script_palette / palette, script_apply / apply, output, skill_file,
@@ -429,6 +514,12 @@ func tutorial_target(id: String) -> Array[Control]:
 		"output":
 			if _output_frame != null:
 				out.append(_output_frame)
+		"guide":
+			if guide_open():
+				out.append(_guide)
+		"guide_button":
+			if _guide_btn != null:
+				out.append(_guide_btn)
 		"skill_file":
 			if _skill_file_btn.has(_socket):
 				out.append(_skill_file_btn[_socket])
@@ -1028,7 +1119,9 @@ func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
 	var discount := ""
 	if not rule.is_always() and rule.cost_multiplier() < 1.0:
 		discount = "buffs x%.2f" % rule.cost_multiplier()
-		if rule.is_discount_capped():
+		if rule.spends_marks():
+			discount += " (spends its marks%s)" % (", max discount" if rule.is_discount_capped() else "")
+		elif rule.is_discount_capped():
 			discount += " (max discount)"
 	var looping := rule.loop != null
 	var is_while := looping and rule.loop.mode == ProgramLoop.Mode.WHILE
@@ -1053,27 +1146,7 @@ func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
 			if c.keyword() != "" and i == 0:
 				head = c.keyword() + " "         # except missed:
 			code.add_child(_tok(head, COL_KEYWORD))
-			var call_form := c.keyword() == "" and not c.modular()
-			if not c.modular():                          # when [x] [>=] [3]: is all parameters
-				code.add_child(_tok(_fn_name(c), COL_GEM if c.required_support() != "" else COL_FN))
-			if call_form:
-				code.add_child(_tok("(", COL_OP))
-			var params := c.param_names()
-			for j in params.size():
-				var p := params[j]
-				if j > 0:
-					code.add_child(_tok(" " if c.modular() else ", ", COL_OP))
-				var param_num := _num_tok(_fmt_param(c, p), c.param_label(p).to_lower(), func(d: int) -> void:
-					c.nudge_param(p, d)
-					_changed())
-				code.add_child(param_num)
-				if not _cond_nums.has(c):
-					_cond_nums[c] = []
-				_cond_nums[c].append(param_num)
-			if call_form:
-				code.add_child(_tok("):" if last else ")", COL_OP))
-			elif last:
-				code.add_child(_tok(":", COL_OP))
+			_condition_tokens(code, c, last)
 			code.add_child(_comment_tok(discount if i == 0 else ""))
 			if i == 0:
 				code.add_child(_delete_rule_button(rule))
@@ -1089,7 +1162,7 @@ func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
 	if looping and not is_while:
 		_loop_line(rule, limits)
 		indent = "        "
-	if rule.effects.is_empty() and not looping:
+	if rule.effects.is_empty() and not looping and rule.branches.is_empty():
 		var parts := _code_line(rule)
 		var code: HBoxContainer = parts[1]
 		code.add_child(_tok("    pass", COL_KEYWORD))
@@ -1097,6 +1170,8 @@ func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
 		_make_line_interactive(parts[0], rule, {})
 	for e in rule.effects:
 		_effect_line(rule, e, limits, indent)
+	for bi in rule.branches.size():
+		_branch_lines(rule, bi, limits)
 	if looping:
 		if is_while:
 			_loop_line(rule, limits)
@@ -1106,43 +1181,120 @@ func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
 			_break_line(rule, indent)
 
 
-func _effect_line(rule: ProgramRule, e: ProgramEffect, limits: SkillProgramLimits, indent := "    ") -> void:
+## A condition's tokens after its keyword: fn(params) for a call, or the parts of a modular block
+## (target in registry). `last`: it ends the header, so it gets the ":".
+func _condition_tokens(code: HBoxContainer, c: ProgramCondition, last: bool) -> void:
+	var call_form := c.keyword() == "" and not c.modular()
+	if not c.modular():                          # when [x] [>=] [3]: is all parameters
+		code.add_child(_tok(_fn_name(c), COL_GEM if c.required_support() != "" else COL_FN))
+	if call_form:
+		code.add_child(_tok("(", COL_OP))
+	var params := c.param_names()
+	for j in params.size():
+		var p := params[j]
+		if j > 0:
+			code.add_child(_tok(" " if c.modular() else ", ", COL_OP))
+		var param_num := _num_tok(_fmt_param(c, p), c.param_label(p).to_lower(), func(d: int) -> void:
+			c.nudge_param(p, d)
+			_changed())
+		code.add_child(param_num)
+		if not _cond_nums.has(c):
+			_cond_nums[c] = []
+		_cond_nums[c].append(param_num)
+	if call_form:
+		code.add_child(_tok("):" if last else ")", COL_OP))
+	elif last:
+		code.add_child(_tok(":", COL_OP))
+
+
+## An "if" block inside a rule: its header (one line per condition, "if" then "and"), then its
+## lines one step further in. Drops on any of its lines go into the block.
+func _branch_lines(rule: ProgramRule, bi: int, limits: SkillProgramLimits) -> void:
+	var b := rule.branches[bi]
+	var as_rule := rule.branch_rule(bi)
+	var discount := ""
+	if not b.conditions.is_empty() and as_rule.cost_multiplier() < 1.0:
+		discount = "buffs x%.2f" % as_rule.cost_multiplier()
+		if as_rule.spends_marks():
+			discount += " (spends its marks%s)" % (", max discount" if as_rule.is_discount_capped() else "")
+		elif as_rule.is_discount_capped():
+			discount += " (max discount)"
+	var per_hit := as_rule.scope() == ProgramCondition.Scope.HIT
+	var head_tip := "An if block: its lines apply only when this rule fires AND its own conditions are true. Its conditions are written once with the rule's, so it costs fewer blocks than a second rule.%s\nDrop a condition on this line to add it, or knobs below it. Drag out or right-click to delete the if." % (
+		"\nIts conditions are checked on each hit, so its lines can only change damage, leech, barrier, guard and support effects on that hit." if per_hit else "")
+	if b.conditions.is_empty():
+		var parts := _code_line(rule)
+		var code: HBoxContainer = parts[1]
+		code.add_child(_tok("    if ", COL_KEYWORD))
+		code.add_child(_tok("...:", COL_OP))
+		code.add_child(_comment_tok("drop a condition here"))
+		parts[0].tooltip_text = head_tip
+		_make_line_interactive(parts[0], rule, {"kind": "branch"}, b)
+		_mark(parts, rule, b)
+	for i in b.conditions.size():
+		var c := b.conditions[i]
+		var parts := _code_line(rule)
+		var code: HBoxContainer = parts[1]
+		code.add_child(_tok("    if " if i == 0 else "     and ", COL_KEYWORD))
+		_condition_tokens(code, c, i == b.conditions.size() - 1)
+		code.add_child(_comment_tok(discount if i == 0 else ""))
+		if i == 0:
+			parts[0].tooltip_text = head_tip
+			_make_line_interactive(parts[0], rule, {"kind": "branch"}, b)
+			_mark(parts, rule, b)
+		else:
+			parts[0].tooltip_text = "%s\nPart of the if block above. Drag out or right-click to delete." % c.describe()
+			_make_line_interactive(parts[0], rule, {"kind": "condition", "condition": c}, b)
+		_mark(parts, rule, c)
+	if b.effects.is_empty():
+		var parts := _code_line(rule)
+		var code: HBoxContainer = parts[1]
+		code.add_child(_tok("        pass", COL_KEYWORD))
+		code.add_child(_comment_tok("drop a knob here"))
+		_make_line_interactive(parts[0], rule, {}, b)
+	for e in b.effects:
+		_effect_line(rule, e, limits, "        ", b)
+
+
+## `branch`: the if block the line is in (null = the rule's own lines). Its numbers (per-hit
+## limits, discounts, class bonuses) come from the rule the block means.
+func _effect_line(rule: ProgramRule, e: ProgramEffect, limits: SkillProgramLimits, indent := "    ",
+		branch: ProgramBranch = null) -> void:
+	var owner_rule := rule
+	if branch != null:
+		rule = owner_rule.branch_rule(owner_rule.branches.find(branch))
 	var knob := limits.get_knob(e.knob)
 	var cost := _draft().line_cost(knob, e) if knob else 0.0
 	if cost > 0.0:
 		cost *= limits.buff_cost_mult()                  # class trait discount (Enchanter)
 	var marker := "+" if cost > 0.0 else ("-" if cost < 0.0 else "")
-	var parts := _code_line(rule, marker, COL_BUFF if cost > 0.0 else COL_DRAW)
+	var parts := _code_line(owner_rule, marker, COL_BUFF if cost > 0.0 else COL_DRAW)
 	var code: HBoxContainer = parts[1]
 	code.add_child(_tok(indent, COL_OP))
-	if ScriptRegisters.is_write(e.knob):                 # [x] [+=] [1]: every part is a token
-		code.add_child(_num_tok(e.register_name(), "counter", func(d: int) -> void:
-			e.reg = posmod(e.reg + d, ScriptRegisters.NAMES.size())
-			_changed()))
-		code.add_child(_tok(" ", COL_OP))
-		code.add_child(_num_tok(e.write_op(), "operator", func(d: int) -> void:
+	if ScriptRegisters.is_write(e.knob):                 # [registry.add](target): click to swap add / remove
+		var op_num := _num_tok("registry." + e.write_op(), "operation", func(d: int) -> void:
 			e.op = posmod(e.op + d, ScriptRegisters.WRITE_OPS.size())
-			_changed()))
-		code.add_child(_tok(" ", COL_OP))
-		var value_num := _num_tok(str(e.steps), "value", func(d: int) -> void:
-			e.steps = clampi(e.steps + d, 0, ScriptRegisters.WRITE_MAX)
 			_changed())
-		code.add_child(value_num)
-		_effect_num[e] = value_num
+		code.add_child(op_num)
+		_effect_num[e] = op_num
+		code.add_child(_tok("(target)", COL_OP))
 		code.add_child(_comment_tok("repeats only" if rule.loop != null or rule.only_on_repeats() else ""))
-		parts[0].tooltip_text = "Changes %s once this cast's rules have been read. It keeps its value between casts. Free: no points or blocks.\nClick a part to change it. Drag out or right-click to delete." % e.register_name()
-		_make_line_interactive(parts[0], rule, {"kind": "effect", "effect": e})
-		_mark(parts, rule, e)
+		var when := "the enemy being hit" if rule.scope() == ProgramCondition.Scope.HIT \
+				else "every enemy this cast hits, as each hit lands"
+		var what := "Adds %s to the registry." if e.write_op() == "add" else "Takes %s out of the registry."
+		parts[0].tooltip_text = (what % when) + " The registry is a set of enemies: each one is in it or not. It keeps them between casts; an enemy that dies leaves it. Free: no points or blocks.\nClick add / remove to swap. Drag out or right-click to delete."
+		_make_line_interactive(parts[0], owner_rule, {"kind": "effect", "effect": e}, branch)
+		_mark(parts, owner_rule, e)
 		return
 	code.add_child(_tok(String(e.knob), COL_VAR))
 	code.add_child(_tok(" -= " if e.steps < 0 else " += ", COL_OP))
-	var effect_mult := limits.rule_effect_mult(rule)
+	var effect_mult := limits.rule_effect_mult(rule, not SkillProgramLimits.per_hit_knob(knob))
 	var grow_tok := func() -> Control:
 		return _num_tok(e.ramp_text(), "what this grows with (it stops at the knob's limit)",
 			func(d: int) -> void:
-				e.ramp = posmod(e.ramp + 1 + d, ScriptRegisters.NAMES.size() + 1) - 1
+				e.ramp = _next_grow_key(e.ramp, d)
 				_changed())
-	if e.ramps():                                        # damage += x * 1%
+	if e.ramps():                                        # damage += registry.size * 1%
 		code.add_child(grow_tok.call())
 		code.add_child(_tok(" * ", COL_OP))
 	var value := str(absi(e.steps))
@@ -1158,7 +1310,7 @@ func _effect_line(rule: ProgramRule, e: ProgramEffect, limits: SkillProgramLimit
 		note = "costs %.1f" % cost
 		if e.ramps() and knob:
 			var room := _draft().growth_room(e, knob)
-			note += ", max +%s at %s = %d" % [_fmt_knob(knob, room, effect_mult), e.ramp_register(), ScriptRegisters.ramp_reach(e.steps, room)]
+			note += ", max +%s at %s = %d" % [_fmt_knob(knob, room, effect_mult), e.ramp_text(), ScriptRegisters.ramp_reach(e.steps, room)]
 	elif cost < 0.0:
 		note = "pays %.1f" % -cost
 	if rule.loop != null or rule.only_on_repeats():
@@ -1169,21 +1321,48 @@ func _effect_line(rule: ProgramRule, e: ProgramEffect, limits: SkillProgramLimit
 		note = ("%s, %s" % [note, x]) if note != "" else x
 	code.add_child(_comment_tok(note))
 	if knob and e.ramps():
-		parts[0].tooltip_text = "%s grows with %s until it reaches its limit, less your other %s lines. %s only rises once per cast.\nA higher value gets there faster and costs more. If no WHEN about the fight raises %s, it costs far more.\nDrag out or right-click to delete." % [
-			knob.display_name, e.ramp_register(), e.knob, e.ramp_register(), e.ramp_register()]
+		parts[0].tooltip_text = "%s grows with registry.size, the number of enemies in the registry, until it reaches its limit, less your other %s lines.\nA higher value gets there faster and costs more. It needs a registry.add(target) line to grow at all.\nDrag out or right-click to delete." % [
+			knob.display_name, e.knob]
 	elif knob:
-		parts[0].tooltip_text = "%s: %s\n%+.1f points per step. Limits: %d to %+d steps.%s%s\nDrag out or right-click to delete." % [
-			knob.display_name, knob.describe(e.steps), knob.cost_per_step, knob.min_steps, knob.max_steps,
+		parts[0].tooltip_text = "%s: %s\n%s\n%s%s%s\nDrag out or right-click to delete." % [
+			knob.display_name, knob.describe(e.steps), _knob_usage_note(knob), _step_price_note(knob),
 			(_stat_note(knob, limits) if knob.kind == SkillKnob.Kind.STAT else "") + _knob_limits_note(knob),
 			"\nIn a loop rule this only changes the repeats." if rule.loop != null else
 			("\nThis rule's condition is about loop repeats, so this only changes the repeats." if rule.only_on_repeats() else "")]
-	_make_line_interactive(parts[0], rule, {"kind": "effect", "effect": e})
-	_mark(parts, rule, e)
+	_make_line_interactive(parts[0], owner_rule, {"kind": "effect", "effect": e}, branch)
+	_mark(parts, owner_rule, e)
 
 
-## True when this line can grow with a counter, for a player who has counters.
+## How many steps this script has on the knob and its limit. Conditional rules count as if all of
+## them were active at once, the same way the limit is checked (ProgramValidation.knob_ranges).
+func _knob_usage_note(knob: SkillKnob) -> String:
+	var range_now: Array = _validation.knob_ranges.get(knob.id, [0, 0]) if _validation != null else [0, 0]
+	var lo: int = range_now[0]
+	var hi: int = range_now[1]
+	var have := "%+d steps" % lo if lo == hi else "%+d to %+d steps (with every WHEN rule active)" % [lo, hi]
+	if lo == 0 and hi == 0:
+		have = "0 steps"
+	return "You have: %s. Limit: %d to %+d steps." % [have, knob.min_steps, knob.max_steps]
+
+
+## Buff steps get pricier the more this script puts on the knob; drawbacks pay back flat.
+func _step_price_note(knob: SkillKnob) -> String:
+	var n := _draft().buff_steps_on(knob)
+	var pay := "Drawback steps pay back %.1f points each." % absf(knob.cost_per_step)
+	if n <= 0:
+		return "First buff step: %.1f points. %s" % [knob.next_step_cost(0), pay]
+	return "This knob's %d buff steps cost %.1f points in all; the next one costs %.1f (each costs x%s the last). %s" % [
+		n, knob.buff_cost(n), knob.next_step_cost(n), str(SkillKnob.STEP_COST_GROWTH), pay]
+
+
+## True when this line can grow with the registry, for a player who has the registry.
 func _can_grow(knob: SkillKnob, limits: SkillProgramLimits) -> bool:
 	return limits.allows("knob:" + String(ScriptRegisters.WRITE_KNOB)) and ScriptRegisters.can_grow(knob)
+
+
+## The next choice of what a buff grows with, `d` clicks on: nothing (-1) or registry.size (0).
+static func _next_grow_key(ramp: int, d: int) -> int:
+	return -1 if (ramp >= 0) != (posmod(d, 2) == 0) else 0
 
 
 ## Where a support knob can't work (see SkillKnob.always_only / first_cast_only).
@@ -1355,10 +1534,13 @@ func _code_line(rule: ProgramRule, marker := "", marker_col := Color.WHITE) -> A
 
 
 ## Lines of a rule: drops go to the rule, a click selects it, and lines with `info`
-## (a condition or an effect) can be dragged away or right-clicked to delete them.
-func _make_line_interactive(line: Control, rule: ProgramRule, info: Dictionary) -> void:
+## (a condition, an effect, an if block...) can be dragged away or right-clicked to delete them.
+## `branch`: the if block the line belongs to; drops on it go into the block.
+func _make_line_interactive(line: Control, rule: ProgramRule, info: Dictionary, branch: ProgramBranch = null) -> void:
 	var drag_func := Callable()
-	if not info.is_empty():
+	if branch != null:
+		info["branch"] = branch
+	if info.has("kind"):
 		info["src"] = "rule"
 		info["rule"] = rule
 		drag_func = func(_pos: Vector2) -> Variant:
@@ -1373,7 +1555,7 @@ func _make_line_interactive(line: Control, rule: ProgramRule, info: Dictionary) 
 				_selected = rule
 				_owner = rule.owner              # its file is the open one (its knobs in SNIPPETS)
 				_queue_rebuild()
-		elif ev.button_index == MOUSE_BUTTON_RIGHT and ev.pressed and not info.is_empty():
+		elif ev.button_index == MOUSE_BUTTON_RIGHT and ev.pressed and info.has("kind"):
 			_remove_block(info)
 			line.accept_event())
 
@@ -1489,7 +1671,7 @@ func _build_palette() -> void:
 		if sample.defensive() != defense or not limits.allows("cond:" + type_id):
 			continue                                   # wrong tab, or above the player's rank
 		if sample.modular():
-			continue                                   # listed under "counters" below
+			continue                                   # listed under "registry" below
 		var gem_id := sample.required_support()
 		if gem_id != "":
 			if limits.support_ids.has(gem_id):
@@ -1504,6 +1686,10 @@ func _build_palette() -> void:
 		_add_loop_snippets(limits)
 	if limits.allows("knob:" + String(ScriptRegisters.WRITE_KNOB)):   # on both tabs: my_life_below() can count too
 		_add_variable_snippets()
+	if limits.allows("if"):
+		_palette_box.add_child(_comment_tok("blocks"))
+		_palette_box.add_child(_snippet("if", COL_KEYWORD, {"src": "palette", "kind": "branch"},
+			"An if block inside a rule: its lines apply only when the rule fires AND the if's own conditions are true.\nThe rule's conditions are written once, so it costs fewer blocks than a second rule. With a per-hit condition (target in registry) its lines change only those hits.\nDrop it on a rule (not one with a loop), then drop a condition on its if line and knobs below it."))
 	# One section per socketed support gem that adds blocks, in socket order
 	for gem_id in limits.support_ids:
 		if not by_gem.has(gem_id):
@@ -1520,8 +1706,8 @@ func _build_palette() -> void:
 	if knobs.is_empty():
 		_palette_box.add_child(_comment_tok("nothing to change" if not defense else "no defensive knobs here"))
 	for knob: SkillKnob in knobs:
-		var tip := "%s\n+1 step: %s for %+.1f points.\nLimits: %d to %+d steps." % [
-			knob.display_name, knob.describe(1), knob.cost_for(1), knob.min_steps, knob.max_steps]
+		var tip := "%s\n%s\n+1 step: %s. %s" % [
+			knob.display_name, _knob_usage_note(knob), knob.describe(1), _step_price_note(knob)]
 		if knob.kind == SkillKnob.Kind.STAT:
 			tip += _stat_note(knob, limits)
 		tip += _knob_limits_note(knob)
@@ -1531,30 +1717,34 @@ func _build_palette() -> void:
 		_palette_box.add_child(knob_snippet)
 
 
-## The counter pieces: the counters, what can be assigned and what can be compared. Every piece
-## makes or changes a whole line, so a script is never left half-written (_add_counter_piece).
+## The registry pieces: add and remove, the membership checks, and the size with what it can be
+## compared with. Every piece makes or changes a whole line, so a script is never left
+## half-written (_add_counter_piece).
 func _add_variable_snippets() -> void:
-	var assign_tip := "%s\nAdds a line writing a counter, or changes the operator of the line you drop it on.\nCounters keep their value between casts, and clear %d seconds after a fight. Writing one is free: no points or blocks."
-	var compare_tip := "%s\nAdds a WHEN comparing a counter, as it was when the cast started, or changes the operator of the line you drop it on. Buffs in this rule cost x%.2f."
-	_palette_box.add_child(_comment_tok("counters"))
-	var counters: Array = []
-	for i in ScriptRegisters.NAMES.size():
-		counters.append([ScriptRegisters.NAMES[i], {"src": "palette", "kind": "counter", "reg": i},
-			"Counter %s.\nDrop on a knob's value to make that buff grow with it. Drop on a counter line to change which counter it uses. Anywhere else it adds %s += 1." % [
-				ScriptRegisters.NAMES[i], ScriptRegisters.NAMES[i]]])
-	_add_piece_row(counters)
-	_palette_box.add_child(_comment_tok("assign"))
-	var assigns: Array = []
-	for i in ScriptRegisters.WRITE_OPS.size():
-		assigns.append([ScriptRegisters.WRITE_OPS[i], {"src": "palette", "kind": "assign_op", "op": i},
-			assign_tip % [ScriptRegisters.WRITE_OPS[i], int(ScriptRegisters.CLEAR_AFTER)]])
-	_add_piece_row(assigns)
-	_palette_box.add_child(_comment_tok("compare"))
-	var compares: Array = []
+	_palette_box.add_child(_comment_tok("registry: a set of enemies"))
+	var free := "\nFree: no points or blocks. It keeps enemies between casts, and clears %d seconds after a fight; an enemy that dies leaves it." % int(ScriptRegisters.CLEAR_AFTER)
+	_add_piece_row([
+		["registry.add(target)", {"src": "palette", "kind": "set_write", "op": 0},
+			"Adds enemies to the registry. In always: or a WHEN, every enemy the cast hits; in a per-hit rule, the enemy being hit.\nDrop on a registry line to make it add." + free],
+		["registry.remove(target)", {"src": "palette", "kind": "set_write", "op": 1},
+			"Takes enemies out of the registry, the same way add puts them in.\nDrop on a registry line to make it remove." + free],
+	])
+	var member_tip := "%s\nChecked per hit, against the enemy being hit, so this rule's buffs only land on those hits (per-hit rules can change damage, leech, barrier, guard and support effects that happen on that hit or kill: explosions, breakpoints, tremors, charge, error damage, forks. Barrier and guard come once per cast when a hit lands). A hit sees the registry from before it landed.\n%s Drop on a registry check to change it."
+	var in_cost := "Buffs in this rule cost x%.2f if your script spends marks with registry.remove(target): each mark pays out once. Without a remove a mark lasts all fight, so they cost x%.2f." % [
+		VarCondition.COST_SPENT, VarCondition.COST_KEPT]
+	_add_piece_row([
+		["target in registry", {"src": "palette", "kind": "member", "op": 0},
+			member_tip % ["When the enemy being hit is in the registry.", in_cost]],
+		["target not in registry", {"src": "palette", "kind": "member", "op": 1},
+			member_tip % ["When the enemy being hit is not in the registry yet.", "Buffs in this rule cost x%.2f." % VarCondition.COST_MULT]],
+	])
+	var size_pieces: Array = [["registry.size", {"src": "palette", "kind": "size"},
+		"How many enemies are in the registry. Checked per cast, and it grows as hits land, so while registry.size < 3: stops itself.\nDrop on a knob's value to make that buff grow with it. Anywhere else it adds when registry.size >= 3."]]
 	for i in ScriptRegisters.OPS.size():
-		compares.append([ScriptRegisters.OPS[i], {"src": "palette", "kind": "compare_op", "op": i},
-			compare_tip % [ScriptRegisters.OPS[i], VarCondition.COST_MULT]])
-	_add_piece_row(compares)
+		size_pieces.append([ScriptRegisters.OPS[i], {"src": "palette", "kind": "compare_op", "op": i},
+			"%s\nAdds when registry.size %s 3, or changes the operator of the registry check you drop it on. Buffs in this rule cost x%.2f." % [
+				ScriptRegisters.OPS[i], ScriptRegisters.OPS[i], VarCondition.COST_MULT]])
+	_add_piece_row(size_pieces)
 
 
 ## Small snippets side by side: each entry is [text, drag data, tooltip].
@@ -1617,7 +1807,7 @@ func _condition_snippet(type_id: String, sample: ProgramCondition, col: Color, g
 	var tip := "%s\nRarer conditions make buffs cheaper.\nDrag into a rule, or click to add." % sample.describe()
 	if sample.modular():
 		label = sample.describe().trim_prefix("WHEN ")
-		tip = "Reads a counter, as it was when the cast started. Buffs in this rule cost x%.2f.\nDrag into a rule, or click to add. Then click x, >= or 3 to change them." % sample.cost_multiplier()
+		tip = "Reads the registry: target in registry per hit, registry.size per cast. Buffs in this rule cost x%.2f.\nDrag into a rule, or click to add. Click its parts to change them." % sample.cost_multiplier()
 	if gem_name != "":
 		tip = "From the %s gem.\n%s" % [gem_name, tip]
 	return _snippet(label, col, {"src": "palette", "kind": "condition", "type": type_id}, tip)
@@ -1683,7 +1873,7 @@ func palette_items() -> Array[String]:
 	for c in _palette_box.get_children():
 		if c is PanelContainer:
 			out.append((c.get_child(0) as Label).text)
-		elif c is HFlowContainer:                      # a row of counter pieces
+		elif c is HFlowContainer:                      # a row of registry pieces
 			for piece in c.get_children():
 				out.append((piece.get_child(0) as Label).text)
 	return out
@@ -1698,8 +1888,8 @@ func _can_drop_on_rule(_pos: Vector2, data: Variant, _rule: ProgramRule) -> bool
 func _drop_on_rule(_pos: Vector2, data: Variant, rule: ProgramRule, line: Dictionary = {}) -> void:
 	if data.get("src") == "palette":
 		_add_from_palette(data, rule, line)
-	elif data.get("rule") != rule:
-		_move_block(data, rule)
+	elif data.get("rule") != rule or data.get("branch") != line.get("branch"):
+		_move_block(data, rule, line)
 
 
 func _can_drop_new_rule(_pos: Vector2, data: Variant) -> bool:
@@ -1742,7 +1932,7 @@ func _new_rule() -> ProgramRule:
 func _add_from_palette(data: Dictionary, rule: ProgramRule, line: Dictionary = {}) -> void:
 	if _sock() == null or _limits() == null:
 		return
-	if data["kind"] in ["counter", "assign_op", "compare_op"]:
+	if data["kind"] in ["set_write", "member", "size", "compare_op"]:
 		_add_counter_piece(data, rule, line)
 		return
 	if data["kind"] == "break" and (rule == null or rule.loop == null):
@@ -1750,12 +1940,18 @@ func _add_from_palette(data: Dictionary, rule: ProgramRule, line: Dictionary = {
 		return
 	if data["kind"] == "effect" and not _knob_fits(data["knob"], rule.owner if rule != null else _owner):
 		return
+	if data["kind"] == "branch" and rule != null and rule.loop != null:
+		panel._notify("A RULE WITH A LOOP CAN'T HAVE AN IF")
+		return
 	if rule == null:
 		rule = _new_rule()
-	if data["kind"] == "condition":
+	var box: Object = _box(rule, line)                 # the rule, or the if block dropped on
+	if data["kind"] == "branch":
+		rule.branches.append(ProgramBranch.new())
+	elif data["kind"] == "condition":
 		var c := ProgramConditions.create(data["type"])
 		if c != null:
-			rule.conditions.append(c)
+			box.conditions.append(c)
 	elif data["kind"] == "loop":
 		if rule.loop == null:
 			rule.loop = ProgramLoop.make(data["mode"])
@@ -1768,66 +1964,84 @@ func _add_from_palette(data: Dictionary, rule: ProgramRule, line: Dictionary = {
 			else ProgramLoop.Break.KILL
 	else:
 		var existing: ProgramEffect = null
-		for e in rule.effects:
+		for e in box.effects:
 			if e.knob == data["knob"]:
 				existing = e
 		if existing != null:
 			existing.steps += 1
 		else:
-			rule.effects.append(ProgramEffect.make(data["knob"], 1))
+			box.effects.append(ProgramEffect.make(data["knob"], 1))
 	_selected = rule
 	_changed()
 
 
-## A counter piece from SNIPPETS. Dropped on a line it fits, it changes that line:
-##   a counter on a counter line changes which one it uses; on a knob's line, that buff grows with it
-##   an operator on a line of its own kind changes that line's operator
+## Where a drop on `line` of `rule` goes: the if block the line is in, or the rule itself. Both
+## have `conditions` and `effects`.
+static func _box(rule: ProgramRule, line: Dictionary) -> Object:
+	var b: ProgramBranch = line.get("branch") as ProgramBranch
+	return b if b != null and rule != null and b in rule.branches else rule
+
+
+## A registry piece from SNIPPETS. Dropped on a line it fits, it changes that line:
+##   add / remove on a registry line swaps the operation; a check on a registry check replaces it;
+##   registry.size on a knob's line makes that buff grow with it
 ## Anywhere else it adds a whole line of its own, so a script is never left half-written.
 func _add_counter_piece(data: Dictionary, rule: ProgramRule, line: Dictionary) -> void:
 	var limits := _limits()
 	var read: VarCondition = line.get("condition") as VarCondition
 	var effect: ProgramEffect = line.get("effect") as ProgramEffect
 	var write: ProgramEffect = effect if effect != null and ScriptRegisters.is_write(effect.knob) else null
+	var branch: ProgramBranch = _box(rule, line) as ProgramBranch
 	match data["kind"]:
-		"counter":
-			if read != null:
-				read.reg = data["reg"]
-			elif write != null:
-				write.reg = data["reg"]
-			elif effect != null:
-				var knob := limits.get_knob(effect.knob)
-				if not _can_grow(knob, limits):
-					panel._notify("%s CAN'T GROW WITH A COUNTER" % String(effect.knob).to_upper())
-					return
-				effect.ramp = data["reg"]
-			else:
-				rule = _add_write(rule, ScriptRegisters.NAMES[data["reg"]], "+=", 1)
-		"assign_op":
+		"set_write":
 			if write != null:
 				write.op = data["op"]
 			else:
-				var op_text: String = ScriptRegisters.WRITE_OPS[data["op"]]
-				rule = _add_write(rule, "x", op_text, 0 if op_text == "=" else 1)
-		"compare_op":
+				rule = _add_write(rule, ScriptRegisters.WRITE_OPS[data["op"]], branch)
+		"member":
 			if read != null:
+				read.key = 0
 				read.op = data["op"]
 			else:
 				if rule == null:
 					rule = _new_rule()
-				rule.conditions.append(VarCondition.make("x", ScriptRegisters.OPS[data["op"]], 3))
+				_box(rule, line).conditions.append(VarCondition.make("target", ScriptRegisters.MEMBER_OPS[data["op"]]))
+		"size":
+			if read != null:
+				read.key = 1
+				read.op = ScriptRegisters.OPS.find(">=")
+			elif effect != null and write == null:
+				var knob := limits.get_knob(effect.knob)
+				if not _can_grow(knob, limits):
+					panel._notify("%s CAN'T GROW WITH THE REGISTRY" % String(effect.knob).to_upper())
+					return
+				effect.ramp = 0
+			else:
+				if rule == null:
+					rule = _new_rule()
+				_box(rule, line).conditions.append(VarCondition.make("size", ">=", 3))
+		"compare_op":
+			if read != null:
+				read.key = 1
+				read.op = data["op"]
+			else:
+				if rule == null:
+					rule = _new_rule()
+				_box(rule, line).conditions.append(VarCondition.make("size", ScriptRegisters.OPS[data["op"]], 3))
 	if rule == null:
 		return                                         # a write that doesn't fit this file
 	_selected = rule
 	_changed()
 
 
-## Adds a counter line to `rule` (null = a new rule). Returns the rule, null if this file can't.
-func _add_write(rule: ProgramRule, reg_name: String, op_text: String, value: int) -> ProgramRule:
+## Adds registry.add / remove(target) to `rule` (null = a new rule), or to its if block `branch`.
+## Returns the rule, null if this file can't.
+func _add_write(rule: ProgramRule, op_text: String, branch: ProgramBranch = null) -> ProgramRule:
 	if not _knob_fits(ScriptRegisters.WRITE_KNOB, rule.owner if rule != null else _owner):
 		return null
 	if rule == null:
 		rule = _new_rule()
-	rule.effects.append(ProgramEffect.make_write(reg_name, op_text, value))
+	(branch if branch != null else rule).effects.append(ProgramEffect.make_write(op_text))
 	return rule
 
 
@@ -1846,21 +2060,28 @@ func _knob_fits(knob_id: StringName, owner_id: String) -> bool:
 
 func _detach(info: Dictionary) -> void:
 	var from: ProgramRule = info["rule"]
+	var box: Object = _box(from, info)
 	match info["kind"]:
 		"condition":
-			from.conditions.erase(info["condition"])
+			box.conditions.erase(info["condition"])
 		"effect":
-			from.effects.erase(info["effect"])
+			box.effects.erase(info["effect"])
+		"branch":
+			from.branches.erase(info.get("branch"))
 		"loop":
 			from.loop = null
 		"break":
 			if from.loop != null:
 				from.loop.break_on = ProgramLoop.Break.NONE
-	if from.conditions.is_empty() and from.effects.is_empty() and from.loop == null:
+	var b := box as ProgramBranch
+	if b != null and b.conditions.is_empty() and b.effects.is_empty():
+		from.branches.erase(b)                       # an empty if block goes with its last line
+	if from.conditions.is_empty() and from.effects.is_empty() and from.loop == null and from.branches.is_empty():
 		_draft().rules.erase(from)
 
 
-func _move_block(info: Dictionary, to: ProgramRule) -> void:
+## `line`: what the drop landed on, so a line can go into (or out of) an if block of `to`.
+func _move_block(info: Dictionary, to: ProgramRule, line: Dictionary = {}) -> void:
 	var src: ProgramRule = info["rule"]
 	var moved_loop: ProgramLoop = src.loop
 	var moved_break := moved_loop.break_on if moved_loop != null else ProgramLoop.Break.NONE
@@ -1870,14 +2091,24 @@ func _move_block(info: Dictionary, to: ProgramRule) -> void:
 	if info["kind"] == "effect" and not _knob_fits((info["effect"] as ProgramEffect).knob,
 			to.owner if to != null else _owner):
 		return
+	if info["kind"] == "branch" and to != null and to.loop != null:
+		panel._notify("A RULE WITH A LOOP CAN'T HAVE AN IF")
+		return
+	var moved_branch: ProgramBranch = info.get("branch") as ProgramBranch
+	var dest_branch: ProgramBranch = line.get("branch") as ProgramBranch
+	if info["kind"] == "branch" and dest_branch == moved_branch:
+		return                                       # dropped on itself
 	_detach(info)
 	if to == null:
 		to = _new_rule()
+	var box: Object = dest_branch if dest_branch != null and dest_branch in to.branches else to
 	match info["kind"]:
 		"condition":
-			to.conditions.append(info["condition"])
+			box.conditions.append(info["condition"])
 		"effect":
-			to.effects.append(info["effect"])
+			box.effects.append(info["effect"])
+		"branch":
+			to.branches.append(moved_branch)
 		"loop":
 			to.loop = moved_loop
 		"break":
@@ -1893,6 +2124,75 @@ func _remove_block(info: Dictionary) -> void:
 
 func _changed() -> void:
 	_queue_rebuild()
+
+
+# ---------- TIPS ----------
+## The tip line at the top of OUTPUT: "# tip: ...", a button to the guide page that explains it,
+## and x to dismiss it. Hidden until a tip shows (ScriptTips).
+func _build_tip_row() -> HBoxContainer:
+	_tip_row = HBoxContainer.new()
+	_tip_row.add_theme_constant_override("separation", 6)
+	_tip_row.visible = false
+	_tip_label = Label.new()
+	_tip_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_tip_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tip_label.custom_minimum_size.x = 1.0
+	_tip_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tip_label.add_theme_color_override("font_color", Color(COL_PENDING, 0.9))
+	if panel._font:
+		_tip_label.add_theme_font_override("font", panel._font)
+	_tip_label.add_theme_font_size_override("font_size", roundi(_sz(12) * panel.font_scale))
+	_tip_row.add_child(_tip_label)
+	_tip_page_btn = _code_button("guide()", "Read more about this in the SCRIPTING GUIDE.")
+	_tip_page_btn.pressed.connect(func() -> void:
+		if not _tip_shown.is_empty():
+			open_guide(_tip_shown["page"]))
+	_tip_row.add_child(_tip_page_btn)
+	var close_btn := _code_button("x", "Hide this tip. Tips can be turned off in SETTINGS > GAMEPLAY.")
+	close_btn.pressed.connect(_hide_tip)
+	_tip_row.add_child(close_btn)
+	return _tip_row
+
+
+## Shows the first new tip this draft triggers (each shows once per character). The tip on
+## screen stays until a newer one replaces it or the player hides it.
+func _update_tip(draft: SkillProgram, v: ProgramValidation, limits: SkillProgramLimits) -> void:
+	if _tip_row == null:
+		return
+	if not ScriptTips.enabled():
+		_hide_tip()
+		return
+	if _tip_hold:
+		_tip_hold = false                      # apply()'s tip survives the rebuild after it
+		return
+	var next := ScriptTips.next_tip(draft, v, limits)
+	if not next.is_empty():
+		_show_tip(next)
+
+
+func _show_tip(t: Dictionary) -> void:
+	if _tip_row == null:
+		return
+	_tip_shown = t
+	ScriptTips.mark_seen(t["id"])
+	_tip_label.text = "# tip: " + String(t["text"])
+	var page := 0
+	for i in ScriptGuide.PAGES.size():
+		if ScriptGuide.PAGES[i][0] == t["page"]:
+			page = i + 1
+	_tip_page_btn.text = "guide() p.%d" % page if page > 0 else "guide()"
+	_tip_row.visible = true
+
+
+func _hide_tip() -> void:
+	_tip_shown = {}
+	if _tip_row != null:
+		_tip_row.visible = false
+
+
+## The tip on screen ({} for none), for tests and the tutorial.
+func current_tip() -> Dictionary:
+	return _tip_shown
 
 
 # ---------- OUTPUT / APPLY ----------
@@ -1911,6 +2211,7 @@ func _update_status() -> void:
 
 	var draft := _draft()
 	var v := _validation if _validation != null else _skills().preview_program(_socket, draft)
+	_update_tip(draft, v, limits)
 	var lines: Array[String] = []
 
 	# points  [########........]  6.0 / 12.0
@@ -2103,6 +2404,9 @@ func _apply() -> void:
 	if result.valid:
 		_drafts.erase(_socket)                  # the next draft starts from what was applied
 		panel._notify("PROGRAM APPLIED")
+		if ScriptTips.enabled() and not ScriptTips.seen("applied"):
+			_show_tip(ScriptTips.tip("applied"))
+			_tip_hold = true
 	else:
 		panel._notify(result.errors[0].to_upper() if not result.errors.is_empty() else "INVALID PROGRAM")
 	_queue_rebuild()
@@ -2160,7 +2464,7 @@ static func _fmt_knob(knob: SkillKnob, steps: int, mult: float = 1.0) -> String:
 	return "%.1f" % v
 
 
-## What one count of a counter adds: the maximum shared out over the counts that reach it.
+## What one count of the registry adds: the maximum shared out over the counts that reach it.
 static func _fmt_per_count(knob: SkillKnob, steps: int, mult: float = 1.0) -> String:
 	var v := absf(knob.value_for(steps) * mult) / ScriptRegisters.RAMP_PER_STEP
 	match knob.unit:

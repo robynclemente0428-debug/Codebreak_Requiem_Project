@@ -317,6 +317,18 @@ func _check(cond: String) -> bool:
 				result = _quests.can_start(_quests.get_def(arg))
 			"recovered":                          # a quest item or event (QuestItems id)
 				result = _quests.has_recovered(arg)
+			"deed":                               # @ deed:ending:merge, or @ deed:ending:any
+				var d := arg.split(":", true, 1)
+				if d.size() == 2 and d[1] == "any":
+					for k in _quests.deeds:
+						if str(k).begins_with(d[0] + ":"):
+							result = true
+				elif d.size() == 2:
+					result = _quests.deed_count(d[0], d[1]) > 0
+	if parts[0] == "here":                     # @ here:act_4_the_fray: the area's scene file name
+		var am := get_tree().get_first_node_in_group("area_manager") as AreaManager
+		result = am != null and am.current_area != null \
+				and am.current_area.scene_file_path.get_file().get_basename() == arg
 	if parts[0] == "has_credits" and _wallet != null:
 		result = _wallet.amount >= int(arg)
 	return result != negate
@@ -348,6 +360,12 @@ func _do(e: Dictionary) -> String:
 			if args.size() > 0:
 				close()
 				ExamChamber.enter(get_tree(), args[0])
+			return "end"
+		"ending":                                # > ending merge: the ending card (EndingCard)
+			if args.size() > 0:
+				GameEvents.report("ending", args[0])    # saved as a deed: ending:merge
+				close()
+				load("res://scenes/ui/ending/ending_card.gd").show_ending(get_tree(), args[0])
 			return "end"
 		"open_shop":
 			if _npc is ShopNPC:

@@ -4,8 +4,9 @@ extends Resource
 ## Each gem lists its knobs in its SkillProgramLimits. Players never see or edit these numbers:
 ## they only choose how many STEPS to move a knob (+2 damage steps, -1 attack speed step, ...).
 ##
-## Price: every step costs `cost_per_step` points. Buffs have a positive cost, drawbacks pay
-## points back. Example: damage step = +5% for 2 points; mana cost step = +10% for -1 point.
+## Price: the first step costs `cost_per_step` points. Buffs have a positive cost, drawbacks pay
+## points back. Buff steps get pricier: each one costs STEP_COST_GROWTH x the one before, counting
+## every buff step this knob has in the script (SkillProgram.line_cost). Drawbacks pay back flat. Example: damage step = +5% for 2 points; mana cost step = +10% for -1 point.
 
 enum Kind {
 	## Skill damage. Works in every rule: always, per cast and per hit.
@@ -15,7 +16,7 @@ enum Kind {
 	## Any other stat (mana cost, attack speed, crit...). Only in ALWAYS rules, because mana and
 	## cooldown are paid before any condition can be checked.
 	STAT,
-	## Writes a register (ScriptRegisters): x += 1, x = 0. Free, and works in every rule.
+	## Writes the registry (ScriptRegisters): registry.add(target), registry.remove(target). Free, and works in every rule.
 	VARIABLE,
 }
 
@@ -48,8 +49,40 @@ func value_for(steps: int) -> float:
 	return step * steps
 
 
+## Each buff step on a knob costs this much more than the step before it.
+const STEP_COST_GROWTH := 1.25
+## Every buff step's price x this, to make up for the rising price: a damage knob of
+## cost_per_step 2 starts at 1 point. Drawbacks still pay back the full cost_per_step.
+const BUFF_PRICE_MULT := 0.5
+
+
+## Flat price of `steps` (sign tells buff from drawback). Buff lines in a script are priced with
+## buff_cost instead; this stays the price of a drawback and of a single step.
 func cost_for(steps: int) -> float:
 	return cost_per_step * steps
+
+
+## True when moving this knob `steps` costs points (a buff), false when it pays them back.
+func is_buff(steps: int) -> bool:
+	return cost_per_step * steps > 0.0
+
+
+## Total price of `n` buff steps on this knob: 1, 1.25, 1.56... x the first step's price
+## (cost_per_step x BUFF_PRICE_MULT).
+func buff_cost(n: int) -> float:
+	if n <= 0:
+		return 0.0
+	return first_step_cost() * (pow(STEP_COST_GROWTH, n) - 1.0) / (STEP_COST_GROWTH - 1.0)
+
+
+## What the first buff step costs.
+func first_step_cost() -> float:
+	return absf(cost_per_step) * BUFF_PRICE_MULT
+
+
+## Price of the next buff step after `n` already taken.
+func next_step_cost(n: int) -> float:
+	return first_step_cost() * pow(STEP_COST_GROWTH, maxi(n, 0))
 
 
 func describe(steps: int) -> String:

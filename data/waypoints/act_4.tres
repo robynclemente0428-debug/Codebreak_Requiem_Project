@@ -10,7 +10,7 @@ display_name = "The Threshold"
 scene = "res://scenes/map/town/act_4_threshold.tscn"
 kind = 0
 map_position = Vector2(0.12, 0.5)
-links = Array[String](["act4_fray", "act4_gate"])
+links = Array[String](["act4_fray", "act4_gate", "act4_expedition", "act4_wells"])
 note = "Vesper, Sudo, Hex. The far side of the Inward Gate"
 
 [sub_resource type="Resource" id="Waypoint_act4_fray"]
@@ -46,13 +46,39 @@ scene = "res://scenes/map/dungeon/act_4_core_gate.tscn"
 spawn_id = &"gate_in"
 dungeon_level = 35
 kind = 2
-map_position = Vector2(0.88, 0.7)
+map_position = Vector2(0.42, 0.86)
 links = Array[String](["act4_threshold"])
 note = "Level 35  -  Null Gatekeeper"
+
+[sub_resource type="Resource" id="Waypoint_act4_expedition"]
+script = ExtResource("2_wp")
+id = "act4_expedition"
+display_name = "The Expedition's End"
+scene = "res://scenes/map/dungeon/act_4_expedition_end.tscn"
+spawn_id = &"exp_in"
+dungeon_level = 31
+kind = 2
+map_position = Vector2(0.3, 0.16)
+links = Array[String](["act4_threshold"])
+note = "Level 31  -  The Auditor (AUDIT). The Compiler Guild's last camp"
+random_threats = Vector2i(1, 1)
+
+[sub_resource type="Resource" id="Waypoint_act4_wells"]
+script = ExtResource("2_wp")
+id = "act4_wells"
+display_name = "The Echo Wells"
+scene = "res://scenes/map/dungeon/act_4_echo_wells.tscn"
+spawn_id = &"wells_in"
+dungeon_level = 34
+kind = 1
+map_position = Vector2(0.74, 0.78)
+links = Array[String](["act4_threshold"])
+note = "Level 34  -  Where Hardfault's relay signal fell in"
+random_threats = Vector2i(1, 1)
 
 [resource]
 script = ExtResource("1_act")
 act_number = 4
 title = "ACT IV"
 subtitle = "THE NULL ZONE  -  Into the Null  -  Levels 30-35"
-waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act4_threshold"), SubResource("Waypoint_act4_fray"), SubResource("Waypoint_act4_loom"), SubResource("Waypoint_act4_gate")])
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act4_threshold"), SubResource("Waypoint_act4_fray"), SubResource("Waypoint_act4_loom"), SubResource("Waypoint_act4_gate"), SubResource("Waypoint_act4_expedition"), SubResource("Waypoint_act4_wells")])

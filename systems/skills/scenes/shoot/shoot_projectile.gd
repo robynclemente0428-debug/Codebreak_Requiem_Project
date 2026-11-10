@@ -3,6 +3,7 @@ extends Node3D
 ## A fast bullet. It sweeps its whole path every physics frame so it can't tunnel through
 ## enemies, reports each enemy it passes through, and stops on world geometry or once it has
 ## used up its pierce. It does no damage itself: ShootBehavior listens to `hit_enemy`.
+## It has no mesh of its own: ShootTracers draws every bullet in the area with one MultiMesh.
 
 ## pierced_so_far is 0 for the first enemy hit, 1 for the second, and so on.
 signal hit_enemy(target: Node, position: Vector3, pierced_so_far: int)
@@ -42,20 +43,22 @@ var _pierced := 0
 var _done := false
 var _started := false
 var _wall_shape := SphereShape3D.new()
-var _target_shape := SphereShape3D.new()
-var _column := CapsuleShape3D.new()      # from the bullet down to floor_y
+var _box := BoxShape3D.new()             # one step of flight, from the bullet down to floor_y
+var _tracers: ShootTracers               # draws this bullet (with every other one in the area)
 
 
 func _ready() -> void:
 	if enemy_group != &"enemies":
 		target_radius = hit_radius
 	_wall_shape.radius = hit_radius
-	_target_shape.radius = target_radius
-	_column.radius = target_radius
 	look_at(global_position + direction, Vector3.UP)     # point the tracer along its flight
-	var mesh := get_node_or_null("MeshInstance3D") as GeometryInstance3D
-	if mesh != null:
-		mesh.set_instance_shader_parameter(&"tint", tint)
+	_tracers = ShootTracers.for_parent(get_parent())
+	_tracers.add(self)
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(_tracers):
+		_tracers.remove(self)
 
 
 func _physics_process(delta: float) -> void:
@@ -76,66 +79,96 @@ func _physics_process(delta: float) -> void:
 		_finish(global_position)
 
 
-## Checks the path from `from` to `to` for targets (and walls, if `walls`), testing a point
-## every hit_radius so a fast bullet can't skip an enemy. `include_start` also tests `from`
-## itself. True when the bullet stopped (out of pierce, or hit a wall).
-func _sweep(from: Vector3, to: Vector3, include_start: bool, walls: bool) -> bool:
+## Checks the path from `from` to `to` for targets (and walls, if `walls`). True when the bullet
+## stopped (out of pierce, or hit a wall). Cheap enough for many bullets at once: one swept sphere
+## finds the first wall, then ONE box over the whole step (bullet-wide, from the bullet down to
+## floor_y) finds every target on the way, hit in the order the bullet reaches them.
+## `_include_start`: kept for the callers; the box always covers the start too.
+func _sweep(from: Vector3, to: Vector3, _include_start: bool, walls: bool) -> bool:
 	var path := to - from
 	var length := path.length()
-	if length < 0.0001 and not include_start:
-		return false
+	var dir := path / length if length > 0.0001 else direction
 	var space := get_world_3d().direct_space_state
-	var wall_query := PhysicsShapeQueryParameters3D.new()
-	wall_query.shape = _wall_shape
-	wall_query.collision_mask = hit_mask
-	var target_query := PhysicsShapeQueryParameters3D.new()
-	target_query.shape = _target_shape
-	target_query.collision_mask = hit_mask
-	var drop := from.y - floor_y                     # how far below the bullet still counts
-	var column: PhysicsShapeQueryParameters3D = null
-	if drop > target_radius:
-		_column.height = drop + 2.0 * target_radius
-		column = PhysicsShapeQueryParameters3D.new()
-		column.shape = _column
-		column.collision_mask = hit_mask
 
-	var samples := maxi(ceili(length / hit_radius), 1)
-	for i in range(0 if include_start else 1, samples + 1):
-		var pos := from + path * float(i) / float(samples)
-		# Enemies (and barrels) first, anywhere in the column under the bullet
-		if column != null:
-			column.transform = Transform3D(Basis.IDENTITY, pos + Vector3.DOWN * drop * 0.5)
-			column.exclude = exclude
-			# Room for 32 results: this wide shape also touches the floor, which must not crowd
-			# enemies out of the list.
-			for r in space.intersect_shape(column, 32):
-				var c := r["collider"] as Node
-				if _is_target(c) and not exclude.has(r["rid"]) \
-						and SkillTargets.line_is_clear(space, pos, c, r["rid"]):
-					var at := pos                       # spark on the target, not in the air above it
-					if c is Node3D:
-						at.y = minf(pos.y, (c as Node3D).global_position.y + 0.6)
-					if _hit(c, r["rid"], at):
-						return true
-		# Then the bullet itself: enemies at its height...
-		target_query.transform = Transform3D(Basis.IDENTITY, pos)
-		target_query.exclude = exclude
-		for r in space.intersect_shape(target_query, 32):
-			var collider := r["collider"] as Node
-			if _is_target(collider) and not exclude.has(r["rid"]) \
-					and SkillTargets.line_is_clear(space, pos, collider, r["rid"]) \
-					and _hit(collider, r["rid"], pos):
-				return true
-		# ...and walls, which always stop it
-		if walls:
-			wall_query.transform = Transform3D(Basis.IDENTITY, pos)
-			wall_query.exclude = exclude
-			for r in space.intersect_shape(wall_query, 8):
-				if not _is_target(r["collider"] as Node):
-					hit_world.emit(pos)
-					_finish(pos)
-					return true
+	# Walls first: how far the bullet gets this step. Targets past that are behind the wall.
+	var wall_at := INF
+	if walls and length > 0.0001:
+		wall_at = _first_wall(space, from, path, length)
+	var reach := minf(length, wall_at)
+
+	# Every target in the box over this step
+	var r := target_radius
+	var drop := from.y - floor_y                     # how far below the bullet still counts
+	var bottom := (floor_y if drop > r else minf(from.y, to.y)) - r
+	var top := maxf(from.y, to.y) + r
+	var flat := Vector3(dir.x, 0.0, dir.z)
+	if flat.length_squared() < 0.0001:
+		flat = Vector3.FORWARD
+	_box.size = Vector3(2.0 * r, top - bottom, reach + 2.0 * r)
+	var centre := from + dir * reach * 0.5
+	centre.y = (top + bottom) * 0.5
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = _box
+	q.collision_mask = hit_mask
+	q.exclude = exclude
+	q.transform = Transform3D(Basis.looking_at(flat.normalized(), Vector3.UP), centre)
+	# Room for 32 results: the box also touches the floor and walls, which must not crowd
+	# enemies out of the list.
+	var found: Array = []                            # [metres along the path, collider, rid]
+	for res in space.intersect_shape(q, 32):
+		var c := res["collider"] as Node
+		if not _is_target(c) or exclude.has(res["rid"]):
+			continue
+		var t := 0.0
+		if c is Node3D:
+			t = clampf(((c as Node3D).global_position - from).dot(dir), 0.0, reach)
+		found.append([t, c, res["rid"]])
+	found.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0])
+	for f in found:
+		var c: Node = f[1]
+		if not is_instance_valid(c) or exclude.has(f[2]):
+			continue
+		var pos: Vector3 = from + dir * float(f[0])
+		if not SkillTargets.line_is_clear(space, pos, c, f[2]):
+			continue
+		var at := pos                                # spark on the target, not in the air above it
+		if c is Node3D:
+			at.y = minf(pos.y, (c as Node3D).global_position.y + 0.6)
+		if _hit(c, f[2], at):
+			return true
+
+	if wall_at < INF:
+		var stop := from + dir * wall_at
+		hit_world.emit(stop)
+		_finish(stop)
+		return true
 	return false
+
+
+## Metres along `path` to the first wall the bullet touches (INF = none). Only the world layer can
+## stop a bullet; barrels sit on it too but are targets, so they're skipped and the sweep goes on.
+func _first_wall(space: PhysicsDirectSpaceState3D, from: Vector3, path: Vector3, length: float) -> float:
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = _wall_shape
+	q.collision_mask = hit_mask & SkillTargets.WORLD_LAYER_MASK
+	var skip: Array[RID] = exclude.duplicate()
+	for i in 4:                                      # a few barrels in a row at most
+		q.exclude = skip
+		q.transform = Transform3D(Basis.IDENTITY, from)
+		q.motion = path
+		var frac := space.cast_motion(q)
+		if frac[1] >= 1.0:
+			return INF
+		q.transform = Transform3D(Basis.IDENTITY, from + path * frac[1])
+		q.motion = Vector3.ZERO
+		var info := space.get_rest_info(q)
+		if info.is_empty():
+			return frac[1] * length
+		var c := instance_from_id(info["collider_id"]) as Node
+		if not _is_target(c):
+			return frac[1] * length
+		skip.append(info["rid"])
+	return INF
 
 
 func _is_target(collider: Node) -> bool:

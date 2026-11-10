@@ -84,8 +84,14 @@ target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
 target_spawn = &"from_district"
 arrival_spawn_id = &"sweep_out"
 sealed_by_key = "root_key"
+route_after_quest = "q06c_root_access"
+routed_area = "res://scenes/map/dungeon/act_3_far_side.tscn"
+routed_spawn = &"far_in"
+route_when_done = true
+routed_level = 30
 clears_stop = "act3_sweep"
 room_size = Vector2i(3, 3)
+metadata/_note = "The Inward Gate: back to the yard until Root Access is turned in, then on to Checkpoint's Far Side and Act IV."
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
 [node name="SpawnOut" type="Marker3D" parent="Layout"]

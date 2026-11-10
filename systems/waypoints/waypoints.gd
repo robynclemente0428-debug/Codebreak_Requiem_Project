@@ -115,7 +115,7 @@ static func _write_to_saves() -> void:
 # ---------- THE CONVOY ROUTE ----------
 ## A dungeon on a convoy act: reached from the route terminal, not the waypoint map.
 static func is_convoy_stop(w: Waypoint) -> bool:
-	if w == null or w.kind == Waypoint.Kind.TOWN:
+	if w == null or w.kind == Waypoint.Kind.TOWN or w.on_foot:
 		return false
 	var act := act_of_scene(w.scene)
 	return act != null and act.convoy_route

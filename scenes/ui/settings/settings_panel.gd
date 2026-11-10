@@ -295,6 +295,7 @@ func _build_gameplay() -> void:
 	_toggle_row("AUTO-BIND NEW SKILLS", "gameplay", "auto_bind_skills")
 	_toggle_row("SHAKE LIFE BAR WHEN HIT", "gameplay", "hud_shake")
 	_toggle_row("AIM LINE FOR RANGED SKILLS", "gameplay", "aim_line")
+	_toggle_row("SCRIPTING TIPS", "gameplay", "script_tips")
 	_note("SHOW LOOT only hides item names. Gems are always shown.")
 
 

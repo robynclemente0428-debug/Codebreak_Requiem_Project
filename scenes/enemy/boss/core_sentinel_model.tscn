@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/enemy/boss/the_mimic_model.tscn" id="1_base"]
+[ext_resource type="Script" path="res://systems/enemies/boss/summoner.gd" id="2_summon"]
+[ext_resource type="Resource" path="res://data/enemies/glitchling.tres" id="3_brood"]
+
+[node name="CoreSentinel" instance=ExtResource("1_base")]
+transform = Transform3D(1.5, 0, 0, 0, 1.5, 0, 0, 0, 1.5, 0, 0, 0)
+metadata/_note = "PROTOTYPE. The Mimic's model, larger, until the Sentinel has its own. Its Summoner is BROOD LINK's brood (RecallLock turns it off after that phase)."
+
+[node name="Summoner" type="Node" parent="."]
+script = ExtResource("2_summon")
+summon = ExtResource("3_brood")
+interval = 9.0
+first_delay = 3.0
+count = 4
+max_alive = 8
+radius = 3.5

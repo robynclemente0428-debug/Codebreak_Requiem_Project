@@ -3,6 +3,7 @@ extends Area3D
 
 const PICKUP_ACTION := &"pickup"          # Input Map action bound to F
 const PICKUP_LAYER := 16                  # physics layer 5 ("loot"), used only for mouse picking
+const GROUP := &"loot_pickups"            # every drop on the ground
 
 const RARITY_COLORS := {
 	"normal": Color(0.60, 0.60, 0.62),    # gray, no glow
@@ -17,6 +18,8 @@ const RARITY_COLORS := {
 @export var label_height: float = 0.7     # metres above the pickup (font size lives on LootLabels now)
 
 var item: ItemInstance        # set by the populator before the pickup enters the tree
+## Drops picked up since the game started (the loot lesson in TutorialHints ends on the first).
+static var taken := 0
 
 @onready var mesh: MeshInstance3D = $MeshInstance3D
 @onready var light: OmniLight3D = $OmniLight3D
@@ -25,6 +28,7 @@ var _label: Label             # lives in the HUD overlay (LootLabels), not in th
 var _color := Color.WHITE
 
 func _ready() -> void:
+	add_to_group(GROUP)
 	# Nothing walks into this any more: it only needs to be found by the mouse ray
 	collision_layer = PICKUP_LAYER
 	collision_mask = 0
@@ -79,5 +83,6 @@ func try_pickup(inventory: InventoryComponent) -> bool:
 	if not inventory.add_item(item):
 		print("Inventory full")
 		return false
+	taken += 1
 	queue_free()
 	return true

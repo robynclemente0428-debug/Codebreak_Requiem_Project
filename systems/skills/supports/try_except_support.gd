@@ -30,7 +30,7 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 	var stacks := stacks_of(cast.caster, cast.skill)
 	if stacks <= 0:
 		return
-	hit.damage *= 1.0 + cast.flag("except_stack_damage") * stacks
+	hit.damage *= 1.0 + hit.flag("except_stack_damage") * stacks       # + a per-hit rule's
 	cast.extra["except_handled"] = stacks
 
 

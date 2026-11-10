@@ -6,6 +6,9 @@ extends ProgramCondition
 @export var radius: float = 4.0
 
 
+const NullLawsRef := preload("res://systems/world/null_laws.gd")   # Act IV's Null Laws
+
+
 func type_id() -> String:
 	return "enemies_nearby"
 
@@ -17,11 +20,13 @@ func changes_during_cast() -> bool:
 func is_true(cast: SkillCast, _target: Node) -> bool:
 	var origin := cast.caster.global_position
 	var count := 0
+	var far := NullLawsRef.on("near_is_far", cast.caster)     # NEAR MEANS FAR: beyond the radius
 	for t in SkillTargets.candidates(cast.caster):
 		if not (t is Node3D) or ProgramCondition.health_fraction(t) <= 0.0:
 			continue
 		var d: Vector3 = (t as Node3D).global_position - origin
-		if Vector2(d.x, d.z).length() <= radius:
+		var dist := Vector2(d.x, d.z).length()
+		if (dist > radius and dist <= radius * NullLawsRef.FAR_REACH) if far else dist <= radius:
 			count += 1
 			if count >= min_count:
 				return true

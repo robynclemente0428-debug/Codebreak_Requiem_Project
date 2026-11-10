@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="DialogueData" format=3]
+[gd_resource type="Resource" script_class="DialogueData" format=3 uid="uid://do7lwos08l0ud"]
 
 [ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
 
@@ -16,7 +16,32 @@ source = "# Tinker Hex: trader. Sarcastic, fair. Gives Salvage Rights (Act I) an
 @ quest_ready:copied_stock -> ready_copied_stock
 @ quest_active:copied_stock -> remind_copied_stock
 @ can_start:copied_stock -> offer_copied_stock
+@ quest_ready:static_from_home -> ready_static
+@ quest_active:static_from_home -> remind_static
+@ can_start:static_from_home -> offer_static
 -> idle
+
+~ offer_static
+Hex: Hardfault's been pinging the relay for days. Brack, mostly. None of it gets here.
+Hex: I traced it. The calls fall into those wells south-east of here and bounce round forever. Wisps carry them.
+Hex: Bring them back. Not because I miss anyone. Because they owe me money.
+* ACCEPT -> accept_static
+* DECLINE -> idle
+
+~ accept_static
+> start_quest static_from_home
+Hex: Three packets. The wisps learn whatever hits them, so don't hit them the same way twice.
+-> end
+
+~ remind_static
+Hex: Still static. Three packets, Echo Wells.
+-> idle
+
+~ ready_static
+> turn_in static_from_home
+Hex: That's Brack. That's me. That's... that's Brack's voice, and I don't know what he's saying.
+Hex: Don't tell him. Next time he calls, I'll pretend it came through clean.
+-> end
 
 ~ offer_copied_stock
 Hex: Somebody copied my inventory. I want royalties.

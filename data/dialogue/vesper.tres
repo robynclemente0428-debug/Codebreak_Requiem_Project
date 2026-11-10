@@ -1,4 +1,4 @@
-[gd_resource type="Resource" script_class="DialogueData" format=3]
+[gd_resource type="Resource" script_class="DialogueData" format=3 uid="uid://cujcoqth8woou"]
 
 [ext_resource type="Script" uid="uid://dd85gxidfhqxl" path="res://systems/dialogue/dialogue_data.gd" id="1_dlg"]
 
@@ -15,10 +15,17 @@ source = "# Vesper: Null Speaker, guide to the Core (Acts IV and V). Calm, eerie
 @ can_start:q07_null_weaver_prime -> offer_q07_null_weaver_prime
 @ can_start:q08_null_gatekeeper -> offer_q08_null_gatekeeper
 @ can_start:null_fragments -> offer_fragments
+@ quest_ready:under_new_rules -> ready_rules
+@ can_start:under_new_rules -> offer_rules
 @ quest_active:q08_null_gatekeeper -> remind_q08_null_gatekeeper
 @ quest_active:q07_null_weaver_prime -> remind_q07_null_weaver_prime
 @ quest_active:q07a_learn_the_language -> remind_language
 @ quest_active:null_fragments -> remind_fragments
+@ quest_active:under_new_rules -> remind_rules
+@ deed:ending:any -> after_ending
+@ quest_done:q10_root_process -> before_choice
+@ quest_active:q10_root_process -> during_root
+@ quest_active:q09_core_sentinel -> during_sentinel
 @ quest_done:q08_null_gatekeeper -> at_the_core
 -> idle
 
@@ -30,6 +37,7 @@ Vesper: The Weavers speak in patterns. Break them and you’ll hear the grammar.
 
 ~ accept_language
 > start_quest q07a_learn_the_language
+Vesper: Out there it rewrites AXIOM's rules, one at a time. Bring a script set for each. I'll meet you at The Fray.
 Vesper: Don’t fear them. Read them.
 -> end
 
@@ -74,6 +82,44 @@ Vesper: It isn’t addressed to the Null. It’s addressed to whoever gets there
 
 ~ at_the_core
 Vesper: The way is open. What you do next is yours alone.
+-> end
+
+~ during_sentinel
+Vesper: The Stack Trace is full of things you've already killed. The Core keeps everything.
+Vesper: Don't let it make you fight the past the same way twice.
+-> end
+
+~ during_root
+Vesper: The Root Process isn't evil. It's the last thing in AXIOM that still believes the old rules.
+-> end
+
+~ before_choice
+Vesper: It's quiet. I've never heard the Null this quiet. It's waiting for you.
+-> end
+
+~ after_ending
+Vesper: Whatever you chose, you chose it awake. That's more than the Architects did.
+-> end
+
+~ offer_rules
+Vesper: You keep fighting its laws. Stop. Fight under them.
+Vesper: Win once under every law it writes, and you'll understand it better than the Guild ever did.
+* ACCEPT -> accept_rules
+* DECLINE -> end
+
+~ accept_rules
+> start_quest under_new_rules
+Vesper: Six under each. Out in the Null Zone, where the laws run. Bring a script set for each one.
+-> end
+
+~ remind_rules
+Vesper: Six kills under each of its laws. The banner tells you which one you're under.
+-> end
+
+~ ready_rules
+> turn_in under_new_rules
+Vesper: You did it its way. How did it feel?
+Vesper: Don't answer. I could see it. You looked like you belonged out there.
 -> end
 
 ~ out_of_quarantine

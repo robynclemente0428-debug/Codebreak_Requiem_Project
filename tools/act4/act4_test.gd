@@ -5,6 +5,7 @@ extends Node
 
 const MAIN := "res://scenes/map/main.tscn"
 const YARD := "res://scenes/map/town/act_3_quarantine_yard.tscn"
+const SWEEP := "res://scenes/map/dungeon/act_3_sweep.tscn"
 const FAR_SIDE := "res://scenes/map/dungeon/act_3_far_side.tscn"
 const HUB := "res://scenes/map/town/act_4_threshold.tscn"
 const FRAY := "res://scenes/map/dungeon/act_4_the_fray.tscn"
@@ -43,25 +44,30 @@ func _run() -> void:
 	(_player().get("stats") as StatComponent).base_stats = tough
 	(_player().get("health") as HealthComponent).heal(1000000.0)
 
-	# --- The gate ---
-	var gate := _am().current_area.get_node("YardGate") as Portal
-	_check("the gate leads to Checkpoint's far side", gate.target_area == FAR_SIDE)
-	_check("shut before Root Access", gate.is_sealed())
+	# --- The gate: the Sweep's exit ---
+	await _go(SWEEP, &"sweep_in", 29)
+	var gate := _portal_to_any(_am().current_area.find_children("*", "Portal", true, false), [YARD, FAR_SIDE])
+	qm.recover("root_key")
+	await _wait(0.8)
+	_check("before Root Access the Sweep's exit goes home", gate != null and gate.target_area == YARD)
 	qm.completed_ids.append("q06b_the_collector")
 	qm.completed_ids.append("q06c_root_access")
-	_check("open after Root Access", not gate.is_sealed())
+	await _wait(0.8)
+	_check("after Root Access it goes to Checkpoint's far side (level %d)" % gate.dungeon_level,
+		gate.target_area == FAR_SIDE and gate.dungeon_level == 30 and not gate.is_sealed())
+	await _go(YARD, &"from_district", 0)
 
 	qm.completed_ids.append("q07a_learn_the_language")
 	var q07 := qm.get_def("q07_null_weaver_prime")
 	_check("Vesper's quest can't start in the yard", not qm.can_start(q07))
 
 	# --- The hub ---
-	await _go(gate.target_area, gate.target_spawn, gate.dungeon_level)
+	await _go(FAR_SIDE, &"far_in", 30)
 	_check("the gate arrives on the far side", _am().current_area.scene_file_path == FAR_SIDE)
 	_check("the player lands on the floor (%s)" % _player().global_position, _on_floor())
 	var far_portals := _am().current_area.find_children("*", "Portal", true, false)
 	var far_exit := _portal_to(far_portals, HUB)
-	_check("portals back to the yard and on to Act IV", far_exit != null and _portal_to(far_portals, YARD) != null)
+	_check("portals back to the Sweep and on to Act IV", far_exit != null and _portal_to(far_portals, SWEEP) != null)
 	await _go(far_exit.target_area, far_exit.target_spawn, 0)
 	var hub := _am().current_area
 	_check("the far side arrives in The Threshold", hub != null and hub.scene_file_path == HUB)
@@ -73,10 +79,10 @@ func _run() -> void:
 	var hex := hub.get_node("TinkerHex") as ShopNPC
 	_check("Hex is here, selling (%d items, level %d)" % [hex.stock.size(), hex.stock_level], not hex.stock.is_empty() and hex.stock_level == 35)
 	var hub_portals := hub.find_children("*", "Portal", true, false)
-	_check("the hub has its three portals (%d)" % hub_portals.size(), hub_portals.size() == 3)
+	_check("the hub has its five portals (%d)" % hub_portals.size(), hub_portals.size() == 5)
 	var to_fray := _portal_to(hub_portals, FRAY)
-	var to_yard := _portal_to(hub_portals, YARD)
-	_check("one back to the yard, one on to The Fray", to_fray != null and to_yard != null)
+	var to_yard := _portal_to(hub_portals, FAR_SIDE)
+	_check("one back to the far side, one on to The Fray", to_fray != null and to_yard != null)
 	_check("the act is on the map", Waypoints.act_of_scene(HUB) != null and Waypoints.act_of_scene(HUB).act_number == 4)
 	await _wait(linger)
 
@@ -162,6 +168,13 @@ func _process(_delta: float) -> void:
 func _portal_to(portals: Array, area: String) -> Portal:
 	for p in portals:
 		if (p as Portal).target_area == area:
+			return p
+	return null
+
+
+func _portal_to_any(portals: Array, areas: Array) -> Portal:
+	for p in portals:
+		if (p as Portal).target_area in areas and (p as Portal).route_after_quest != "":
 			return p
 	return null
 

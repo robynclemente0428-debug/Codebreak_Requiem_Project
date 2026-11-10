@@ -16,7 +16,7 @@ agent_height = 1.8
 agent_radius = 0.3
 
 [node name="FarSide" type="Node3D"]
-metadata/_note = "PROTOTYPE. Between the Inward Gate and The Threshold: the last of Checkpoint, on The Fray's layout."
+metadata/_note = "PROTOTYPE. Between the Inward Gate (the Sweep's exit) and The Threshold: the last of Checkpoint, on The Fray's layout."
 script = ExtResource("1_dun")
 dungeon_level = 30
 respawn_spawn_id = &"far_in"
@@ -64,9 +64,10 @@ mesh_library = ExtResource("6_mesh")
 [node name="PortalBack" type="Marker3D" parent="Layout"]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 100)
 script = ExtResource("7_portalm")
-target_area = "res://scenes/map/town/act_3_quarantine_yard.tscn"
-target_spawn = &"from_inward"
+target_area = "res://scenes/map/dungeon/act_3_sweep.tscn"
+target_spawn = &"sweep_out"
 arrival_spawn_id = &"far_in"
+dungeon_level = 29
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
