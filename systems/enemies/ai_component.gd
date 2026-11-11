@@ -108,7 +108,7 @@ func _physics_process(delta: float) -> void:
 				else:
 					to_next = _nav.get_next_path_position() - _body.global_position
 				to_next.y = 0.0
-				move_dir = (to_next.normalized() + _separation() * 1.2).normalized()
+				move_dir = _steer(to_next.normalized(), 1.2)
 
 				var real := _body.get_real_velocity()
 				real.y = 0.0
@@ -288,6 +288,23 @@ func _separation() -> Vector3:
 			push += offset / d * (1.0 - d / separation_radius)
 	_sep = push.limit_length(1.0)
 	return _sep
+
+## Where to go: toward `dir` (the path), pushed apart from the crowd. Against a wall the crowd's
+## push is weaker and nothing pushes into the wall: it slides along it, so a crowd can't pin an
+## enemy into a wall or a corner.
+func _steer(dir: Vector3, crowd: float) -> Vector3:
+	var push := _separation() * crowd
+	if not _body.is_on_wall():
+		return (dir + push).normalized()
+	var n := _body.get_wall_normal()
+	n.y = 0.0
+	n = n.normalized()
+	var want := dir + push * 0.35
+	var into := want.dot(n)
+	if into < 0.0:
+		want -= n * into                              # the part going into the wall: dropped
+	return want.normalized() if want.length_squared() > 0.0001 else dir
+
 
 func _face_direction(dir: Vector3, delta: float) -> void:
 	# Casting a skill: EnemySkills turned us to the target when the cast began. Hold that facing

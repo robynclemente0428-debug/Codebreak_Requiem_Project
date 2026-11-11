@@ -1,0 +1,349 @@
+[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="Shader" id="Shader_j5y01"]
+code = "shader_type spatial;
+// CodeBreak Requiem - Act I town tiles: Hardfault, the day after the surge. Still the outpost its
+// people keep up (warm decking, green safe-zone lights, lit windows), with the night on it:
+//   sealed breaches   where the surge reached into town, welded over with raw steel patches,
+//                     ringed in amber hazard tape; at a seam, now and then, a red flicker
+//   the missing       boards of pinned notes on some walls, a few crossed out in red, and
+//                     candles at the foot of the wall
+//   empty homes       half the windows dark now, some boarded up
+//   leaving           loading bays painted on the plazas, chalk arrows on the streets
+// `piece`: 0 Floor (street), 1 Room_Floor (plaza), 2 Wall (the same pieces as the other libraries).
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform int piece = 0;
+uniform vec3 steel : source_color = vec3(0.27, 0.28, 0.29);
+uniform vec3 dark : source_color = vec3(0.08, 0.085, 0.095);
+uniform vec3 paint : source_color = vec3(0.16, 0.24, 0.26);      // painted lower wall band
+uniform vec3 deck : source_color = vec3(0.30, 0.27, 0.23);       // warm composite decking
+uniform vec3 safe : source_color = vec3(0.25, 1.0, 0.55);        // safe-zone green
+uniform vec3 cyan : source_color = vec3(0.0, 0.85, 1.0);
+uniform vec3 warm : source_color = vec3(1.0, 0.72, 0.38);        // lived-in light, candles
+uniform vec3 amber : source_color = vec3(1.0, 0.6, 0.15);        // hazard tape, bay paint
+uniform vec3 surge_col : source_color = vec3(1.0, 0.16, 0.24);   // the surge's red
+uniform vec3 paper : source_color = vec3(0.82, 0.8, 0.72);
+uniform vec3 chalk : source_color = vec3(0.78, 0.77, 0.72);
+uniform vec3 wood : source_color = vec3(0.32, 0.22, 0.13);
+uniform float glow = 2.2;
+// How much of the town the surge reached (sealed now): the noise level above which it's a patch.
+uniform float surge = 0.1;            // share of tiles with a sealed breach
+// Share of windows still lit.
+uniform float lit_windows = 0.5;
+// GRAPHICS > TILE DETAIL (GraphicsQuality): 0 = simple (no motion)
+global uniform float gfx_detail;
+
+varying vec3 lp;
+varying vec3 ln;
+varying vec3 tile;      // world position of this tile's centre: one random pick per tile
+
+void vertex() {
+	lp = VERTEX;
+	ln = NORMAL;
+	tile = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+}
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+// A sealed breach: where the surge broke through, a rectangular plate of fresh steel welded over the
+// hole, framed in hazard tape. On a share of the tiles (`surge`), placed and sized per tile.
+// Returns 1 on the plate (tape included); `tape` the taped frame, `weld` its outer edge.
+float breach(vec2 uv, vec2 key, out float tape, out float weld) {
+	tape = 0.0;
+	weld = 0.0;
+	if (hash(key * 1.31 + vec2(3.7, 9.1)) > surge) {
+		return 0.0;
+	}
+	vec2 c = (vec2(hash(key + 1.1), hash(key + 2.2)) - 0.5) * 0.45;
+	vec2 hs = vec2(0.32) + vec2(hash(key + 3.3), hash(key + 4.4)) * 0.28;
+	vec2 d = abs(uv - c) - hs;
+	float m = max(d.x, d.y);                                     // < 0 on the plate
+	weld = step(-0.04, m) * step(m, 0.0);
+	tape = step(-0.2, m) * step(m, -0.04);
+	return step(m, 0.0);
+}
+// The patch over whatever was there: bright fresh steel, bolted, hazard tape round it, the weld.
+vec3 sealed(vec2 uv, vec3 under, float t, float on, float tape, float weld, inout vec3 em, inout float metal) {
+	vec3 col = mix(under, steel * 1.6 + vec3(0.02, 0.03, 0.05), on * (1.0 - tape - weld));
+	vec2 b = abs(fract(uv * 2.5) - 0.5);
+	col = mix(col, steel * 2.0, on * (1.0 - tape - weld) * step(length(b - vec2(0.38)), 0.05));
+	float stripe = step(0.5, fract((uv.x + uv.y) * 1.8));
+	col = mix(col, mix(dark, amber * 0.8, stripe), tape);
+	col = mix(col, dark * 0.6, weld);
+	em *= 1.0 - on;                                              // the plate covers what glowed there
+	float flick = step(0.97, hash(floor(uv * 8.0) + floor(t * 4.0)));   // contained, mostly
+	em += surge_col * glow * weld * flick * 0.7;
+	metal = mix(metal, 0.75, on);
+	return col;
+}
+// A chalk arrow pointing +y in tile space.
+float arrow(vec2 p) {
+	float shaft = step(abs(p.x), 0.04) * step(-0.4, p.y) * step(p.y, 0.25);
+	float head = step(abs(abs(p.x) * 0.9 + (p.y - 0.38)), 0.05) * step(abs(p.x), 0.24);
+	return max(shaft, head);
+}
+
+void fragment() {
+	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vec3 an = abs(ln);
+	bool top = an.y > 0.5;
+	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
+	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
+	float th = hash(tile.xz * 0.37 + vec2(tile.y * 0.11) + vec2(an.x, an.z) * 5.3);   // per tile (and wall side)
+	bool detail = gfx_detail > 0.5;
+	float t = detail ? TIME : 0.0;
+	float grime = noise(wuv * 1.3) * 0.7 + noise(wuv * 5.0) * 0.3;   // light wear, no rust
+
+	vec3 col = steel;
+	vec3 em = vec3(0.0);
+	float metal = 0.45;
+	float rough = 0.55;
+
+	if (piece == 0) {
+		// Street: warm decking planks, teal curb trims, green guide dots down the middle
+		if (top) {
+			float plank = fract(uv.y * 2.0);
+			float gap = step(0.94, plank);
+			float tone = hash(vec2(tile.x + tile.z * 3.0, floor(uv.y * 2.0)));
+			col = deck * (0.85 + 0.25 * tone);
+			// worn pale down the middle, where everyone walks
+			float worn = (1.0 - smoothstep(0.2, 0.6, abs(uv.x))) * (0.5 + noise(wuv * 3.0) * 0.5);
+			col = mix(col, deck * 1.35, worn * 0.35);
+			col = mix(col, dark, gap);
+			float curb = step(0.78, abs(uv.x));
+			col = mix(col, steel * 1.1, curb);
+			float trim = step(0.80, abs(uv.x)) * (1.0 - step(0.86, abs(uv.x)));
+			em += cyan * glow * trim * 0.35;
+			col = mix(col, cyan * 0.4, trim);
+			// guide dots: one per tile, softly breathing, run along the street
+			float dot_d = length(vec2(uv.x, fract(uv.y * 0.5 + 0.25) * 2.0 - 1.0));
+			float dotm = 1.0 - smoothstep(0.07, 0.12, dot_d);
+			float breathe = detail ? 0.7 + 0.3 * sin(t * 1.5 - wp.x * 0.4 - wp.z * 0.4) : 0.85;
+			em += safe * glow * dotm * breathe * 0.6;
+			col = mix(col, safe * 0.4, dotm);
+			// chalk arrows beside the dots on some tiles: which way to the convoy
+			if (th < 0.14) {
+				vec2 p = vec2(uv.x - 0.42 * sign(th - 0.07), uv.y * (th < 0.07 ? 1.0 : -1.0));
+				col = mix(col, chalk, arrow(p * 1.4) * step(0.3, noise(wuv * 9.0)) * 0.8);
+			}
+			metal = 0.15;
+			rough = 0.7;
+			float tape;
+			float weld;
+			float on = breach(uv, tile.xz, tape, weld);
+			col = sealed(uv, col, t, on, tape, weld, em, metal);
+		} else {
+			col = dark;
+		}
+	} else if (piece == 1) {
+		// Plaza: checker plates, a green safe-zone ring per tile, a warm floor lamp
+		if (top) {
+			vec2 q = floor(uv + 1.0);                                 // 2x2 sub plates
+			float checker = mod(q.x + q.y, 2.0);
+			col = mix(steel * 1.15, steel * 0.9, checker);
+			vec2 plate = fract(uv + 1.0) * 2.0 - 1.0;
+			float seamp = step(0.95, max(abs(plate.x), abs(plate.y)));
+			col = mix(col, dark, seamp * 0.8);
+			float edge = max(abs(uv.x), abs(uv.y));
+			float ring = step(0.9, edge) * (1.0 - step(0.95, edge));
+			em += safe * glow * ring * 0.25;
+			col = mix(col, safe * 0.35, ring);
+			// a loading bay painted on some plates: amber corner brackets and a stencilled stripe
+			if (hash(tile.xz * 0.731 + vec2(17.0, 5.0)) < 0.12) {
+				vec2 a = abs(uv);
+				float corner = step(0.62, a.x) * step(a.x, 0.72) * step(0.42, a.y) * step(a.y, 0.72)
+					+ step(0.62, a.y) * step(a.y, 0.72) * step(0.42, a.x) * step(a.x, 0.72);
+				float stencil = step(abs(uv.y), 0.05) * step(abs(uv.x), 0.3) * step(0.5, fract(uv.x * 5.0 + 0.5));
+				float paintm = min(corner + stencil, 1.0) * step(0.25, noise(wuv * 8.0));
+				col = mix(col, amber * 0.7, paintm);
+			} else {
+				// small warm floor lamp, steady
+				float lamp = 1.0 - smoothstep(0.06, 0.12, length(uv));
+				em += warm * glow * lamp * 0.45;
+				col = mix(col, warm * 0.4, lamp);
+			}
+			metal = 0.4;
+			rough = 0.45;
+			float tape;
+			float weld;
+			float on = breach(uv, tile.xz, tape, weld);
+			col = sealed(uv, col, t, on, tape, weld, em, metal);
+		} else {
+			col = dark;
+		}
+	} else {
+		// Building wall: painted lower band, panels, windows (half of them dark now), a green
+		// status strip; on some walls a board of the missing, with candles beneath
+		if (top) {
+			col = dark * 1.3;
+			float rim = step(0.82, max(abs(uv.x), abs(uv.y)));
+			col = mix(col, steel, rim);
+			float line = step(0.93, max(abs(uv.x), abs(uv.y))) * (1.0 - step(0.96, max(abs(uv.x), abs(uv.y))));
+			em += cyan * glow * line * 0.12;
+			col = mix(col, cyan * 0.25, line);
+		} else {
+			float y = uv.y;                                           // -1 bottom .. 1 top of the block
+			bool upper = tile.y > 2.0;                                 // second block of a 2-high wall
+			float seam = step(0.95, abs(fract(uv.x * 0.5 + 0.5) * 2.0 - 1.0));
+			col = upper ? steel : paint;
+			col = mix(col, dark, seam);
+			col = mix(col, dark, step(y, -0.88));                     // kick plate
+			if (upper) {
+				vec2 w = vec2(uv.x, y - 0.05);
+				float frame = step(max(abs(w.x) / 0.55, abs(w.y) / 0.42), 1.0);
+				float pane = step(max(abs(w.x) / 0.47, abs(w.y) / 0.34), 1.0);
+				float mullion = step(abs(w.x), 0.025);
+				float wh = hash(tile.xz * 0.37 + vec2(an.x, an.z) * 3.1);
+				float lit = step(1.0 - lit_windows, wh);
+				col = mix(col, dark * 0.8, frame);
+				vec3 glass = mix(dark * 0.6, warm * 0.6, lit);
+				col = mix(col, glass, pane * (1.0 - mullion));
+				em += warm * glow * pane * (1.0 - mullion) * lit * 0.5;
+				// some of the dark ones boarded up: two planks across
+				if (wh < 0.2) {
+					float b1 = step(abs(w.y - w.x * 0.62), 0.07);
+					float b2 = step(abs(w.y + w.x * 0.62), 0.07);
+					float boards = max(b1, b2) * frame;
+					col = mix(col, wood * (0.8 + noise(wuv * 12.0) * 0.4), boards);
+				}
+			} else {
+				// green status strip: the outpost's safe-zone boundary
+				float strip = step(abs(y - 0.55), 0.045);
+				float pulse = detail ? 0.8 + 0.2 * sin(t * 1.2 + wp.x * 0.5 + wp.z * 0.5) : 0.9;
+				em += safe * glow * strip * pulse * 0.6;
+				col = mix(col, safe * 0.45, strip);
+				float chev = step(0.5, fract(uv.x * 2.0 + abs(y + 0.7) * 2.0)) * step(abs(y + 0.7), 0.08);
+				if (th > 0.72) {
+					// the missing: notes pinned in a loose grid, a few crossed out
+					vec2 g = vec2((uv.x + 0.85) / 1.7 * 5.0, (y + 0.52) / 0.88 * 2.0);
+					vec2 gi = floor(g);
+					if (gi.x >= 0.0 && gi.x < 5.0 && gi.y >= 0.0 && gi.y < 2.0) {
+						float nh = hash(gi + tile.xz * 0.37 + th * 11.0);
+						if (nh > 0.18) {
+							vec2 f = fract(g) - 0.5 + (vec2(hash(gi + 3.3), hash(gi + 7.7)) - 0.5) * 0.18;
+							float tilt = (hash(gi + 1.9) - 0.5) * 0.35;
+							vec2 r = vec2(f.x * cos(tilt) - f.y * sin(tilt), f.x * sin(tilt) + f.y * cos(tilt));
+							float note = step(abs(r.x), 0.36) * step(abs(r.y), 0.4);
+							float lines = step(0.55, fract(r.y * 9.0)) * step(abs(r.x), 0.27) * step(-0.28, r.y) * step(r.y, 0.22);
+							float pin = 1.0 - step(0.05, length(r - vec2(0.0, 0.33)));
+							col = mix(col, paper * (0.85 + nh * 0.15), note);
+							col = mix(col, dark * 1.5, note * lines * 0.7);
+							col = mix(col, surge_col * 0.8, pin * note);
+							if (nh > 0.78) {                          // crossed out: lost in the surge
+								float x1 = step(abs(r.y - r.x * 1.1), 0.045);
+								float x2 = step(abs(r.y + r.x * 1.1), 0.045);
+								col = mix(col, surge_col * 0.75, max(x1, x2) * note);
+							}
+						}
+					}
+					// candles at the foot of the wall
+					float cx = fract((uv.x + 1.0) * 2.5) - 0.5;
+					float ci = floor((uv.x + 1.0) * 2.5);
+					if (hash(vec2(ci, th * 5.0)) > 0.35) {
+						float body = step(abs(cx), 0.05) * step(-0.86, y) * step(y, -0.74);
+						float flame_y = y + 0.70;
+						float flick = detail ? 0.75 + 0.25 * sin(t * 9.0 + ci * 4.0) * sin(t * 13.0 + ci) : 0.9;
+						float flame = 1.0 - smoothstep(0.02, 0.05, length(vec2(cx, flame_y * 0.6)));
+						col = mix(col, paper, body);
+						col = mix(col, warm, flame);
+						em += warm * glow * (flame * flick * 0.9 + (1.0 - smoothstep(0.0, 0.18, length(vec2(cx, flame_y)))) * flick * 0.08);
+					}
+				} else {
+					col = mix(col, steel * 1.3, chev * 0.6);          // stencilled chevrons above the kick plate
+				}
+			}
+			// rivets along the top edge of each block
+			vec2 rv = vec2(fract(uv.x * 2.0) - 0.5, y - 0.88);
+			col = mix(col, steel * 1.6, step(length(rv), 0.045));
+			// a breach that reached a wall, sealed like the floors
+			float tape;
+			float weld;
+			if (!upper) {                                            // low on the wall, clear of the windows
+				float on = breach(uv, tile.xz + vec2(an.x, an.z) * 7.0 + tile.y, tape, weld);
+				col = sealed(uv, col, t, on, tape, weld, em, metal);
+			}
+		}
+	}
+
+	col *= 0.92 + 0.08 * grime;
+	ALBEDO = col;
+	METALLIC = metal;
+	ROUGHNESS = rough;
+	EMISSION = em;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_lyosf"]
+render_priority = 0
+shader = SubResource("Shader_j5y01")
+shader_parameter/piece = 0
+shader_parameter/glow = 1.1
+shader_parameter/surge = 0.1
+shader_parameter/lit_windows = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_ofl4b"]
+material = SubResource("ShaderMaterial_lyosf")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_uvqow"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_q36qh"]
+render_priority = 0
+shader = SubResource("Shader_j5y01")
+shader_parameter/piece = 2
+shader_parameter/glow = 1.1
+shader_parameter/surge = 0.1
+shader_parameter/lit_windows = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_j0m78"]
+material = SubResource("ShaderMaterial_q36qh")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_f02v3"]
+data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_0hxso"]
+render_priority = 0
+shader = SubResource("Shader_j5y01")
+shader_parameter/piece = 1
+shader_parameter/glow = 1.1
+shader_parameter/surge = 0.1
+shader_parameter/lit_windows = 0.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_emhem"]
+material = SubResource("ShaderMaterial_0hxso")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_vlmui"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[resource]
+item/0/name = "Floor"
+item/0/mesh = SubResource("BoxMesh_ofl4b")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = [SubResource("ConcavePolygonShape3D_uvqow"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1
+item/1/name = "Wall"
+item/1/mesh = SubResource("BoxMesh_j0m78")
+item/1/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/mesh_cast_shadow = 1
+item/1/shapes = [SubResource("ConcavePolygonShape3D_f02v3"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/1/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/navigation_layers = 1
+item/2/name = "Room_Floor"
+item/2/mesh = SubResource("BoxMesh_emhem")
+item/2/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/mesh_cast_shadow = 1
+item/2/shapes = [SubResource("ConcavePolygonShape3D_vlmui"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/2/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/navigation_layers = 1

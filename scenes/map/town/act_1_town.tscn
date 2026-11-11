@@ -2,9 +2,9 @@
 
 [ext_resource type="Script" uid="uid://chcl1w027nx4n" path="res://scenes/map/town/town_area.gd" id="1_5a5ii"]
 [ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="2_4lkov"]
-[ext_resource type="Resource" uid="uid://bjsg34670e4e1" path="res://dungeon_generation/rendering/mesh_library/resources/hardfault_town.tres" id="3_7315m"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act1_town.tres" id="3_7315m"]
 [ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="3_08110"]
-[ext_resource type="MeshLibrary" uid="uid://c8fj8v2pce55c" path="res://dungeon_generation/rendering/mesh_library/hardfault_town_meshes.tres" id="4_0spvh"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act1_town_meshes.tres" id="4_0spvh"]
 [ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="6_ns84f"]
 [ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_0spvh"]
 [ext_resource type="PackedScene" uid="uid://c8xae3fagfdfj" path="res://scenes/loot/shop_npc/general_vendor.tscn" id="8_4ttov"]

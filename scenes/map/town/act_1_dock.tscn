@@ -2,8 +2,8 @@
 
 [ext_resource type="Script" path="res://scenes/map/town/town_area.gd" id="1_ifwfw"]
 [ext_resource type="Script" path="res://dungeon_generation/dungeon_director.gd" id="2_t8ss0"]
-[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/hardfault_town.tres" id="3_nmcoo"]
-[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/hardfault_town_meshes.tres" id="4_8hu78"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act1_town.tres" id="3_nmcoo"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act1_town_meshes.tres" id="4_8hu78"]
 [ext_resource type="Script" path="res://dungeon_generation/layout/room_marker.gd" id="5_1h60e"]
 [ext_resource type="Script" path="res://dungeon_generation/layout/spawn_marker.gd" id="6_20hpm"]
 [ext_resource type="Script" path="res://dungeon_generation/layout/portal_marker.gd" id="7_he07q"]

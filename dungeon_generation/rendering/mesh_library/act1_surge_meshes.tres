@@ -1,0 +1,325 @@
+[gd_resource type="MeshLibrary" format=3]
+
+[sub_resource type="Shader" id="Shader_jb42q"]
+code = "shader_type spatial;
+// CodeBreak Requiem - Act I tiles: Hardfault's outer ward, the morning after the Null surge.
+// The outpost's salvaged steel, with the night written on it:
+//   the surge's scars   the floor and walls overwritten in blocks of red pixels, static crackling
+//                       where it stopped (the Corrupted's own red), climbing the walls from below
+//   the ward            Hardfault's cyan ward circuits under the deck plates, dead near the scars
+//   the evacuation      amber arrows painted in a hurry, pointing every which way
+//   the survivors       mismatched salvage panels, welds, and chalk tallies on the walls
+// `piece`: 0 Floor, 1 Room_Floor, 2 Wall (the same pieces as the other libraries).
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform int piece = 0;
+uniform vec3 steel : source_color = vec3(0.22, 0.235, 0.26);
+uniform vec3 soot : source_color = vec3(0.035, 0.035, 0.045);
+uniform vec3 rust : source_color = vec3(0.36, 0.17, 0.08);
+uniform vec3 paint : source_color = vec3(0.17, 0.29, 0.29);      // the outpost's old teal paint
+uniform vec3 amber : source_color = vec3(1.0, 0.6, 0.15);        // hazard and evacuation paint
+uniform vec3 ward : source_color = vec3(0.2, 0.85, 1.0);         // Hardfault's ward circuits
+uniform vec3 surge_col : source_color = vec3(1.0, 0.16, 0.24);   // the surge (the Corrupted's red)
+uniform vec3 chalk : source_color = vec3(0.78, 0.77, 0.72);
+uniform float glow = 1.0;
+// How much of the ward the surge overwrote (0 none .. 1 most): the noise level above which it's red.
+uniform float surge = 0.22;
+
+// Wall cutaway (as the other tiles): wall pixels between the camera and the player dither away.
+global uniform vec3 player_world_pos;
+// GRAPHICS > TILE DETAIL (GraphicsQuality): 0 = simple (no fine grain, no motion)
+global uniform float gfx_detail;
+uniform float cutaway_radius = 3.2;
+uniform float cutaway_keep = 0.12;
+
+varying vec3 lp;
+varying vec3 ln;
+varying flat vec3 tile;      // world position of this tile's centre: one random pick per tile
+
+void vertex() {
+	lp = VERTEX;
+	ln = NORMAL;
+	tile = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+}
+
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float noise(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x),
+		mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+float bayer4(vec2 p) {
+	int x = int(mod(p.x, 4.0));
+	int y = int(mod(p.y, 4.0));
+	int i = x + y * 4;
+	float m[16] = { 0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0 };
+	return (m[i] + 0.5) / 16.0;
+}
+// The surge's mark, in blocks of 25 cm pixels: 1 inside a scar. `edge` is the ring of pixels where
+// it stopped, `n` how close this spot came (the ward dies as it nears). `bias` lowers the bar
+// (walls: more of it near the floor, where it rose from).
+float scar(vec2 w, float bias, out float edge, out float n) {
+	vec2 q = floor(w * 4.0) / 4.0;
+	n = noise(q * 0.42) * 0.65 + noise(q * 1.6 + 5.0) * 0.35;
+	float cut = 1.0 - surge - bias;
+	float inside = step(cut, n);
+	edge = step(cut - 0.045, n) * (1.0 - inside);
+	return inside;
+}
+// What a scar looks like: overwritten pixels, dark red and black, a few lit; static at its edge.
+vec3 scar_look(vec2 w, float t, float edge, out vec3 em) {
+	vec2 q = floor(w * 4.0);
+	float frame = floor(t * 7.0);
+	float px = hash(q + vec2(frame * 0.0, 0.0));
+	vec3 col = mix(soot * 0.6, surge_col * 0.2, step(0.62, px));
+	float lit = step(0.95, hash(q * 1.7 + frame * 0.13));
+	em = surge_col * glow * (lit * 0.4 + step(0.5, fract(w.y * 6.0 - t * 1.5)) * 0.05);
+	float crackle = edge * step(0.45, hash(q * 3.1 + frame));
+	em += surge_col * glow * crackle * 0.8;
+	return mix(col, surge_col * 0.6, crackle);
+}
+// An evacuation arrow in tile space, pointing +y (`p` already turned to its direction).
+float arrow(vec2 p) {
+	float shaft = step(abs(p.x), 0.07) * step(-0.45, p.y) * step(p.y, 0.15);
+	float head = step(abs(abs(p.x) * 0.95 + (p.y - 0.42)), 0.09) * step(abs(p.x), 0.36);
+	return max(shaft, head);
+}
+
+void fragment() {
+	vec3 wp = (INV_VIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	if (piece == 2 && !IN_SHADOW_PASS) {
+		vec3 pv = (VIEW_MATRIX * vec4(player_world_pos + vec3(0.0, 1.0, 0.0), 1.0)).xyz;
+		if (VERTEX.z > pv.z + 0.3) {
+			float d = length(VERTEX.xy - pv.xy);
+			float fade = 1.0 - smoothstep(cutaway_radius * 0.55, cutaway_radius, d);
+			if (bayer4(FRAGCOORD.xy) < fade * (1.0 - cutaway_keep)) {
+				discard;
+			}
+		}
+	}
+	vec3 an = abs(ln);
+	bool top = an.y > 0.5;
+	vec2 uv = top ? lp.xz : (an.x > 0.5 ? lp.zy : lp.xy);        // metres, -1..1 across the tile
+	vec2 wuv = top ? wp.xz : (an.x > 0.5 ? wp.zy : wp.xy);
+	float th = hash(tile.xz * 0.37 + vec2(tile.y * 0.11));       // this tile's random number
+	bool detail = gfx_detail > 0.5;
+	float t = detail ? TIME : 0.0;
+	float grain = detail ? noise(wuv * 9.0) * 0.5 + noise(wuv * 23.0) * 0.5 : 0.5;
+	float rusty = smoothstep(0.62, 0.9, noise(wuv * 1.1) * 0.7 + noise(wuv * 4.3) * 0.3);
+
+	vec3 col = steel;
+	vec3 em = vec3(0.0);
+	float metal = 0.6;
+	float rough = 0.55;
+	float m = max(abs(uv.x), abs(uv.y));
+
+	if (piece == 0 || piece == 1) {
+		if (!top) {
+			col = soot;
+		} else {
+			float edge;
+			float near;
+			float gone = scar(wp.xz, 0.0, edge, near);
+			// the ward still runs here, dimmer the closer the surge came
+			float alive = 1.0 - smoothstep(1.0 - surge - 0.22, 1.0 - surge - 0.02, near);
+			if (piece == 0) {
+				// Walkway: diamond tread plate, a seam round each plate, rust in the low spots
+				col = steel * (0.82 + grain * 0.3);
+				vec2 d = fract(uv * 3.0) - 0.5;
+				vec2 r = vec2(d.x + d.y, d.x - d.y) * 0.7071;
+				float tread = step(abs(r.x) * 0.45 + abs(r.y) * 1.6, 0.16);
+				col = mix(col, steel * 1.35, tread);
+				col = mix(col, soot, step(0.955, m));
+				// an evacuation arrow on some tiles, painted in a hurry: any direction, worn through
+				if (th < 0.32) {
+					float a = floor(hash(tile.xz + 2.2) * 4.0) * 1.5708 + (hash(tile.xz + 6.1) - 0.5) * 0.4;
+					vec2 p = vec2(cos(a) * uv.x - sin(a) * uv.y, sin(a) * uv.x + cos(a) * uv.y);
+					float worn = step(0.32, noise(wuv * 7.0));
+					col = mix(col, amber * 0.62, arrow(p) * worn);
+				}
+				// hazard stripes along the plate edge on a few tiles
+				if (th > 0.82) {
+					float band = step(0.72, abs(uv.x)) * step(abs(uv.x), 0.94);
+					float stripe = step(0.5, fract((uv.x + uv.y) * 2.2));
+					col = mix(col, mix(soot, amber * 0.7, stripe), band * step(0.3, noise(wuv * 5.0)));
+				}
+			} else {
+				// Deck plates over the ward: four plates a tile, bolted, the ward's circuits glowing
+				// cyan in their seams and running between the bolts
+				vec2 plate = fract(uv + 1.0) * 2.0 - 1.0;
+				float tint = hash(floor(wp.xz)) ;
+				col = mix(steel * 0.9, steel * 1.12, tint) * (0.85 + grain * 0.25);
+				float seam = step(0.93, max(abs(plate.x), abs(plate.y)));
+				col = mix(col, soot, seam);
+				vec2 bc = abs(plate) - vec2(0.74);
+				float bolt = step(length(bc), 0.07);
+				col = mix(col, steel * 1.6, bolt);
+				// circuit traces on a 1/4 m lattice, a few lit, a pulse running along them
+				vec2 g = wp.xz * 4.0;
+				vec2 gi = floor(g);
+				vec2 gf = fract(g);
+				float hor = step(0.8, hash(gi + 11.0)) * step(abs(gf.y - 0.5), 0.06);
+				float ver = step(0.8, hash(gi + 23.0)) * step(abs(gf.x - 0.5), 0.06);
+				float trace = max(max(hor, ver), seam * 0.35) * (1.0 - bolt);
+				float pulse = detail ? smoothstep(0.85, 1.0, fract(dot(wp.xz, vec2(0.11, 0.07)) - t * 0.35)) : 0.0;
+				col = mix(col, ward * 0.14, trace * alive * 0.7);
+				em += ward * glow * trace * alive * (0.035 + pulse * 0.45);
+				em += ward * glow * bolt * alive * 0.18;
+				// soot where something burned on the plates
+				col = mix(col, soot, smoothstep(0.7, 0.85, noise(wp.xz * 0.9 + 3.0)) * 0.7);
+				metal = 0.5;
+			}
+			col = mix(col, rust, rusty * 0.35);
+			rough = mix(rough, 0.85, rusty);
+			// the surge: overwritten pixels, static at the edge
+			vec3 sem;
+			vec3 sc = scar_look(wp.xz, t, edge, sem);
+			col = mix(col, sc, max(gone, edge));
+			em = mix(em, sem, max(gone, edge));
+			rough = mix(rough, 0.95, gone);
+			metal = mix(metal, 0.0, gone);
+		}
+	} else {
+		if (top) {
+			// dark cap, a steel rim
+			col = soot * 1.6 + noise(wuv * 3.0) * 0.03;
+			col = mix(col, steel * 0.7, step(0.86, m));
+			metal = 0.4;
+		} else {
+			float y = uv.y;                                          // -1 bottom .. 1 top of the block
+			float h = wp.y - 1.1;                                    // metres above the floor
+			// salvage: two panels a face, each from somewhere else (bare steel, rusted, old paint)
+			float pi = floor((uv.x + 1.0) * 1.0);
+			float ph = hash(vec2(pi, th * 17.0) + tile.xz * 0.37 + tile.y);
+			vec3 pc = ph < 0.4 ? steel : (ph < 0.7 ? mix(steel, rust, 0.55) : paint);
+			col = pc * (0.78 + grain * 0.3);
+			// weld seams between the panels, with a bright bead here and there
+			float weld = step(abs(uv.x), 0.035);
+			col = mix(col, soot, weld);
+			col = mix(col, steel * 1.5, weld * step(0.7, noise(vec2(wp.y * 9.0, th * 30.0))));
+			float rib = step(abs(y + 0.4), 0.06);
+			col = mix(col, steel * 1.3, rib);
+			// the ward light along the upper block, dead where the surge climbed
+			float edge;
+			float near;
+			float gone = scar(wuv + vec2(tile.y * 2.0), (1.0 - smoothstep(0.0, 1.6, h)) * 0.13, edge, near);
+			float alive = 1.0 - smoothstep(1.0 - surge - 0.25, 1.0 - surge - 0.05, near + (1.0 - smoothstep(0.0, 1.6, h)) * 0.13);
+			float strip = step(abs(y - 0.55), 0.045) * step(2.0, h);
+			float flicker = detail ? (0.7 + 0.3 * step(0.2, hash(vec2(floor(t * 9.0), th)))) : 1.0;
+			col = mix(col, ward * 0.35, strip);
+			em += ward * glow * strip * alive * flicker * 0.75;
+			// hazard stripes at the foot, worn
+			float foot = step(y, -0.72) * step(-0.92, y) * step(h, 1.0);
+			float stripe = step(0.5, fract((uv.x + y) * 2.0));
+			col = mix(col, mix(soot, amber * 0.65, stripe), foot * step(0.35, noise(wuv * 4.0)));
+			col = mix(col, soot, step(y, -0.92) * step(h, 1.0));       // plinth
+			// rust running down from the rib
+			float streak = smoothstep(0.6, 0.9, noise(vec2(wuv.x * 6.0, wuv.y * 0.6))) * step(y, 0.35);
+			col = mix(col, rust, max(rusty * 0.4, streak * 0.6));
+			// chalk tallies on some walls: someone was counting
+			if (th > 0.8 && h > 0.9 && h < 2.1) {
+				vec2 tp = vec2((uv.x + 0.62) / 1.24, (y + 0.05) / 0.5);
+				if (tp.x > 0.0 && tp.x < 1.0 && tp.y > 0.0 && tp.y < 1.0) {
+					float slot = tp.x * 15.0;
+					float gi = floor(slot / 5.0);
+					float si = mod(floor(slot), 5.0);
+					float groups = 1.0 + floor(hash(tile.xz + 9.9) * 3.0);
+					if (gi < groups) {
+						float wob = (noise(vec2(slot * 3.0, tp.y * 4.0)) - 0.5) * 0.12;
+						float stroke = si < 4.0 ? step(abs(fract(slot) - 0.5 + wob), 0.13) * step(0.08, tp.y) * step(tp.y, 0.92) : 0.0;
+						float gx = (slot - gi * 5.0) / 4.0;
+						float diag = step(abs(tp.y - (0.12 + gx * 0.76)), 0.07) * step(gx, 1.08);
+						float mark = max(stroke, diag) * step(0.25, noise(wuv * 14.0));
+						col = mix(col, chalk, mark * 0.85);
+					}
+				}
+			}
+			// the surge, climbing from the floor
+			vec3 sem;
+			vec3 sc = scar_look(wuv + vec2(tile.y * 2.0), t, edge, sem);
+			col = mix(col, sc, max(gone, edge));
+			em = mix(em, sem, max(gone, edge));
+			metal = mix(0.55, 0.0, gone);
+			rough = mix(0.5, 0.95, max(gone, rusty * 0.6));
+		}
+	}
+
+	ALBEDO = col;
+	METALLIC = metal;
+	ROUGHNESS = rough;
+	EMISSION = em;
+}
+"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_nqxis"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 0
+shader_parameter/glow = 1.0
+shader_parameter/surge = 0.22
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_thlkj"]
+material = SubResource("ShaderMaterial_nqxis")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_1c3s2"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_j70o3"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 2
+shader_parameter/glow = 1.0
+shader_parameter/surge = 0.22
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_okwpl"]
+material = SubResource("ShaderMaterial_j70o3")
+size = Vector3(2, 2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_52fan"]
+data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -1, 1, 1, 1, -1, -1, 1, -1, 1, -1, -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1, 1, 1, -1, -1, -1, -1, 1, 1, -1, -1, 1, -1, -1, -1, 1, 1, 1, -1, 1, 1, 1, 1, -1, -1, 1, 1, -1, 1, -1, 1, 1, -1, -1, -1, 1, 1, -1, 1, -1, -1, -1, 1, -1, 1, 1, -1, -1, -1, -1, -1)
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_bcrlo"]
+render_priority = 0
+shader = SubResource("Shader_jb42q")
+shader_parameter/piece = 1
+shader_parameter/glow = 1.0
+shader_parameter/surge = 0.22
+shader_parameter/cutaway_radius = 3.2
+shader_parameter/cutaway_keep = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_gs8hm"]
+material = SubResource("ShaderMaterial_bcrlo")
+size = Vector3(2, 0.2, 2)
+
+[sub_resource type="ConcavePolygonShape3D" id="ConcavePolygonShape3D_fjas6"]
+data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, -1, 1, -0.099999994, -1, -1, 0.099999994, -1, -1, -0.099999994, -1, 1, -0.099999994, -1, 1, 0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, 1, 1, 0.099999994, -1, 1, -0.099999994, -1, 1, -0.099999994, 1, -1, 0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, -1, -1, 0.099999994, 1, -1, -0.099999994, 1, -1, -0.099999994, -1, 1, 0.099999994, 1, -1, 0.099999994, 1, 1, 0.099999994, -1, -1, 0.099999994, 1, -1, 0.099999994, -1, 1, 0.099999994, -1, -1, -0.099999994, 1, 1, -0.099999994, 1, -1, -0.099999994, -1, 1, -0.099999994, 1, 1, -0.099999994, -1, -1, -0.099999994, -1)
+
+[resource]
+item/0/name = "Floor"
+item/0/mesh = SubResource("BoxMesh_thlkj")
+item/0/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/mesh_cast_shadow = 1
+item/0/shapes = [SubResource("ConcavePolygonShape3D_1c3s2"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/0/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/0/navigation_layers = 1
+item/1/name = "Wall"
+item/1/mesh = SubResource("BoxMesh_okwpl")
+item/1/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/mesh_cast_shadow = 1
+item/1/shapes = [SubResource("ConcavePolygonShape3D_52fan"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/1/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/1/navigation_layers = 1
+item/2/name = "Room_Floor"
+item/2/mesh = SubResource("BoxMesh_gs8hm")
+item/2/mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/mesh_cast_shadow = 1
+item/2/shapes = [SubResource("ConcavePolygonShape3D_fjas6"), Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)]
+item/2/navigation_mesh_transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+item/2/navigation_layers = 1

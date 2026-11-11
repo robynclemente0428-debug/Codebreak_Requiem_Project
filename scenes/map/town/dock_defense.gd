@@ -15,7 +15,17 @@ extends Node3D
 ##      portal and completes that step of the quest.
 ## Dying calls it off: everything resets (the townsfolk back at their posts), and it starts
 ## again when you come back.
-## Towns have no navmesh (no enemies), so the area's is baked when the fight starts.
+## Towns have no navmesh (no enemies), so the area's is baked when the fight starts: the tiles
+## and furniture as before, plus the NPCs and anything else standing on the floor, so paths go
+## round them, with room for the biggest boarders (NAV_CLEARANCE).
+##
+## Keeping the Null moving, quietly:
+##   - waves only come from floor that is on the navmesh and has a path to the fight (a cell
+##     walled off from it, or on top of a crate, is never used), snapped onto the navmesh
+##   - wave enemies pass through NPCs (the townsfolk never pin one in place)
+##   - a wave enemy that makes no headway for STUCK_TIME, or ends up off the floor, hops a couple
+##     of metres along its path; on screen that's a two-frame Null flicker. One with no path at all
+##     goes back to a spawn point, but only off screen.
 
 @export var quest_id := "q02b_the_road_out"
 ## What winning counts as (QuestItems id): the portal is sealed by it.
@@ -84,6 +94,22 @@ const ACCENT := Color("#00E5FF")
 const COL_WARN := Color(1.0, 0.35, 0.35)
 const COL_GOOD := Color(0.25, 1.0, 0.55)
 const RUN_CLIP := "player_anims/Jog_F"     # every NPC model shares the player's animations
+## The navmesh's clearance from walls: the biggest boarders (a rare's 1.5x body) still fit round
+## corners, so a path never runs where a body snags.
+const NAV_CLEARANCE := 0.5
+const NAV_SOURCE_GROUP := &"dock_nav_source"
+## A spawn point this far from the navmesh isn't walkable floor (inside a wall's clearance, a prop).
+const SPAWN_OFF_MESH := 1.2
+## Stuck watch: checked every STUCK_CHECK seconds. A chasing wave enemy that moved less than
+## STUCK_MOVE metres over STUCK_TIME seconds, or stands more than OFF_MESH from the navmesh, is
+## moved HOP metres along its path to its target.
+const STUCK_CHECK := 0.5
+const STUCK_MOVE := 0.35
+const STUCK_TIME := 3.0
+const OFF_MESH := 1.4
+const HOP := 2.5
+## After this many hops with no headway in between, it goes back to a spawn point (off screen).
+const HOPS_BEFORE_RESPAWN := 3
 const VANISH_DISTANCE := 1.2               # metres from the portal where a runner steps through
 
 enum State { WAITING, RUNNING, CLEARING, DONE }
@@ -99,6 +125,9 @@ var _portal: Node3D                      # what the fight is held at (a Portal h
 var _spawn_points: Array[Vector3] = []
 var _baked := false
 var _runners: Array[Dictionary] = []     # the fleeing NPCs, see _evacuate()
+var _npc_bodies: Array[PhysicsBody3D] = []   # the townsfolk's bodies: wave enemies pass through them
+var _watch := 0.0                        # time to the next stuck check
+var _stuck := {}                         # enemy instance id -> {"at": Vector3, "still": float, "hops": int}
 var _hud: CanvasLayer
 var _title: Label
 var _status: Label
@@ -190,8 +219,12 @@ func _start() -> void:
 	QuestItems.toast(get_tree(), start_toast, COL_WARN)
 	if evacuate_npcs:
 		_evacuate()
+	_stuck.clear()
+	_find_npc_bodies()
 	if not _baked:
 		await _bake()
+	else:
+		_keep_reachable_spawns()
 
 
 ## Floor around the portal, spawn_min..spawn_max metres away, for the waves to come from, and
@@ -237,16 +270,64 @@ func _bake() -> void:
 		return
 	if region.navigation_mesh == null:
 		region.navigation_mesh = NavigationMesh.new()
-	region.navigation_mesh.agent_radius = 0.3       # like the dungeons
-	region.navigation_mesh.agent_height = 1.8
+	var nm := region.navigation_mesh
+	nm.agent_radius = NAV_CLEARANCE
+	nm.agent_height = 1.8
+	# The tiles and furniture (the region's children, meshes as before) and every NPC and prop
+	# standing in the area (their colliders), so paths go round them
+	nm.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_WITH_CHILDREN
+	nm.geometry_source_group_name = NAV_SOURCE_GROUP
+	nm.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_BOTH
+	region.add_to_group(NAV_SOURCE_GROUP)
+	for body in get_parent().find_children("*", "StaticBody3D", true, false):
+		if not region.is_ancestor_of(body):
+			body.add_to_group(NAV_SOURCE_GROUP)
 	region.bake_navigation_mesh(true)
 	await region.bake_finished
+	await get_tree().physics_frame                # the new navmesh reaches the navigation map
+	await get_tree().physics_frame
+	_keep_reachable_spawns()
 	_baked = true
+
+
+## The spawn points the Null can actually walk from: on the navmesh (snapped onto it) and with a
+## path to the fight. Floor walled off from it, or a crate top, is dropped. If none are left, the
+## old list stands (better a stuck boarder than no wave).
+func _keep_reachable_spawns() -> void:
+	var region := _region()
+	if region == null or _spawn_points.is_empty() or not is_instance_valid(_portal):
+		return
+	var map := region.get_navigation_map()
+	var goal := NavigationServer3D.map_get_closest_point(map, _portal.global_position)
+	var kept: Array[Vector3] = []
+	for p in _spawn_points:
+		var on := NavigationServer3D.map_get_closest_point(map, p)
+		if Vector2(on.x - p.x, on.z - p.z).length() > SPAWN_OFF_MESH:
+			continue
+		var path := NavigationServer3D.map_get_path(map, on, goal, true)
+		if path.is_empty() or path[path.size() - 1].distance_to(goal) > 1.5:
+			continue
+		kept.append(on)
+	if not kept.is_empty():
+		_spawn_points = kept
+
+
+## The townsfolk's bodies (DialogueNPC: Brack, Hex, Sudo...), for wave enemies to pass through.
+func _find_npc_bodies() -> void:
+	_npc_bodies.clear()
+	for npc in get_parent().find_children("*", "DialogueNPC", true, false):
+		for b in npc.find_children("*", "PhysicsBody3D", true, false):
+			_npc_bodies.append(b as PhysicsBody3D)
 
 
 # ---------- THE FIGHT ----------
 func _run(delta: float) -> void:
 	_alive.assign(_alive.filter(func(e) -> bool: return is_instance_valid(e) and e.is_in_group("enemies")))
+	if _baked:
+		_watch -= delta
+		if _watch <= 0.0:
+			_watch = STUCK_CHECK
+			_unstick()
 	if _baked:
 		for r in _runners:
 			_move_runner(r, delta)
@@ -305,11 +386,110 @@ func _spawn_one(def: EnemyDefinition, rarity: String, mods: Variant, grow: float
 	EnemySpawner.empower(e, wave_health_growth * grow, wave_armour_growth * grow,
 			wave_damage_growth * (grow - 1.0), "wave", wave_health_flat * grow, wave_armour_flat * grow)
 	e.ai.aggro_range = spawn_max * 3.0          # they all come for the portal
+	for b in _npc_bodies:
+		if is_instance_valid(b):
+			e.add_collision_exception_with(b)   # the townsfolk never pin a boarder in place
 	_alive.append(e)
 	var numbers := get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
 	if numbers:
 		numbers.track(e.health)
 	return e
+
+
+# ---------- KEEPING THEM MOVING ----------
+## Every STUCK_CHECK seconds: a chasing wave enemy that made no headway for STUCK_TIME, or stands
+## off the navmesh, hops along its path (or, with no path, goes back to a spawn point off screen).
+func _unstick() -> void:
+	var region := _region()
+	if region == null:
+		return
+	var map := region.get_navigation_map()
+	var cam := get_viewport().get_camera_3d()
+	var seen := {}
+	for e in _alive:
+		var id := e.get_instance_id()
+		seen[id] = true
+		var ai := e.get("ai") as AIComponent
+		var w: Dictionary = _stuck.get(id, {"at": e.global_position, "still": 0.0, "hops": 0})
+		_stuck[id] = w
+		var on := NavigationServer3D.map_get_closest_point(map, e.global_position)
+		var off_mesh := Vector2(on.x - e.global_position.x, on.z - e.global_position.z).length() > OFF_MESH
+		var moved := Vector2(e.global_position.x - w.at.x, e.global_position.z - w.at.z).length()
+		w.at = e.global_position
+		if ai == null or ai.target == null or not is_instance_valid(ai.target) or ai.state != AIComponent.State.CHASE \
+				or ai._is_busy() or _content(e, ai):
+			w.still = 0.0                                # fighting, casting, or where it wants to be
+			if moved > STUCK_MOVE:
+				w.hops = 0
+			if not off_mesh:
+				continue
+		if moved > STUCK_MOVE and not off_mesh:
+			w.still = 0.0
+			w.hops = 0
+			continue
+		w.still += STUCK_CHECK
+		if w.still < STUCK_TIME and not off_mesh:
+			continue
+		w.still = 0.0
+		var goal: Vector3 = ai.target.global_position if ai != null and ai.target != null and is_instance_valid(ai.target) \
+				else _portal.global_position
+		var path := NavigationServer3D.map_get_path(map, on, NavigationServer3D.map_get_closest_point(map, goal), true)
+		var reaches := not path.is_empty() and path[path.size() - 1].distance_to(goal) < 3.0
+		w.hops += 1
+		var visible := cam != null and cam.is_position_in_frustum(e.global_position + Vector3.UP)
+		if reaches and w.hops <= HOPS_BEFORE_RESPAWN:
+			_hop(e, _along(path, HOP) if path.size() > 1 else on, visible)
+		elif not visible and not _spawn_points.is_empty():
+			_hop(e, _spawn_points[randi() % _spawn_points.size()], false)   # no way out: back to the edge
+			w.hops = 0
+		elif off_mesh:
+			_hop(e, on, visible)                         # at least back onto the floor
+	for id in _stuck.keys():
+		if not seen.has(id):
+			_stuck.erase(id)
+
+
+## True when an enemy standing still means to: a shooter at its range, a saboteur at its system.
+func _content(e: Node3D, ai: AIComponent) -> bool:
+	var d := e.global_position.distance_to(ai.target.global_position)
+	if ai.preferred_distance > 0.0 and d <= ai.preferred_distance * 1.3:
+		return true
+	return d <= ai.attack_range * 1.5
+
+
+## The point `metres` along a path (or its end).
+static func _along(path: PackedVector3Array, metres: float) -> Vector3:
+	var left := metres
+	for i in range(1, path.size()):
+		var seg := path[i] - path[i - 1]
+		var l := seg.length()
+		if l >= left:
+			return path[i - 1] + seg * (left / maxf(l, 0.001))
+		left -= l
+	return path[path.size() - 1]
+
+
+## Moves an enemy to `to`. Seen by the camera, it flickers out and back over two short frames
+## (the Null skipping a frame); unseen, it just moves.
+func _hop(e: Node3D, to: Vector3, seen: bool) -> void:
+	var at := to + Vector3.UP * 0.1
+	if not seen:
+		e.global_position = at
+		e.set("velocity", Vector3.ZERO)
+		return
+	var model := e.get("model") as Node3D
+	if model != null:
+		model.visible = false
+	var tw := create_tween()
+	tw.tween_interval(0.07)
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(e):
+			e.global_position = at
+			e.set("velocity", Vector3.ZERO))
+	tw.tween_interval(0.07)
+	tw.tween_callback(func() -> void:
+		if is_instance_valid(e) and model != null and is_instance_valid(model):
+			model.visible = true)
 
 
 func _held() -> void:
