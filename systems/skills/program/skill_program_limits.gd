@@ -32,6 +32,11 @@ var bonus_points := 0.0
 var bonus_steps := 0
 
 
+## The character's routines (SkillComponent.routines, ProgramRoutine), for the  call  lines of a
+## script on this skill. Set by SkillInstance.get_program_limits (or the editor, for a draft).
+var routines: Array = []
+
+
 func get_knob(knob_id: StringName) -> SkillKnob:
 	for k in knobs:
 		if k.id == knob_id:

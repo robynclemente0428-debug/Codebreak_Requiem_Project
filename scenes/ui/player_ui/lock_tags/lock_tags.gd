@@ -225,7 +225,7 @@ static func draw_icon(canvas: CanvasItem, shape: String, r: Rect2, col: Color) -
 
 ## The player is near `lock` on `enemy`: the first time this character meets that lock, queue its card.
 func _meet(lock: EnemyTrait, enemy: Node3D) -> void:
-	var lock_id := lock.lock_name()
+	var lock_id: String = lock.lock_name()
 	_load_met()
 	if lock_id == "" or _met.has(lock_id):
 		return

@@ -6,7 +6,8 @@ extends Resource
 ##
 ## Pass:  every wave cleared within time_limit, health never under fail_health, and a rule
 ##        using required_condition fired at least required_fires times (or, with
-##        required_stop_loop, a self-stopping loop repeated that often).
+##        required_stop_loop, a self-stopping loop repeated that often; with required_routine,
+##        a shared routine ran that often, from that many skills).
 ## Grade: PASS / MERIT / DISTINCTION from points:
 ##        the script's efficiency tier (Lean 1, Elegant 2) + cleared within par_time (1)
 ##        + lost no more than par_damage of max health (1).   0-1 PASS, 2-3 MERIT, 4 DISTINCTION.
@@ -25,6 +26,11 @@ extends Resource
 ## Instead of a condition: the script must keep a registry (SkillProgram.keeps_a_count: add enemies
 ## to it, and read it), and each time a rule reading the registry fires counts as a fire.
 @export var required_variable := false
+## Instead of a condition: the scripts must share a routine (ProgramRoutine): at least
+## required_callers skills (or every skill, if fewer are socketed) call the same one, and each time a
+## call runs counts as a fire. The Engineer exam.
+@export var required_routine := false
+@export var required_callers := 3
 ## Perks the sandbox lends during this exam (Ranks.PERKS flag keys), so an exam can ask for what
 ## its own rank unlocks: the Architect exam lends "loops".
 @export var lends: Array[String] = []

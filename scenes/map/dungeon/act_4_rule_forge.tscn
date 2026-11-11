@@ -1,0 +1,143 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://blbsgtjt3mdxp" path="res://scenes/map/dungeon/dungeon.gd" id="1_dun"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_portal"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/null_forge.tres" id="4_theme"]
+[ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act4_null_meshes.tres" id="6_mesh"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
+[ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="10_enemym"]
+[ext_resource type="Resource" path="res://data/enemies/null_weaver.tres" id="e_weaver"]
+[ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="n_vesper"]
+[ext_resource type="Resource" path="res://data/dialogue/vesper_field.tres" id="n_vesper_dlg"]
+[ext_resource type="Script" path="res://systems/world/stand_near_arrival.gd" id="n_stand"]
+[ext_resource type="Script" path="res://systems/world/null_law_director.gd" id="n_laws"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_1"]
+agent_height = 1.8
+agent_radius = 0.3
+
+[node name="RuleForge" type="Node3D"]
+metadata/_note = "PROTOTYPE. Act IV challenge zone, level 33, off The Deleted Quarter: where the Null tries its laws out. They change every 30 seconds instead of 80, Reflector is always on (plus one random threat), and far more rares and champions spawn, so it drops better. A champion Null Weaver holds the last room. Both portals lead back to The Deleted Quarter."
+script = ExtResource("1_dun")
+dungeon_level = 33
+respawn_spawn_id = &"forge_in"
+portal_scene = ExtResource("2_portal")
+metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
+
+[node name="DungeonDirector" type="Node" parent="." node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("3_dir")
+grid_width = 100
+grid_height = 100
+corridor_width = 3
+min_room_size = 7
+max_room_size = 10
+room_interval = 8
+num_branch_rooms = 1
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_theme")
+layout_root = NodePath("../Layout")
+loop_connections = 0
+straight_corridors = true
+filler_rooms = true
+random_rooms = 3
+random_room_spread = 12
+metadata/_custom_type_script = "uid://b5gwgfu4bdnrx"
+
+[node name="DungeonPopulator" type="Node" parent="." node_paths=PackedStringArray("director", "enemies_root", "loot_root")]
+script = ExtResource("5_pop")
+director = NodePath("../DungeonDirector")
+enemies_root = NodePath("../Enemies")
+loot_root = NodePath("../Loot")
+metadata/_custom_type_script = "uid://gvonfu37eay0"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_1")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D"]
+mesh_library = ExtResource("6_mesh")
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Loot" type="Node3D" parent="."]
+
+[node name="Layout" type="Node3D" parent="."]
+
+[node name="PortalBack" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 100)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/dungeon/act_4_deleted_quarter.tscn"
+target_spawn = &"dq_forge"
+arrival_spawn_id = &"forge_in"
+dungeon_level = 32
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnIn" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 100)
+script = ExtResource("8_spawnm")
+spawn_id = &"forge_in"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="PortalNext" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 190, 1, 100)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/dungeon/act_4_deleted_quarter.tscn"
+target_spawn = &"dq_forge"
+arrival_spawn_id = &"forge_out"
+dungeon_level = 32
+room_size = Vector2i(3, 3)
+metadata/_custom_type_script = "uid://5iqyjjqg3pro"
+
+[node name="SpawnOut" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 189, 0, 100)
+script = ExtResource("8_spawnm")
+spawn_id = &"forge_out"
+create_room = false
+metadata/_custom_type_script = "uid://drtmekm517kgm"
+
+[node name="Room1" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55, 0, 100)
+script = ExtResource("9_roomm")
+room_size = Vector2i(10, 9)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="Room2" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 100, 0, 100)
+script = ExtResource("9_roomm")
+room_size = Vector2i(10, 9)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="Room3" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 148, 0, 100)
+script = ExtResource("9_roomm")
+room_size = Vector2i(12, 11)
+metadata/_custom_type_script = "uid://c5hhflptas7h1"
+
+[node name="ForgeWarden" type="Marker3D" parent="Layout/Room3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+script = ExtResource("10_enemym")
+enemy = ExtResource("e_weaver")
+rarity = "champion"
+metadata/_custom_type_script = "uid://bri1ph1ms875r"
+metadata/_note = "A champion Null Weaver at the end, with the zone's threat traits."
+
+[node name="Vesper" parent="." instance=ExtResource("n_vesper")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 12, 1.1, 97.6)
+npc_id = "vesper_field"
+info_description = "She is counting under her breath, timing the rewrites."
+dialogue = ExtResource("n_vesper_dlg")
+
+[node name="StandNearArrival" type="Node" parent="Vesper"]
+script = ExtResource("n_stand")
+
+[node name="NullLaws" type="Node" parent="."]
+script = ExtResource("n_laws")
+first_delay = 6.0
+law_time = 30.0
+warn_time = 5.0
+metadata/_note = "The Rule Forge: the Null tries its laws out, one every 30 seconds."

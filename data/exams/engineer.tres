@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="ExamSpec" format=3]
+
+[ext_resource type="Script" path="res://systems/exam/exam_spec.gd" id="1_spec"]
+[ext_resource type="Resource" path="res://data/enemies/sample_copy.tres" id="2_copy"]
+[ext_resource type="Resource" path="res://data/enemies/sample_leak.tres" id="3_leak"]
+[ext_resource type="Resource" path="res://data/enemies/sample_marker.tres" id="5_marker"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act4_null_meshes.tres" id="6_tiles"]
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="4_def"]
+
+[resource]
+script = ExtResource("1_spec")
+rank_id = "engineer"
+title = "ENGINEER EXAM"
+brief = Array[String](["Three samples the Null copied out of your own fights: a swarm, armoured shells, then fast hunters.", "The sandbox lends you routines. Open routines.gd in the script editor and write the lines once, under def name():. Then run them from any skill with call name(). A call is one block, whatever the routine holds.", "Three of your skills (or all of them, if you have fewer) must call the same routine.", "Your routine must run at least 6 times. Clear every wave within 120 seconds.", "Graded on: your scripts' efficiency tier (a call counts as one block), time (par 80 s), damage taken (par 35%). The Null copies. An Engineer references."])
+required_condition = ""
+required_condition_label = "routine runs"
+required_routine = true
+required_callers = 3
+required_fires = 6
+lends = Array[String](["routines"])
+time_limit = 120.0
+par_time = 80.0
+par_damage = 0.35
+fail_health = 0.25
+wave_enemy = ExtResource("2_copy")
+wave_sizes = Array[int]([10, 4, 5])
+wave_enemies = Array[ExtResource("4_def")]([ExtResource("3_leak"), ExtResource("2_copy"), ExtResource("5_marker")])
+wave_mods = Array[String](["", "armoured", "rapid,swift"])
+enemy_level = 5
+spawn_radius = 8.5
+arena_tiles = ExtResource("6_tiles")
+wave_names = Array[String](["COPIED SWARM", "COPIED SHELLS", "COPIED HUNTERS"])
+wave_notes = Array[String](["Your area skill, copied a hundred times.", "Few, armoured, and patient. Hit hard.", "Fast, and they hit hard. One routine, every skill."])
+wave_tints = Array[Color]([Color(0.78, 0.4, 1, 1), Color(0.55, 0.75, 1, 1), Color(1, 0.35, 0.75, 1)])

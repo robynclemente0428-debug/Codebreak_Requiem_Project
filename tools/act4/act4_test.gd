@@ -1,6 +1,7 @@
 extends Node
 ## Walks Act IV's prototype with NO character slot loaded (nothing is saved): the Inward Gate, The
-## Threshold, The Fray and The Weaver's Loom, then back. Writes act4_test_results.txt, and holds on
+## Threshold, The Fray, The Deleted Quarter (with a side trip to The Rule Forge) and The Weaver's
+## Loom, then back. Writes act4_test_results.txt, and holds on
 ## each area for `linger` seconds so it can be looked at.
 
 const MAIN := "res://scenes/map/main.tscn"
@@ -10,6 +11,8 @@ const FAR_SIDE := "res://scenes/map/dungeon/act_3_far_side.tscn"
 const HUB := "res://scenes/map/town/act_4_threshold.tscn"
 const FRAY := "res://scenes/map/dungeon/act_4_the_fray.tscn"
 const LOOM := "res://scenes/map/dungeon/act_4_weavers_loom.tscn"
+const DELETED := "res://scenes/map/dungeon/act_4_deleted_quarter.tscn"
+const FORGE := "res://scenes/map/dungeon/act_4_rule_forge.tscn"
 const RESULTS := "res://tools/act4/act4_test_results.txt"
 
 @export var linger := 5.0
@@ -103,10 +106,39 @@ func _run() -> void:
 		_check("at level %d with Act IV's +150%% (%.0f health)" % [int(e.get("level")), e.get("stats").get_stat(StatTypes.Stat.MAX_HEALTH)],
 			int(e.get("level")) == 30 and scaled)
 	var fray_portals := fray.find_children("*", "Portal", true, false)
-	var to_loom := _portal_to(fray_portals, LOOM)
+	var to_deleted := _portal_to(fray_portals, DELETED)
 	var back_hub := _portal_to(fray_portals, HUB)
-	_check("portals back and on", to_loom != null and back_hub != null)
+	_check("portals back and on", to_deleted != null and back_hub != null)
 	await _wait(linger)
+
+	# --- The Deleted Quarter ---
+	await _go(to_deleted.target_area, to_deleted.target_spawn, to_deleted.dungeon_level)
+	var deleted := _am().current_area
+	_check("The Deleted Quarter loads", deleted != null and deleted.scene_file_path == DELETED)
+	await _wait(2.0)
+	_check("the player lands on the floor (%s)" % _player().global_position, _on_floor())
+	var dq_portals := deleted.find_children("*", "Portal", true, false)
+	var to_loom := _portal_to(dq_portals, LOOM)
+	var to_forge := _portal_to(dq_portals, FORGE)
+	_check("portals back to The Fray, on to the Loom and aside to The Rule Forge (%d)" % dq_portals.size(),
+		_portal_to(dq_portals, FRAY) != null and to_loom != null and to_forge != null)
+	await _wait(linger)
+
+	# --- The Rule Forge (a side trip) ---
+	await _go(to_forge.target_area, to_forge.target_spawn, to_forge.dungeon_level)
+	var forge := _am().current_area
+	_check("The Rule Forge loads", forge != null and forge.scene_file_path == FORGE)
+	await _wait(2.0)
+	_check("the player lands on the floor (%s)" % _player().global_position, _on_floor())
+	var forge_laws := forge.get_node_or_null("NullLaws")
+	_check("its laws change every 30 seconds", forge_laws != null and is_equal_approx(float(forge_laws.get("law_time")), 30.0))
+	var forge_back := _portal_to(forge.find_children("*", "Portal", true, false), DELETED)
+	_check("it leads back to The Deleted Quarter", forge_back != null)
+	await _wait(linger)
+	await _go(forge_back.target_area, forge_back.target_spawn, forge_back.dungeon_level)
+	_check("back in The Deleted Quarter", _am().current_area.scene_file_path == DELETED)
+	dq_portals = _am().current_area.find_children("*", "Portal", true, false)
+	to_loom = _portal_to(dq_portals, LOOM)
 
 	# --- The Loom ---
 	await _go(to_loom.target_area, to_loom.target_spawn, to_loom.dungeon_level)

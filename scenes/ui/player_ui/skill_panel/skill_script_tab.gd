@@ -5,10 +5,11 @@ extends VBoxContainer
 ##
 ##  - EXPLORER (left): one "file" per socketed skill and per scriptable support. A skill and its
 ##                     supports share one point budget, so they are checked together.
-##  - EDITOR (middle): every file of the skill as code, one after another under its own header
-##                     (the skill's file first, then each scriptable support), in one scroll.
-##                     Clicking a file in EXPLORER scrolls to it; scrolling makes the file at
-##                     the top the open one (its knobs in SNIPPETS, clear() acts on it).
+##  - EDITOR (middle): one file at a time, in tabs above the code like a code editor: the
+##                     skill's file, then each scriptable support, then routines.gd (Engineer).
+##                     Click a tab (or the file in EXPLORER) to open it: its knobs in SNIPPETS,
+##                     clear() acts on it. While dragging a line or snippet, hover a tab to open
+##                     that file and drop it there. A tab shows * when unsaved, ! with errors.
 ##                     Each file's rules, with line numbers:
 ##                         always:
 ##                     +       damage += 20%          # costs 8.0
@@ -43,6 +44,13 @@ extends VBoxContainer
 ##                     Sets past the player's rank aren't shown (Ranks.PERKS: B at OPERATOR, C at STRATEGIST),
 ##                     nor are blocks above it (Ranks.LOCKED_BLOCKS: loops need ARCHITECT).
 ##  - save_as() / load() (OUTPUT, rank ARCHITECT): the script library (SkillComponent.library).
+##  - routines.gd (rank ENGINEER): the character's routines (ProgramRoutine), one more file in the
+##                     editor and EXPLORER, shared by every skill. Each is "def name():" and its lines
+##                     (knobs, registry writes, one level of if); no conditions or loops of its own.
+##                     call name() (SNIPPETS, "routines") runs one from a rule: one block, and the
+##                     skill pays for its lines. Click a call's name to switch routine, a routine's
+##                     name to rename it. Routine edits are a draft too: apply() saves them for
+##                     every skill, revert() drops them.
 ##  - guide() (top of the editor): the SCRIPTING GUIDE (ScriptGuide), laid over the tab: rules,
 ##                     always / when, blocks, knobs, points, discounts, with this skill's numbers.
 ##
@@ -126,12 +134,9 @@ var _load_btn: Button
 var _library_box: VBoxContainer   # under OUTPUT's buttons while load() is open
 var _library_open := false
 var _set_hooked: SkillComponent   # the SkillComponent whose script_set_changed we listen to
-# One scroll for all files of the open skill
+# The open file's code; the file tabs above it (one per file of the skill)
 var _editor_scroll: ScrollContainer
-var _file_headers: Dictionary = {}  # owner id ("" = the skill) -> its header line in the editor
-var _end_pad: Control              # room after the last file, so its header can reach the top
-var _pad_height := 0.0
-var _jump_serial := 0              # a newer jump cancels an older one still waiting for layout
+var _file_tabs: HFlowContainer
 # The SCRIPTING GUIDE (ScriptGuide), laid over the tab by guide()
 var _guide: ScriptGuide
 var _guide_btn: Button
@@ -141,6 +146,10 @@ var _tip_label: Label
 var _tip_page_btn: Button
 var _tip_shown: Dictionary = {}    # {id, text, page} on screen now, {} for none
 var _tip_hold := false             # apply() just showed one: the rebuild after it keeps it
+# Routines (rank ENGINEER): routines.gd, edited as a draft like a script (ProgramRoutine.OWNER)
+const ROUTINES_FILE := "@routines"
+var _routine_draft: Array = []      # copies of SkillComponent.routines while editing ([] = not made yet)
+var _routine_rename := -1           # the routine whose name box is open
 
 
 # ---------- BUILDING ----------
@@ -206,6 +215,10 @@ func build() -> void:
 	_rename_btn.pressed.connect(func() -> void: _start_rename(_skills().script_set))
 	head.add_child(_rename_btn)
 	# editor / OUTPUT, the bar between them draggable
+	_file_tabs = HFlowContainer.new()
+	_file_tabs.add_theme_constant_override("h_separation", 2)
+	_file_tabs.add_theme_constant_override("v_separation", 2)
+	mid.add_child(_file_tabs)
 	var rows := _split(true, "output", -90.0 * _k())
 	rows.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	mid.add_child(rows)
@@ -219,7 +232,6 @@ func build() -> void:
 	panel._style_scrollbar(mid_scroll.get_h_scroll_bar())
 	mid_scroll.get_h_scroll_bar().custom_minimum_size = Vector2(0, 8)   # styled for vertical bars
 	_editor_scroll = mid_scroll
-	mid_scroll.get_v_scroll_bar().value_changed.connect(_on_editor_scrolled)
 	editor.add_child(mid_scroll)
 	_rules_box = VBoxContainer.new()
 	_rules_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -475,6 +487,80 @@ func _is_dirty(socket: int) -> bool:
 	return JSON.stringify((_drafts[socket] as SkillProgram).to_dict()) != applied_json
 
 
+## The routines being edited: copies of the character's, made on first use, all three slots.
+func _routines() -> Array:
+	if _routine_draft.is_empty():
+		var sk := _skills()
+		for i in ProgramRoutine.MAX_ROUTINES:
+			var have: ProgramRoutine = sk.routines[i] if sk != null and i < sk.routines.size() else null
+			_routine_draft.append(have.duplicate_routine() if have != null else ProgramRoutine.make(i))
+	return _routine_draft
+
+
+## True when the routines were edited since they were last applied.
+func _routines_dirty() -> bool:
+	if _routine_draft.is_empty():
+		return false
+	var sk := _skills()
+	for i in _routine_draft.size():
+		var have: ProgramRoutine = sk.routines[i] if i < sk.routines.size() else ProgramRoutine.make(i)
+		if JSON.stringify((_routine_draft[i] as ProgramRoutine).to_dict()) != JSON.stringify(have.to_dict()):
+			return true
+	return false
+
+
+## True when the player's rank has routines (Engineer, or lent in Sudo's sandbox).
+func _routines_unlocked() -> bool:
+	var limits := _limits()
+	return limits != null and limits.allows("call")
+
+
+## The file whose knobs a file's lines use: routines use the skill's own.
+func _knob_owner(owner_id: String) -> String:
+	return "" if owner_id == ROUTINES_FILE else owner_id
+
+
+## The routine whose body `rule` is (null for a rule of the script).
+func _routine_of(rule: ProgramRule) -> ProgramRoutine:
+	if rule == null or rule.owner != ROUTINES_FILE:
+		return null
+	for r in _routines():
+		if (r as ProgramRoutine).body == rule:
+			return r
+	return null
+
+
+## The skill files whose script (draft, or applied) calls routine `index`, each with how much
+## stronger its strongest call makes the routine's knobs ("strike.gd x1.75"), when it does.
+func _routine_callers(index: int) -> Array:
+	var out: Array = []
+	var sk := _skills()
+	var routines := _routines()
+	var rt: ProgramRoutine = routines[index] if index < routines.size() else null
+	for i in sk.sockets.size():
+		var sock := sk.sockets[i]
+		if sock.gem == null:
+			continue
+		var p: SkillProgram = _drafts[i] if _drafts.has(i) else sock.program
+		if p == null or not (index in p.called_routines()):
+			continue
+		var text := _file_name(sock.gem.get_display_name())
+		var limits := sk.program_limits_for(i)
+		var top := 1.0
+		if rt != null and not rt.is_empty() and limits != null:
+			for r in p.rules:
+				var calls := r.effects.filter(func(x: ProgramEffect) -> bool: return x.is_call() and x.op == index)
+				if not calls.is_empty():
+					top = maxf(top, float(_routine_here(rt, r, limits)["mult"]))
+				for bi in r.branches.size():
+					if r.branches[bi].effects.any(func(x: ProgramEffect) -> bool: return x.is_call() and x.op == index):
+						top = maxf(top, float(_routine_here(rt, r.branch_rule(bi), limits)["mult"]))
+		if not is_equal_approx(top, 1.0):
+			text += " x%.2f" % top
+		out.append(text)
+	return out
+
+
 ## Opens the SCRIPTING GUIDE over the tab, on `page` ("" = the last one read), with the open
 ## skill's numbers (budget, blocks, rules, tiers).
 func open_guide(page := "") -> void:
@@ -661,55 +747,19 @@ func refresh() -> void:
 				_socket = i
 				break
 		_owner = ""
-	if _sock() != null and _owner != "" and not (_owner in _support_ids(_sock())):
+	if _sock() != null and _owner != "" and _owner != ROUTINES_FILE and not (_owner in _support_ids(_sock())):
 		_owner = ""
 	_rebuild()
 
 
 func _select_gem(socket: int, owner_id: String) -> void:
-	var same_skill := socket == _socket
+	var same_file := socket == _socket and owner_id == _owner
 	_socket = socket
 	_owner = owner_id
 	_selected = null
 	_rebuild()
-	if not same_skill:
-		_editor_scroll.scroll_vertical = 0
-	_scroll_to_file(owner_id)
-
-
-## Scrolls the editor so `owner_id`'s header is at the top (once the new lines are laid out).
-func _scroll_to_file(owner_id: String) -> void:
-	_jump_serial += 1
-	var serial := _jump_serial
-	await get_tree().process_frame
-	if serial != _jump_serial or not _file_headers.has(owner_id):
-		return
-	_fit_end_pad()
-	await get_tree().process_frame                  # the pad's new height has to be laid out too
-	if serial != _jump_serial or not _file_headers.has(owner_id):
-		return
-	var header: Control = _file_headers[owner_id]
-	if is_instance_valid(header):
-		_editor_scroll.scroll_vertical = roundi(header.position.y)
-
-
-## Scrolling makes the file whose header is at (or above) the top of the editor the open one.
-func _on_editor_scrolled(value: float) -> void:
-	if _file_headers.size() < 2:
-		return
-	var top := ""
-	var best := -INF
-	for owner_id in _file_headers:
-		var h: Control = _file_headers[owner_id]
-		if is_instance_valid(h) and h.position.y <= value + 6.0 and h.position.y > best:
-			best = h.position.y
-			top = owner_id
-	if top == _owner:
-		return
-	_owner = top
-	if _selected != null and _selected.owner != top:
-		_selected = null                            # snippet clicks go to the open file
-	_queue_rebuild()
+	if not same_file:
+		_editor_scroll.scroll_vertical = 0           # a newly opened tab starts at its top
 
 
 ## The skill's files in the order the editor shows them: the skill, then each scriptable support.
@@ -722,22 +772,9 @@ func _file_owners() -> Array:
 		var def := item.definition.support_gem
 		if not def.program_knobs.is_empty() and not (def.id in out):
 			out.append(def.id)
+	if _routines_unlocked():
+		out.append(ROUTINES_FILE)                        # routines.gd: last, shared by every skill
 	return out
-
-
-## Sizes the space after the last file so its header can still be scrolled to the top.
-func _fit_end_pad() -> void:
-	if _end_pad == null or not is_instance_valid(_end_pad):
-		return
-	var need := 0.0
-	if _file_headers.size() > 1:
-		var last: Control = _file_headers[_file_owners().back()] if _file_headers.has(_file_owners().back()) else null
-		if last != null and is_instance_valid(last):
-			var content := _end_pad.position.y               # where the last file's lines end
-			need = maxf(_editor_scroll.size.y - (content - last.position.y), 0.0)
-	if not is_equal_approx(need, _pad_height):
-		_pad_height = need
-		_end_pad.custom_minimum_size.y = need
 
 
 ## Rebuilding frees the control that is handling the current click or drop, so wait a frame.
@@ -753,8 +790,9 @@ func _rebuild() -> void:
 	_validation = null
 	_issue_line.clear()
 	if _sock() != null and _limits() != null:
-		_validation = _skills().preview_program(_socket, _draft())
+		_validation = _skills().preview_program(_socket, _draft(), _routines())
 	_build_gem_list()
+	_build_file_tabs()
 	_build_rules()
 	_build_palette()
 	_update_status()
@@ -983,6 +1021,14 @@ func _build_gem_list() -> void:
 				b.disabled = true
 				b.tooltip_text = "This support has nothing to script."
 			_gem_list.add_child(b)
+	if any and _routines_unlocked():                     # routines.gd: one file for every skill
+		var bad := false
+		for rt in _routines():
+			bad = bad or (not (rt as ProgramRoutine).is_empty() and not (rt as ProgramRoutine).problem().is_empty())
+		var rb := _file_button("routines.gd" + (" *" if _routines_dirty() else "") + (" !" if bad else ""),
+			_socket, ROUTINES_FILE, SkillPanel.COL_WARN if bad else COL_KEYWORD, 0)
+		rb.tooltip_text = "Your routines: lines written once, run from any skill with call name() (1 block). Shared by every skill."
+		_gem_list.add_child(rb)
 	if not any:
 		_gem_list.add_child(panel._label("// socket a skill first", _sz(12), COL_COMMENT))
 
@@ -1026,9 +1072,7 @@ func _build_rules() -> void:
 	_rule_line.clear()
 	_effect_num.clear()
 	_cond_nums.clear()
-	_file_headers.clear()
 	_new_rule_ctrl = null
-	_end_pad = null
 	var s := _sock()
 	if s == null:
 		_title.text = "no file open"
@@ -1045,66 +1089,302 @@ func _build_rules() -> void:
 		_owner = ""
 	if _owner == "":
 		_title.text = skill_file
+	elif _owner == ROUTINES_FILE:
+		_title.text = "routines.gd  (every skill)"
 	else:
 		var sup: SupportGemDefinition = SkillGemRegistry.get_support_gem(_owner)
 		_title.text = "%s / %s" % [skill_file.trim_suffix(".gd"), _file_name(sup.display_name) if sup else _owner]
 
+	# Only the open file (its tab): a selected rule in another file is let go, so a snippet click
+	# never lands somewhere out of sight
 	var shown: Array = []
-	for owner_id in owners:
-		shown.append_array(_draft().rules_of(owner_id))
+	if _owner == ROUTINES_FILE:
+		for rt in _routines():
+			shown.append((rt as ProgramRoutine).body)
+	else:
+		shown.append_array(_draft().rules_of(_owner))
 	if _selected != null and not (_selected in shown):
 		_selected = null
-	for owner_id in owners:
-		_file_header(owner_id)
-		_line_no = 0                                     # each file counts its own lines
-		if owner_id == "":
-			_comment_line("# points are shared with every file of this skill")
-		for rule in _draft().rules_of(owner_id):
-			_blank_line(rule)
-			_rule_lines(rule, limits)
-		_blank_line(null)
-		_new_rule_line(owner_id)
-	_end_pad = Control.new()
-	_end_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_end_pad.custom_minimum_size.y = _pad_height if owners.size() > 1 else 0.0
-	_rules_box.add_child(_end_pad)
-	_fit_end_pad.call_deferred()
+	_line_no = 0
+	if _owner == ROUTINES_FILE:
+		_routine_lines(limits)
+		return
+	if _owner == "":
+		_comment_line("# points are shared with every file of this skill (its other tabs)")
+	elif owners.size() > 1:
+		_comment_line("# points are shared with %s and its other tabs" % skill_file)
+	for rule in _draft().rules_of(_owner):
+		_blank_line(rule)
+		_rule_lines(rule, limits)
+	_blank_line(null)
+	_new_rule_line(_owner)
 
 
-## A file's title bar in the editor: "== finishing_blow.gd ==". Click it to open that file.
-func _file_header(owner_id: String) -> void:
+# ---------- FILE TABS ----------
+## One tab per file of the open skill, above the code: the skill's file, each scriptable support,
+## then routines.gd. * = unsaved (the skill's script and its supports share one draft), ! = errors.
+func _build_file_tabs() -> void:
+	_clear(_file_tabs)
+	if _sock() == null or _limits() == null:
+		_file_tabs.visible = false
+		return
+	_file_tabs.visible = true
+	var bad := _error_owners(_socket)
+	for owner_id in _file_owners():
+		var text := _owner_file(owner_id)
+		var has_error: bool = bad.has(owner_id)
+		if owner_id == "" and _is_dirty(_socket):
+			text += " *"
+		elif owner_id == ROUTINES_FILE:
+			if _routines_dirty():
+				text += " *"
+			for rt in _routines():
+				has_error = has_error or (not (rt as ProgramRoutine).is_empty() and not (rt as ProgramRoutine).problem().is_empty())
+		if has_error:
+			text += " !"
+		_file_tabs.add_child(_file_tab(owner_id, text, has_error))
+
+
+func _file_tab(owner_id: String, text: String, has_error: bool) -> Button:
 	var active := owner_id == _owner
-	var col := SkillPanel.COL_SKILL if owner_id == "" else SkillPanel.COL_SUPPORT
-	var bar := PanelContainer.new()
-	bar.mouse_filter = Control.MOUSE_FILTER_STOP
-	bar.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	bar.tooltip_text = "%s\nClick to open this file: its knobs show in SNIPPETS." % _owner_file(owner_id)
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(col, 0.16 if active else 0.06)
-	sb.border_color = Color(col, 0.9 if active else 0.35)
-	sb.border_width_bottom = 1
-	sb.border_width_left = 3 if active else 0
-	sb.content_margin_left = 6
-	sb.content_margin_top = roundi(5.0 * _k())
-	sb.content_margin_bottom = roundi(5.0 * _k())
-	bar.add_theme_stylebox_override("panel", sb)
-	var title := _tok("%s %s" % ["v" if active else ">", _owner_file(owner_id)], Color(col, 1.0 if active else 0.7))
-	_shrinkable(title)
-	bar.add_child(title)
-	bar.gui_input.connect(func(ev: InputEvent) -> void:
-		if ev is InputEventMouseButton and ev.pressed and ev.button_index == MOUSE_BUTTON_LEFT:
-			_select_gem(_socket, owner_id))
-	if not _file_headers.is_empty():                  # before every file but the first: room and a rule
-		_rules_box.add_child(_spacer(18.0))
-		var rule := ColorRect.new()
-		rule.color = Color(panel.accent, 0.22)
-		rule.custom_minimum_size.y = 1.0
-		rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_rules_box.add_child(rule)
-		_rules_box.add_child(_spacer(18.0))
-	_rules_box.add_child(bar)
-	_rules_box.add_child(_spacer(4.0))                # a breath between the title and the first line
-	_file_headers[owner_id] = bar
+	var col: Color = SkillPanel.COL_SKILL if owner_id == "" else (COL_KEYWORD if owner_id == ROUTINES_FILE else SkillPanel.COL_SUPPORT)
+	if has_error:
+		col = SkillPanel.COL_WARN
+	var b := Button.new()
+	b.text = text
+	b.focus_mode = Control.FOCUS_NONE
+	b.tooltip_text = "%s\nClick to open this file. While dragging a line or snippet, hover a tab to open it." % _owner_file(owner_id)
+	if has_error:
+		b.tooltip_text += "\nhas errors"
+	if panel._font:
+		b.add_theme_font_override("font", panel._font)
+	b.add_theme_font_size_override("font_size", roundi(_sz(12) * panel.font_scale))
+	b.add_theme_color_override("font_color", Color(col, 1.0 if active else 0.6))
+	b.add_theme_color_override("font_hover_color", Color.WHITE)
+	b.add_theme_color_override("font_pressed_color", Color.WHITE)
+	var normal := StyleBoxFlat.new()
+	normal.bg_color = Color(col, 0.16) if active else Color(0.0, 0.02, 0.04, 0.5)
+	normal.border_color = Color(col, 0.95 if active else 0.3)
+	normal.border_width_top = 2 if active else 1
+	normal.border_width_left = 1
+	normal.border_width_right = 1
+	normal.corner_radius_top_left = 4
+	normal.corner_radius_top_right = 4
+	normal.content_margin_left = 10
+	normal.content_margin_right = 10
+	normal.content_margin_top = 3
+	normal.content_margin_bottom = 3
+	var hover := normal.duplicate() as StyleBoxFlat
+	hover.bg_color = Color(col, 0.22 if active else 0.1)
+	b.add_theme_stylebox_override("normal", normal)
+	b.add_theme_stylebox_override("hover", hover)
+	b.add_theme_stylebox_override("pressed", hover)
+	b.pressed.connect(_select_gem.bind(_socket, owner_id))
+	# Dragging a line or snippet over a tab opens that file, so it can be dropped there
+	b.set_drag_forwarding(Callable(), func(_pos: Vector2, data: Variant) -> bool:
+		if data is Dictionary and data.get("src") in ["palette", "rule"] and owner_id != _owner:
+			_owner = owner_id
+			_selected = null
+			_editor_scroll.scroll_vertical = 0
+			_queue_rebuild()
+		return false, Callable())
+	return b
+
+
+# ---------- ROUTINES (routines.gd) ----------
+## routines.gd: the character's three routines, each "def name():" and its lines. Edited like a
+## rule (drop knobs, registry writes and if blocks in; no conditions or loops of its own), and run
+## from any skill's script with  call name()  (one block; each skill pays for the lines).
+func _routine_lines(limits: SkillProgramLimits) -> void:
+	_comment_line("# shared by every skill: call name() is 1 block, and each skill pays for the lines")
+	var routines := _routines()
+	for i in routines.size():
+		var rt: ProgramRoutine = routines[i]
+		_blank_line(rt.body)
+		_routine_header(i, rt)
+		if rt.is_empty():
+			var parts := _code_line(rt.body)
+			var code: HBoxContainer = parts[1]
+			code.add_child(_tok("    pass", COL_KEYWORD))
+			code.add_child(_comment_tok("drop knobs, registry writes or an if here"))
+			_make_line_interactive(parts[0], rt.body, {})
+		for e in rt.body.effects:
+			_effect_line(rt.body, e, limits, "    ")
+		for bi in rt.body.branches.size():
+			_branch_lines(rt.body, bi, limits)
+	_blank_line(null)
+
+
+## def cash_in():   # 3/6 blocks, called by strike.gd       [clear]
+## The name is a button: click it to rename the routine.
+func _routine_header(i: int, rt: ProgramRoutine) -> void:
+	var parts := _code_line(rt.body)
+	var line: Control = parts[0]
+	var code: HBoxContainer = parts[1]
+	code.add_child(_tok("def ", COL_KEYWORD))
+	if _routine_rename == i:
+		var edit := _name_edit(ProgramRoutine.NAME_MAX, "name")
+		edit.visible = true
+		edit.text = rt.routine_name
+		edit.text_submitted.connect(func(_t: String) -> void: _finish_routine_rename(edit, i))
+		edit.focus_exited.connect(func() -> void: _finish_routine_rename(edit, i))
+		code.add_child(edit)
+		edit.grab_focus.call_deferred()
+		edit.select_all.call_deferred()
+	else:
+		var name_btn := _code_button(rt.routine_name, "Click to rename this routine. Calls keep working: they point at the routine, not its name.")
+		name_btn.add_theme_color_override("font_color", COL_FN)
+		name_btn.pressed.connect(_start_routine_rename.bind(i))
+		code.add_child(name_btn)
+	code.add_child(_tok("():", COL_OP))
+	var problem: Array = rt.problem() if not rt.is_empty() else []
+	var note := "%d/%d blocks" % [rt.block_count(), ProgramRoutine.MAX_BLOCKS]
+	if not problem.is_empty():
+		note = problem[1]
+	else:
+		var callers := _routine_callers(i)
+		if not callers.is_empty():
+			note += ", called by " + ", ".join(callers)
+	var tok := _comment_tok(note)
+	if not problem.is_empty():
+		tok.add_theme_color_override("font_color", SkillPanel.COL_WARN)
+	code.add_child(tok)
+	var clear_btn := _code_button("clear", "Empty this routine (its name stays). A script that calls it won't compile until it has lines again.")
+	clear_btn.mouse_filter = Control.MOUSE_FILTER_PASS
+	clear_btn.pressed.connect(func() -> void:
+		rt.body.effects.clear()
+		rt.body.branches.clear()
+		_changed())
+	code.add_child(clear_btn)
+	line.tooltip_text = "A routine: lines written once, run from any skill with  call %s()  (1 block in that script).\nIt has no conditions of its own: the rule that calls it decides when. Each skill that calls it pays the points for its lines, on its own knobs.\nThe numbers here are the base. A rule that makes its knobs stronger (a Gladiator's every-Nth rule...) makes these stronger too: \"called by strike.gd x1.75\", and the call line shows each value.\nAt most %d blocks, and one level of if." % [
+		rt.routine_name, ProgramRoutine.MAX_BLOCKS]
+	_make_line_interactive(line, rt.body, {})
+	_rule_line[rt.body] = line
+
+
+func _start_routine_rename(i: int) -> void:
+	_routine_rename = i
+	_lock_player(true)                          # typing WASD must not walk the character
+	_queue_rebuild()
+
+
+func _finish_routine_rename(edit: LineEdit, i: int) -> void:
+	if _routine_rename != i:
+		return
+	_routine_rename = -1
+	_lock_player(false)
+	var routines := _routines()
+	var wanted := ProgramRoutine.clean_name(edit.text, i)
+	for j in routines.size():
+		if j != i and (routines[j] as ProgramRoutine).routine_name == wanted:
+			panel._notify("ANOTHER ROUTINE IS CALLED %s" % wanted.to_upper())
+			_queue_rebuild()
+			return
+	(routines[i] as ProgramRoutine).routine_name = wanted
+	_queue_rebuild()
+
+
+## call cash_in()   (the name is a button: click / right-click switches routine)
+func _call_line(code: HBoxContainer, parts: Array, rule: ProgramRule, e: ProgramEffect, branch: ProgramBranch) -> void:
+	var routines := _routines()
+	var rt: ProgramRoutine = routines[e.op] if e.op >= 0 and e.op < routines.size() else null
+	code.add_child(_tok("call ", COL_KEYWORD))
+	var name_tok := _num_tok(rt.routine_name if rt != null else "routine_%d" % (e.op + 1),
+		"which routine (click / right-click: the next one)", func(d: int) -> void:
+			e.op = posmod(e.op + d, routines.size())
+			_changed())
+	code.add_child(name_tok)
+	_effect_num[e] = name_tok
+	code.add_child(_tok("()", COL_OP))
+	var calling := rule.branch_rule(rule.branches.find(branch)) if branch != null else rule
+	var here := _routine_here(rt, calling, _limits()) if rt != null and not rt.is_empty() else {}
+	var note := "1 block" + ("" if here.is_empty() else ", runs %d" % rt.block_count())
+	var boosted: bool = not here.is_empty() and not is_equal_approx(float(here["mult"]), 1.0)
+	if boosted:
+		note += ", knobs %sx%.2f here (%s)" % ["up to " if here["mixed"] else "", here["mult"], here["why"]]
+	var note_tok := _comment_tok(note)
+	if boosted:
+		note_tok.add_theme_color_override("font_color", Color(COL_BUFF, 0.85))
+	code.add_child(note_tok)
+	var body := "empty" if here.is_empty() else "\n    " + "\n    ".join(here["lines"])
+	parts[0].tooltip_text = "Runs %s() here, under this rule's conditions:%s%s\n1 block in this script, whatever the routine holds; this skill pays the points for its lines.\nEdit it in routines.gd. Click the name to switch routine. Drag out or right-click to delete." % [
+		rt.routine_name if rt != null else "a routine", body,
+		("\nThis rule makes its knobs stronger (%s): the numbers in routines.gd are the base, these are what this call does." % here["why"]) if boosted else ""]
+	_make_line_interactive(parts[0], rule, {"kind": "effect", "effect": e}, branch)
+	_mark(parts, rule, e)
+
+
+## A routine's knob lines as the rule `calling` runs them: the rule's multipliers apply to them as
+## if they were written there (Gladiator's every-Nth rules, Assassin's per-hit rules, Variable
+## Store's charge). A routine's own if adds its conditions to the rule's.
+## {"lines": ["damage += 10%  ->  18% here (x1.75)", ...], "mult": strongest multiplier, "why": its source}
+func _routine_here(rt: ProgramRoutine, calling: ProgramRule, limits: SkillProgramLimits) -> Dictionary:
+	var lines := PackedStringArray()
+	var top := 1.0
+	var why := ""
+	var mults := {}                                   # every multiplier a knob line gets (1.0 too)
+	var groups: Array = [[rt.body.effects, calling, ""]]
+	for b in rt.body.branches:
+		var as_if := ProgramRule.new()
+		as_if.owner = calling.owner
+		as_if.conditions.assign(calling.conditions + b.conditions)
+		groups.append([b.effects, as_if, "if: "])
+	for g in groups:
+		var r: ProgramRule = g[1]
+		for e: ProgramEffect in g[0]:
+			if e.is_call():
+				continue
+			if ScriptRegisters.is_write(e.knob):
+				lines.append("%s%s" % [g[2], e.describe_write()])
+				continue
+			var knob := limits.get_knob(e.knob)
+			if knob == null:
+				lines.append("%s%s  (not a knob of this skill)" % [g[2], e.knob])
+				continue
+			var mult := limits.rule_effect_mult(r, not SkillProgramLimits.per_hit_knob(knob))
+			mults[snappedf(mult, 0.01)] = true
+			var base := _fmt_per_count(knob, e.steps) if e.ramps() else _fmt_knob(knob, e.steps)
+			var now := _fmt_per_count(knob, e.steps, mult) if e.ramps() else _fmt_knob(knob, e.steps, mult)
+			var text := "%s%s%s%s%s" % [g[2], e.knob, " -= " if e.steps < 0 else " += ",
+				(e.ramp_text() + " * ") if e.ramps() else "", base]
+			if not is_equal_approx(mult, 1.0):
+				text += "  ->  %s here (x%.2f)" % [now, mult]
+				if mult > top:
+					top = mult
+					why = _boost_source(r, limits)
+			lines.append(text)
+	return {"lines": lines, "mult": top, "why": why, "mixed": mults.size() > 1}
+
+
+## What makes a rule's knobs stronger, for the hint: "gladiator, every 3rd cast", "charge"...
+func _boost_source(rule: ProgramRule, limits: SkillProgramLimits) -> String:
+	var parts := PackedStringArray()
+	var t := limits.class_trait
+	if t != null:
+		var n := 0
+		for c in rule.conditions:
+			if c is EveryNthCastCondition:
+				n = maxi(n, (c as EveryNthCastCondition).n)
+		if n > 0 and not is_equal_approx(t.nth_effect_mult(rule), 1.0):
+			parts.append("%s, every %s cast" % [t.display_name.to_lower(), _ordinal(n)])
+		if rule.loop == null and rule.scope() == ProgramCondition.Scope.HIT and not is_equal_approx(t.hit_rule_effect_mult, 1.0):
+			parts.append("%s, per-hit rule" % t.display_name.to_lower())
+	if VariableStoreSupport.rule_effect_mult(rule) > 1.0:
+		parts.append("spent charge")
+	return ", ".join(parts) if not parts.is_empty() else "this rule"
+
+
+static func _ordinal(n: int) -> String:
+	if n % 100 in [11, 12, 13]:
+		return "%dth" % n
+	match n % 10:
+		1:
+			return "%dst" % n
+		2:
+			return "%dnd" % n
+		3:
+			return "%drd" % n
+	return "%dth" % n
 
 
 ## Empty space in the editor, `height` px at the original 13 px design size.
@@ -1271,6 +1551,9 @@ func _effect_line(rule: ProgramRule, e: ProgramEffect, limits: SkillProgramLimit
 	var parts := _code_line(owner_rule, marker, COL_BUFF if cost > 0.0 else COL_DRAW)
 	var code: HBoxContainer = parts[1]
 	code.add_child(_tok(indent, COL_OP))
+	if e.is_call():                                      # call cash_in(): a routine (routines.gd)
+		_call_line(code, parts, owner_rule, e, branch)
+		return
 	if ScriptRegisters.is_write(e.knob):                 # [registry.add](target): click to swap add / remove
 		var op_num := _num_tok("registry." + e.write_op(), "operation", func(d: int) -> void:
 			e.op = posmod(e.op + d, ScriptRegisters.WRITE_OPS.size())
@@ -1283,6 +1566,15 @@ func _effect_line(rule: ProgramRule, e: ProgramEffect, limits: SkillProgramLimit
 				else "every enemy this cast hits, as each hit lands"
 		var what := "Adds %s to the registry." if e.write_op() == "add" else "Takes %s out of the registry."
 		parts[0].tooltip_text = (what % when) + " The registry is a set of enemies: each one is in it or not. It keeps them between casts; an enemy that dies leaves it. Free: no points or blocks.\nClick add / remove to swap. Drag out or right-click to delete."
+		_make_line_interactive(parts[0], owner_rule, {"kind": "effect", "effect": e}, branch)
+		_mark(parts, owner_rule, e)
+		return
+	if knob == null:                                     # a routine's line this skill can't use
+		code.add_child(_tok(String(e.knob), COL_VAR))
+		code.add_child(_tok(" -= " if e.steps < 0 else " += ", COL_OP))
+		code.add_child(_tok(str(absi(e.steps)) + " steps", COL_NUM))
+		code.add_child(_comment_tok("not a knob of this skill"))
+		parts[0].tooltip_text = "This skill has no %s knob: a script on it that calls this routine won't compile.\nDrag out or right-click to delete." % e.knob
 		_make_line_interactive(parts[0], owner_rule, {"kind": "effect", "effect": e}, branch)
 		_mark(parts, owner_rule, e)
 		return
@@ -1690,6 +1982,16 @@ func _build_palette() -> void:
 		_palette_box.add_child(_comment_tok("blocks"))
 		_palette_box.add_child(_snippet("if", COL_KEYWORD, {"src": "palette", "kind": "branch"},
 			"An if block inside a rule: its lines apply only when the rule fires AND the if's own conditions are true.\nThe rule's conditions are written once, so it costs fewer blocks than a second rule. With a per-hit condition (target in registry) its lines change only those hits.\nDrop it on a rule (not one with a loop), then drop a condition on its if line and knobs below it."))
+	if limits.allows("call") and _owner != ROUTINES_FILE:
+		_palette_box.add_child(_comment_tok("routines"))
+		var rts := _routines()
+		for i in rts.size():
+			var rt: ProgramRoutine = rts[i]
+			var what := "empty: write it in routines.gd" if rt.is_empty() else rt.body.describe(limits).trim_prefix("ALWAYS -> ")
+			var call_snippet := _snippet("call %s()" % rt.routine_name, COL_KEYWORD, {"src": "palette", "kind": "call", "routine": i},
+				"Runs %s() where you drop it: %s\n1 block, whatever it holds; this skill pays for its lines.\nDrop it in a rule of the skill's own file (or its if), or click to add." % [rt.routine_name, what])
+			_snippets["call:%d" % i] = call_snippet
+			_palette_box.add_child(call_snippet)
 	# One section per socketed support gem that adds blocks, in socket order
 	for gem_id in limits.support_ids:
 		if not by_gem.has(gem_id):
@@ -1701,7 +2003,7 @@ func _build_palette() -> void:
 			_palette_box.add_child(_condition_snippet(type_id, ProgramConditions.create(type_id),
 				COL_GEM, gem_name))
 	_palette_box.add_child(_comment_tok("knobs"))
-	var knobs := limits.knobs_for(_owner).filter(func(k: SkillKnob) -> bool:
+	var knobs := limits.knobs_for(_knob_owner(_owner)).filter(func(k: SkillKnob) -> bool:
 		return k.defensive == defense and k.kind != SkillKnob.Kind.VARIABLE)
 	if knobs.is_empty():
 		_palette_box.add_child(_comment_tok("nothing to change" if not defense else "no defensive knobs here"))
@@ -1932,6 +2234,16 @@ func _new_rule() -> ProgramRule:
 func _add_from_palette(data: Dictionary, rule: ProgramRule, line: Dictionary = {}) -> void:
 	if _sock() == null or _limits() == null:
 		return
+	if rule == null and _owner == ROUTINES_FILE:         # routines.gd open: into the selected routine
+		rule = _selected if _routine_of(_selected) != null else (_routines()[0] as ProgramRoutine).body
+	if _routine_of(rule) != null:
+		var why := _routine_refusal(data, line, _box(rule, line) != rule)
+		if why != "":
+			panel._notify(why)
+			return
+	if data["kind"] == "call" and (rule.owner if rule != null else _owner) != "":
+		panel._notify("CALL ROUTINES FROM THE SKILL'S OWN FILE")
+		return
 	if data["kind"] in ["set_write", "member", "size", "compare_op"]:
 		_add_counter_piece(data, rule, line)
 		return
@@ -1962,6 +2274,8 @@ func _add_from_palette(data: Dictionary, rule: ProgramRule, line: Dictionary = {
 	elif data["kind"] == "break":
 		rule.loop.break_on = ProgramLoop.Break.MISS if rule.loop.break_on == ProgramLoop.Break.KILL \
 			else ProgramLoop.Break.KILL
+	elif data["kind"] == "call":
+		box.effects.append(ProgramEffect.make_call(int(data["routine"])))
 	else:
 		var existing: ProgramEffect = null
 		for e in box.effects:
@@ -1973,6 +2287,23 @@ func _add_from_palette(data: Dictionary, rule: ProgramRule, line: Dictionary = {
 			box.effects.append(ProgramEffect.make(data["knob"], 1))
 	_selected = rule
 	_changed()
+
+
+## Why a snippet can't go into a routine ("" = it can): a routine takes knobs, registry writes and
+## if blocks; conditions only inside its if, and no loops or calls.
+static func _routine_refusal(data: Dictionary, line: Dictionary, in_if: bool) -> String:
+	match data.get("kind"):
+		"call":
+			return "A ROUTINE CAN'T CALL A ROUTINE"
+		"loop", "break":
+			return "A ROUTINE CAN'T LOOP: PUT THE LOOP ON THE RULE THAT CALLS IT"
+		"condition", "member", "compare_op":
+			if not in_if:
+				return "A ROUTINE HAS NO CONDITIONS: PUT THEM ON THE RULE THAT CALLS IT, OR IN AN IF"
+		"size":
+			if not in_if and line.get("effect") == null:
+				return "A ROUTINE HAS NO CONDITIONS: PUT THEM ON THE RULE THAT CALLS IT, OR IN AN IF"
+	return ""
 
 
 ## Where a drop on `line` of `rule` goes: the if block the line is in, or the rule itself. Both
@@ -2051,7 +2382,7 @@ func _knob_fits(knob_id: StringName, owner_id: String) -> bool:
 	var limits := _limits()
 	if limits == null:
 		return false
-	for k in limits.knobs_for(owner_id):
+	for k in limits.knobs_for(_knob_owner(owner_id)):
 		if (k as SkillKnob).id == knob_id:
 			return true
 	panel._notify("%s ISN'T A KNOB OF %s" % [String(knob_id).to_upper(), _owner_file(owner_id).to_upper()])
@@ -2088,8 +2419,18 @@ func _move_block(info: Dictionary, to: ProgramRule, line: Dictionary = {}) -> vo
 	if info["kind"] == "break" and (to == null or to.loop == null):
 		panel._notify("ADD A FOR OR WHILE LOOP FIRST")
 		return
-	if info["kind"] == "effect" and not _knob_fits((info["effect"] as ProgramEffect).knob,
-			to.owner if to != null else _owner):
+	var dest_owner := to.owner if to != null else _owner
+	if _routine_of(to) != null:
+		var into_if := line.get("branch") != null
+		if info["kind"] in ["loop", "break"] or (info["kind"] == "condition" and not into_if) \
+				or (info["kind"] == "effect" and (info["effect"] as ProgramEffect).is_call()):
+			panel._notify("A ROUTINE ONLY TAKES KNOBS, REGISTRY WRITES AND IF BLOCKS")
+			return
+	if info["kind"] == "effect" and (info["effect"] as ProgramEffect).is_call():
+		if dest_owner != "":
+			panel._notify("CALL ROUTINES FROM THE SKILL'S OWN FILE")
+			return
+	elif info["kind"] == "effect" and not _knob_fits((info["effect"] as ProgramEffect).knob, dest_owner):
 		return
 	if info["kind"] == "branch" and to != null and to.loop != null:
 		panel._notify("A RULE WITH A LOOP CAN'T HAVE AN IF")
@@ -2210,7 +2551,7 @@ func _update_status() -> void:
 		return
 
 	var draft := _draft()
-	var v := _validation if _validation != null else _skills().preview_program(_socket, draft)
+	var v := _validation if _validation != null else _skills().preview_program(_socket, draft, _routines())
 	_update_tip(draft, v, limits)
 	var lines: Array[String] = []
 
@@ -2254,7 +2595,9 @@ func _update_status() -> void:
 		lines.append("%s tier    none %s" % [_c(">", COL_GUTTER),
 			_c("// %d fewer blocks -> %s" % [v.actions_to_next_tier, v.next_tier.display_name.to_lower()], COL_COMMENT)])
 
-	var dirty := _is_dirty(_socket)
+	var dirty := _is_dirty(_socket) or _routines_dirty()
+	if _routines_dirty():
+		lines.append(_c("// routines.gd changed: apply() saves it for every skill that calls it", COL_PENDING))
 	var err_lines: Array[String] = []
 	if not v.valid:
 		_state = "invalid"
@@ -2346,13 +2689,14 @@ func _where(issue: Dictionary, index: int) -> String:
 	var rule: ProgramRule = issue["rule"]
 	if rule == null:
 		return ""
-	var line := ("line %d" % _issue_line[index]) if _issue_line.has(index) else ""
-	if rule.owner != "":
-		return "%s%s: " % [_owner_file(rule.owner), (" " + line) if line != "" else ""]
-	return (line + ": ") if line != "" else ""
+	if _issue_line.has(index):
+		return "line %d: " % _issue_line[index]          # in the open tab
+	return "in %s: " % _owner_file(rule.owner)       # another tab of this skill
 
 
 func _owner_file(owner_id: String) -> String:
+	if owner_id == ROUTINES_FILE:
+		return "routines.gd"
 	if owner_id == "":
 		return _file_name(_sock().gem.get_display_name()) if _sock() != null else "skill"
 	var def: SupportGemDefinition = SkillGemRegistry.get_support_gem(owner_id)
@@ -2369,7 +2713,7 @@ func _error_owners(socket: int) -> Dictionary:
 		var program: SkillProgram = _drafts[socket] if _drafts.has(socket) else _skills().get_program(socket)
 		if program == null or _skills().program_limits_for(socket) == null:
 			return {}
-		v = _skills().preview_program(socket, program)
+		v = _skills().preview_program(socket, program, _routines())
 	var out := {}
 	for issue in v.issues:
 		if issue["kind"] == "error":
@@ -2394,6 +2738,13 @@ func _set_output_alert(errors: int) -> void:
 
 
 func _apply() -> void:
+	if _routines_dirty():                        # routines first: this script's calls run them
+		_skills().set_routines(_routines())
+		_routine_draft.clear()
+		if not _is_dirty(_socket):
+			panel._notify("ROUTINES SAVED")
+			_queue_rebuild()
+			return
 	var draft := _draft()
 	if not draft.has_rules():
 		_skills().set_program(_socket, null)
@@ -2414,11 +2765,20 @@ func _apply() -> void:
 
 func _revert() -> void:
 	_drafts.erase(_socket)
+	_routine_draft.clear()                       # routines.gd goes back to what was saved too
+	_routine_rename = -1
 	_selected = null
 	_queue_rebuild()
 
 
 func _clear_gem() -> void:
+	if _owner == ROUTINES_FILE:                  # clear() in routines.gd empties every routine
+		for rt in _routines():
+			(rt as ProgramRoutine).body.effects.clear()
+			(rt as ProgramRoutine).body.branches.clear()
+		_selected = null
+		_changed()
+		return
 	var draft := _draft()
 	for r in draft.rules_of(_owner):
 		draft.rules.erase(r)

@@ -16,11 +16,12 @@
 [ext_resource type="Resource" uid="uid://dphsiomklvcyf" path="res://data/enemies/quad_shell.tres" id="e_shell"]
 [ext_resource type="Resource" uid="uid://depmvkkww0w1u" path="res://data/enemies/trilobite.tres" id="e_trilo"]
 [ext_resource type="Resource" path="res://data/enemies/marker_drone.tres" id="x_0"]
+[ext_resource type="Resource" path="res://data/enemies/null_weaver.tres" id="x_weaver"]
 
 [resource]
 script = ExtResource("3_0ds1j")
 mesh_library = ExtResource("10_4y11d")
-enemy_pool = Array[ExtResource("1_y1pdq")]([ExtResource("e_drone"), ExtResource("e_shell"), ExtResource("e_trilo"), ExtResource("e_hound"), ExtResource("e_raider"), ExtResource("e_enchanter"), ExtResource("x_0")])
+enemy_pool = Array[ExtResource("1_y1pdq")]([ExtResource("e_drone"), ExtResource("e_shell"), ExtResource("e_trilo"), ExtResource("e_hound"), ExtResource("e_raider"), ExtResource("e_enchanter"), ExtResource("x_0"), ExtResource("x_weaver"), ExtResource("x_weaver")])
 enemies_per_room_min = 5
 enemies_per_room_max = 12
 room_rarity_weights = {
@@ -38,5 +39,5 @@ branch_rarity_weights = {
 loot_pool = Array[ExtResource("2_2w6d7")]([ExtResource("4_4y11d"), ExtResource("5_u6yo1"), ExtResource("6_mywbb"), ExtResource("7_jur4a"), ExtResource("8_em106")])
 loot_include_gems = true
 loot_folders = Array[String]([])
-metadata/_note = "Act IV's Weaver's Loom: the Mark Yards' enemies on the Null Zone's tiles."
+metadata/_note = "Act IV's Weaver's Loom: the Mark Yards' enemies and the Weaver's own kind (Null Weavers, listed twice so they're common) on the Null Zone's tiles."
 metadata/_custom_type_script = "uid://ieg5mjinobvq"

@@ -27,9 +27,153 @@ var registers := {}
 var last_active_msec := -1
 var area_id := 0
 
+## ---- Routines (ProgramRoutine, the Engineer rank) ----
+## A script with  call  lines runs as its resolved copy (resolve): every call replaced by its
+## routine's lines. On that copy, `source` is the script it was made from: the registry and its
+## fight clock stay on the source (state()), so rebuilding never loses them.
+var source: SkillProgram
+## On a resolved copy: the source's block count, where a call is one block (action_count).
+var _actions_override := -1
+## On a resolved copy: copy object -> what the editor shows for it (the source's rule, if block,
+## or the call line a routine's line came from), so validate() marks the right lines.
+var _origin := {}
+## On a resolved copy: problems with the calls themselves, [rule, call line, full, text, fix].
+var _call_problems: Array = []
+
 
 func has_rules() -> bool:
 	return not rules.is_empty()
+
+
+## Where the registry and its fight clock live: the source of a resolved copy, else this script.
+func state() -> SkillProgram:
+	return source if source != null else self
+
+
+## True when a line anywhere in the script is a  call  (a routine).
+func has_calls() -> bool:
+	for r in rules:
+		for e in r.effects:
+			if e.is_call():
+				return true
+		for b in r.branches:
+			for e in b.effects:
+				if e.is_call():
+					return true
+	return false
+
+
+## The routine indices this script calls, each once.
+func called_routines() -> Array:
+	var out: Array = []
+	for r in rules:
+		for list in [r.effects] + r.branches.map(func(b: ProgramBranch) -> Array: return b.effects):
+			for e in list:
+				if e.is_call() and not (e.op in out):
+					out.append(e.op)
+	return out
+
+
+## A copy of this script with every  call  replaced by its routine's lines (`routines`:
+## SkillComponent.routines), the way pricing, validation and the skill itself read it. The
+## routine's lines go where the call is: a call among a rule's lines adds its lines and its if
+## blocks to that rule; a call inside an if adds its lines to that if. Lines and conditions taken
+## from a routine are copies (a routine called twice is two sets of lines). Problems with a call
+## (no such routine, empty, too big, an if inside an if, above the player's rank) are kept in
+## _call_problems for validate(). Rules that call a routine carry meta "calls" (the indices), as
+## do if blocks: ProgramSupport reports each call that runs ("routine_called").
+func resolve(routines: Array, limits: SkillProgramLimits = null) -> SkillProgram:
+	var out := SkillProgram.new()
+	out.source = self
+	out.registers = registers
+	out._actions_override = action_count()
+	for r in rules:
+		var nr := ProgramRule.new()
+		nr.owner = r.owner
+		nr.conditions.assign(r.conditions)
+		nr.loop = r.loop
+		out._origin[nr] = r
+		var failed := out._call_problems.size()
+		var calls := out._expand(r.effects, nr.effects, r, routines, limits, false)
+		if out._call_problems.size() > failed:
+			nr.set_meta(&"call_failed", true)            # its call is the error, not "does nothing"
+		for b in r.branches:
+			var nb := ProgramBranch.new()
+			nb.conditions.assign(b.conditions)
+			out._origin[nb] = b
+			failed = out._call_problems.size()
+			var inner := out._expand(b.effects, nb.effects, r, routines, limits, true)
+			if out._call_problems.size() > failed:
+				nb.set_meta(&"call_failed", true)
+			if not inner.is_empty():
+				nb.set_meta(&"calls", inner.map(func(c: Array) -> int: return (c[0] as ProgramEffect).op))
+			nr.branches.append(nb)
+		for c in calls:                                  # a called routine's own if blocks
+			var call: ProgramEffect = c[0]
+			var routine: ProgramRoutine = c[1]
+			for rb in routine.body.branches:
+				var nb := ProgramBranch.new()
+				for cond in rb.conditions:
+					var cc := (cond as ProgramCondition).duplicate() as ProgramCondition
+					out._origin[cc] = call
+					nb.conditions.append(cc)
+				for e in rb.effects:
+					var ec := (e as ProgramEffect).duplicate() as ProgramEffect
+					out._origin[ec] = call
+					nb.effects.append(ec)
+				out._origin[nb] = call
+				nr.branches.append(nb)
+		if not calls.is_empty():
+			nr.set_meta(&"calls", calls.map(func(c: Array) -> int: return (c[0] as ProgramEffect).op))
+		out.rules.append(nr)
+	return out
+
+
+## Copies `lines` into `into`, each call replaced by its routine's lines. Returns the calls that
+## were expanded, [[call line, routine], ...]. `in_if`: these lines are inside an if block.
+func _expand(lines: Array, into: Array, rule: ProgramRule, routines: Array, limits: SkillProgramLimits,
+		in_if: bool) -> Array:
+	var calls: Array = []
+	for e in lines:
+		var line := e as ProgramEffect
+		if not line.is_call():
+			into.append(line)
+			continue
+		var routine: ProgramRoutine = routines[line.op] if line.op >= 0 and line.op < routines.size() else null
+		var problem: Array = []
+		if limits != null and not limits.allows("call"):
+			problem = ["routines aren't available at your rank.", "routines aren't available at your rank (Engineer)",
+				"delete this line"]
+		elif routine == null:
+			problem = ["it calls a routine that doesn't exist.", "there's no routine %d" % (line.op + 1),
+				"pick a routine (click its name) or delete this line"]
+		elif not routine.problem().is_empty():
+			problem = routine.problem()
+		elif in_if and routine.has_if():
+			problem = ["%s() has an if, and it's called inside an if." % routine.routine_name,
+				"%s() has an if: it can't be called inside an if" % routine.routine_name,
+				"call it from the rule's own lines, or take the if out of %s()" % routine.routine_name]
+		if not problem.is_empty():
+			_call_problems.append([rule, line, problem[0], problem[1], problem[2]])
+			continue
+		for re in routine.body.effects:
+			var copy := (re as ProgramEffect).duplicate() as ProgramEffect
+			_origin[copy] = line
+			into.append(copy)
+		calls.append([line, routine])
+	return calls
+
+
+## A problem found on the resolved copy, moved onto what the editor shows (the source's rule, its
+## if block, or the call line a routine's line came from).
+func _remap(v: ProgramValidation) -> void:
+	for issue in v.issues:
+		var r: Variant = issue["rule"]
+		var p: Variant = issue["part"]
+		if r != null and _origin.has(r):
+			issue["rule"] = _origin[r]
+		if p != null and _origin.has(p):
+			issue["part"] = _origin[p]
 
 
 ## Every rule, then each "if" block as the rule it means (ProgramRule.flat): what pricing,
@@ -41,14 +185,31 @@ func flat_rules() -> Array[ProgramRule]:
 	return out
 
 
+## Blocks, a call counting as one (on a resolved copy: its source's count).
 func action_count() -> int:
+	if _actions_override >= 0:
+		return _actions_override
 	var n := 0
 	for r in rules:
 		n += r.action_count()
 	return n
 
 
+## Checks the script against `limits`. A script with calls is checked as its resolved copy (its
+## routines' lines priced and checked on this skill), with a call as one block, and every problem
+## is put back on the line the player wrote (the call, for a routine's lines).
 func validate(limits: SkillProgramLimits) -> ProgramValidation:
+	if limits != null and has_calls():
+		var resolved := resolve(limits.routines, limits)
+		var v := resolved._validate_plain(limits)
+		resolved._remap(v)
+		for p in resolved._call_problems:
+			v.add_issue("%s rule: %s" % [_owner_name((p[0] as ProgramRule).owner), p[2]], p[3], p[4], p[0], p[1])
+		return v
+	return _validate_plain(limits)
+
+
+func _validate_plain(limits: SkillProgramLimits) -> ProgramValidation:
 	tag_registry_reads()
 	var v := ProgramValidation.new()
 	if limits == null:
@@ -110,10 +271,13 @@ func validate(limits: SkillProgramLimits) -> ProgramValidation:
 					"drag a condition onto this if line (target in registry, target_life_below...)", rule)
 				continue
 			if rule.effects.is_empty():
-				v.add_issue("%s does nothing." % label, "this if does nothing yet",
-					"drag a knob from SNIPPETS under it, or delete the if", rule)
+				if not rule.branch().has_meta(&"call_failed"):     # a failed call says so itself
+					v.add_issue("%s does nothing." % label, "this if does nothing yet",
+						"drag a knob from SNIPPETS under it, or delete the if", rule)
 				continue
 		elif rule.effects.is_empty() and rule.loop == null and rule.branches.is_empty():
+			if rule.has_meta(&"call_failed"):
+				continue                                       # its call's own error explains it
 			v.add_issue("%s has no effects." % label, "this rule does nothing yet",
 				"drag a knob from SNIPPETS under it, or delete the rule", rule)
 			continue

@@ -56,6 +56,7 @@ var _max_health := 1.0
 var _fires := 0
 var _casts := 0
 var _rule_fires := {}                    # "gem#index" -> times
+var _routine_callers := {}               # the Engineer exam: skill gem id -> true, once its routine ran
 var _ended := false
 var _real_loadout := {}                  # what the player walked in with (_enter_sandbox)
 var _ring_mat: StandardMaterial3D
@@ -177,6 +178,13 @@ func try_start() -> void:
 
 ## "" if the player's applied script meets the spec, otherwise what's wrong.
 func _spec_problem() -> String:
+	if spec.required_routine:
+		var need := _callers_needed()
+		if _shared_routine_callers() < need:
+			return "SPEC NOT MET: %d of your skills must call the same routine (%d do now).
+Open routines.gd in the script editor ([K]), write the lines once under def name():, then add call name() to a rule of each skill. Apply each one." % [
+				need, _shared_routine_callers()]
+		return ""
 	if spec.required_variable and not _any_applied(_keeps_a_count):
 		return "SPEC NOT MET: no applied script keeps a registry.\nOne rule adds to it: always: registry.add(target) (every enemy the cast hits). Another reads it: when target in registry, or when registry.size >= N. Or make a buff grow with registry.size. Open your skill script with [K]."
 	if spec.required_stop_loop and not _any_applied(_has_stop_loop):
@@ -205,6 +213,7 @@ func _reset_run() -> void:
 	_fires = 0
 	_casts = 0
 	_rule_fires.clear()
+	_routine_callers.clear()
 	_ended = false
 	var health: HealthComponent = _player.get("health")
 	_max_health = health.stats.get_stat(StatTypes.Stat.MAX_HEALTH)
@@ -299,6 +308,10 @@ func _on_event(kind: String, target: String, _amount: int) -> void:
 		"loop_repeat":
 			if spec.required_stop_loop and target == "stop":
 				_fires += 1
+		"routine_called":
+			if spec.required_routine:
+				_fires += 1
+				_routine_callers[target.get_slice("|", 1)] = true
 		"rule_fired":
 			_rule_fires[target] = int(_rule_fires.get(target, 0)) + 1
 		"cast":
@@ -328,6 +341,8 @@ func _finish(fail: String) -> void:
 	health.heal(_max_health)
 	if fail == "" and _fires < spec.required_fires:
 		fail = "SPEC NOT MET"
+	if fail == "" and spec.required_routine and _routine_callers.size() < _callers_needed():
+		fail = "SPEC NOT MET"	# the routine ran, but not from enough skills
 	var r := _result(fail)
 	if r["passed"]:
 		var qm: QuestManager = _player.get("quests")
@@ -347,6 +362,7 @@ func _result(fail: String) -> Dictionary:
 		"passed": fail == "", "fail": fail, "grade": ExamSpec.grade_of(points), "points": points,
 		"tier": tier, "time": _time, "fast": fast, "damage": _damage / _max_health, "unhurt": unhurt,
 		"fires": _fires, "casts": _casts, "waves": _wave, "rule_fires": _rule_fires.duplicate(),
+		"callers": _routine_callers.size(), "callers_needed": _callers_needed() if spec.required_routine else 0,
 		"new_best": false, "first_pass": false,
 	}
 
@@ -368,6 +384,8 @@ func _best_tier() -> String:
 
 
 func _uses_condition(program: SkillProgram) -> bool:
+	if spec.required_routine:
+		return program.has_calls()
 	if spec.required_stop_loop:
 		return _has_stop_loop(program)
 	if spec.required_variable:
@@ -377,6 +395,32 @@ func _uses_condition(program: SkillProgram) -> bool:
 			if spec.required_condition == "" or c.type_id() == spec.required_condition:
 				return true
 	return false
+
+
+## The Engineer exam: how many skills must share a routine (required_callers, or every socketed
+## skill if there are fewer).
+func _callers_needed() -> int:
+	var skills: SkillComponent = _player.get("skills")
+	var socketed := 0
+	for s in skills.sockets:
+		if s.gem != null:
+			socketed += 1
+	return maxi(mini(spec.required_callers, socketed), 1)
+
+
+## The most applied (valid) scripts that call one and the same routine.
+func _shared_routine_callers() -> int:
+	var skills: SkillComponent = _player.get("skills")
+	var per_routine := {}
+	for s in skills.sockets:
+		if s.program == null or s.skill == null or s.skill.program_validation == null 				or not s.skill.program_validation.valid:
+			continue
+		for index in s.program.called_routines():
+			per_routine[index] = int(per_routine.get(index, 0)) + 1
+	var best := 0
+	for index in per_routine:
+		best = maxi(best, per_routine[index])
+	return best
 
 
 static func _has_stop_loop(program: SkillProgram) -> bool:

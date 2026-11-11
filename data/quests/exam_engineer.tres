@@ -2,28 +2,21 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
-[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="3_prog"]
 
-[sub_resource type="Resource" id="Objective_1"]
-script = ExtResource("3_prog")
-description = "Apply an ELEGANT script (4 blocks or fewer at Strategist)"
-kind = "program_efficient"
-target = "elegant"
-
-
-[sub_resource type="Resource" id="Objective_2"]
-script = ExtResource("3_prog")
-description = "Use a rule with two conditions"
-kind = "program_nested"
-
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Pass the Engineer exam in Sudo's sandbox"
+kind = "exam_passed"
+target = "engineer"
 
 [resource]
 script = ExtResource("2_quest")
 id = "exam_engineer"
 title = "RANK EXAM: ENGINEER"
-description = "Examiner Sudo's advanced exam.
-Apply a script that earns the ELEGANT tier (4 blocks or fewer, now that you are a Strategist) and a rule with two conditions."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
+description = "Examiner Sudo has seen what the Null does: it copies processes, and copies drift. An Engineer doesn't copy. An Engineer references.
+Sit the exam in Sudo's sandbox. Three waves of samples the Null copied out of your own fights. The sandbox lends you routines: write lines once in routines.gd (def name():), and run them from any skill with call name(). A call is one block, whatever the routine holds, and each skill still pays the points for its lines. Three of your skills must call the same routine, and it must run at least 6 times.
+Graded PASS, MERIT or DISTINCTION. You can retake it later. Passing makes routines yours, and the Null Gatekeeper will hear you out."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
 ordered = false
 prerequisite_quest_ids = Array[String](["q07_null_weaver_prime"])
 reward_credits = 0

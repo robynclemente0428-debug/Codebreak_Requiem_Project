@@ -45,6 +45,12 @@ const LIBRARY_SIZE := 12
 const LIBRARY_NAME_MAX := 14
 var library: Array = []
 
+## Routines (rank ENGINEER, Ranks.PERKS "routines"): lines written once and run from any skill's
+## script with one  call  line (ProgramRoutine). They belong to the character, so every skill and
+## every script set calls the same ones. At most ProgramRoutine.MAX_ROUTINES. Saved.
+var routines: Array[ProgramRoutine] = []
+var _held_routines: Array = []          # the real routines, set aside in Sudo's sandbox
+
 ## Sudo's sandbox (ExamChamber): the exam's skills are fixed, so no gem or support can be
 ## socketed or taken out while this is on. See snapshot() / restore() / strip_for_exam().
 var sandbox_locked := false
@@ -240,12 +246,15 @@ func unsocket_support(index: int, support_index: int, inventory: InventoryCompon
 
 # ---------- PROGRAMS ----------
 ## Checks a program against the socketed skill's limits without applying it (for live UI).
-func preview_program(index: int, program: SkillProgram) -> ProgramValidation:
+func preview_program(index: int, program: SkillProgram, draft_routines: Variant = null) -> ProgramValidation:
 	if index < 0 or index >= sockets.size() or sockets[index].gem == null:
 		var v := ProgramValidation.new()
 		v.add_error("No skill in this socket.")
 		return v
-	return program.validate(program_limits_for(index))
+	var limits := program_limits_for(index)
+	if limits != null and draft_routines is Array:
+		limits.routines = draft_routines              # the editor's routines, not yet applied
+	return program.validate(limits)
 
 
 ## Knobs, budget and tiers for the skill in a socket, including its supports' knobs.
@@ -311,6 +320,8 @@ func _report_program(index: int) -> void:
 		GameEvents.report("program_nested")
 	if branches >= 2:
 		GameEvents.report("program_branches")
+	for routine_index in s.program.called_routines():          # a script calling a routine
+		GameEvents.report("program_routine", str(routine_index))
 	var v := s.skill.program_validation
 	if v != null and v.tier != null:
 		GameEvents.report("program_efficient", v.tier.display_name.to_lower())
@@ -416,10 +427,12 @@ func snapshot() -> Dictionary:
 		socks.append({"gem": s.gem, "supports": s.supports.duplicate(), "sets": s.sets.duplicate(),
 				"program": s.program})
 	return {"sockets": socks, "bindings": bindings.duplicate(), "script_set": script_set,
-			"set_names": set_names.duplicate()}
+			"set_names": set_names.duplicate(), "routines": routines.duplicate()}
 
 
 func restore(snap: Dictionary) -> void:
+	routines.assign(snap.get("routines", routines))
+	_held_routines.clear()
 	var socks: Array = snap.get("sockets", [])
 	for i in mini(socks.size(), sockets.size()):
 		var s := sockets[i]
@@ -441,8 +454,10 @@ func restore(snap: Dictionary) -> void:
 	changed.emit()
 
 
-## The exam loadout: the same skill gems on the same keys, without supports or scripts.
+## The exam loadout: the same skill gems on the same keys, without supports, scripts or routines.
 func strip_for_exam() -> void:
+	_held_routines = routines.duplicate()
+	routines.clear()
 	for s in sockets:
 		if s.gem == null:
 			continue
@@ -453,6 +468,50 @@ func strip_for_exam() -> void:
 	script_set = 0
 	script_set_changed.emit(0)
 	changed.emit()
+
+
+# ---------- ROUTINES ----------
+func has_routines() -> bool:
+	return Ranks.perk(rank(), "routines")
+
+
+## Replaces the routines with copies of `list` and runs every skill again: a script calling a
+## routine that changed is checked again with its new lines (and runs without its script if it no
+## longer fits, like a script after a rank change).
+func set_routines(list: Array) -> void:
+	routines.clear()
+	for r in list.slice(0, ProgramRoutine.MAX_ROUTINES):
+		if r is ProgramRoutine:
+			routines.append((r as ProgramRoutine).duplicate_routine())
+	for s in sockets:
+		if s.skill != null:
+			s.skill.routines = routines
+	_apply_set()
+	changed.emit()
+
+
+## The skills whose current program calls routine `index` (socket indices).
+func callers_of(index: int) -> Array:
+	var out: Array = []
+	for i in sockets.size():
+		var p := sockets[i].program
+		if p != null and index in p.called_routines():
+			out.append(i)
+	return out
+
+
+## For the save: each routine as a dictionary. In the sandbox, the ones the player walked in with.
+func routines_to_list() -> Array:
+	var src: Array = _held_routines if sandbox_locked else routines
+	return src.map(func(r: ProgramRoutine) -> Dictionary: return r.to_dict())
+
+
+## From the save (before the skills' programs, so their calls are checked against them).
+func restore_routines(saved: Array) -> void:
+	routines.clear()
+	for d in saved.slice(0, ProgramRoutine.MAX_ROUTINES):
+		if d is Dictionary:
+			routines.append(ProgramRoutine.from_dict(d))
 
 
 # ---------- SCRIPT LIBRARY ----------
@@ -571,6 +630,7 @@ func _rebuild(s: Socket) -> void:
 	if s.program != null:
 		s.program.prune_owners(support_ids)        # a removed support takes its rules with it
 	skill.program = s.program
+	skill.routines = routines
 	skill.class_trait = _class_trait()
 	skill.rank = rank()
 	skill.bonus_points = bonus_points()

@@ -345,7 +345,7 @@ class Plate extends PanelContainer:
 		_state_labels.clear()
 		for t in locks:
 			var lock := t as EnemyTrait
-			var col := lock.lock_color()
+			var col: Color = lock.lock_color()
 			var row := HBoxContainer.new()
 			row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			row.add_theme_constant_override("separation", 6)
@@ -373,7 +373,7 @@ class Plate extends PanelContainer:
 		for i in mini(locks.size(), _state_labels.size()):
 			if not is_instance_valid(locks[i]):
 				continue
-			var s := (locks[i] as EnemyTrait).tag_state()
+			var s: String = (locks[i] as EnemyTrait).tag_state()
 			if _state_labels[i].text != s:
 				_state_labels[i].text = s
 				changed = true

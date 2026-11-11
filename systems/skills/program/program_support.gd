@@ -28,7 +28,7 @@ var _cast_count := 0
 ## It lives on the program, so it outlasts this support when the skill is rebuilt.
 var registers: Dictionary:
 	get:
-		return program.registers
+		return program.state().registers           # a resolved copy (routines): its source's
 var _caster: Node3D
 ## Loops still running (kept here so they live until they finish).
 var _runners: Array[ProgramLoopRunner] = []
@@ -69,6 +69,9 @@ func before_release(cast: SkillCast) -> void:
 	var whiles: Array[ProgramRule] = []
 	var late_fors: Array[ProgramRule] = []
 	_flat = program.flat_rules()
+	for rule in program.rules:                     # always: rules that call a routine run every cast
+		if rule.is_always() and rule.loop == null:
+			_report_calls(rule, cast)
 	for rule in _flat:
 		if rule.scope() != ProgramCondition.Scope.CAST:
 			continue
@@ -158,6 +161,7 @@ static func _is_repeat_rule(rule: ProgramRule) -> bool:
 func announce(cast: SkillCast, rule: ProgramRule) -> void:
 	_mark_fired(cast, rule)
 	_report_triggered(rule, cast)
+	_report_calls(rule, cast)
 	_trait_fired(cast, rule)
 	var fired: Array = cast.extra.get(RULES_FIRED_KEY, [])
 	if not rule.is_branch() and not rule.get_instance_id() in fired:
@@ -246,19 +250,20 @@ func _clear_stale_registers() -> void:
 	if not is_instance_valid(_caster):
 		return
 	var now := Time.get_ticks_msec()
-	if program.last_active_msec < 0:
-		program.last_active_msec = now             # a new script's fight starts here
-	var active := program.last_active_msec
+	var st := program.state()                    # the registry's clock lives on the script the player wrote
+	if st.last_active_msec < 0:
+		st.last_active_msec = now                  # a new script's fight starts here
+	var active := st.last_active_msec
 	var hp := _caster.get("health") as HealthComponent
 	if hp != null:
 		active = maxi(active, hp.last_damaged_msec)
 	var am := _caster.get_tree().get_first_node_in_group("area_manager") as AreaManager if _caster.is_inside_tree() else null
-	var area := am.current_area.get_instance_id() if am != null and am.current_area != null else program.area_id
-	if program.area_id == 0:
-		program.area_id = area
-	if area != program.area_id or now - active > int(ScriptRegisters.CLEAR_AFTER * 1000.0):
+	var area := am.current_area.get_instance_id() if am != null and am.current_area != null else st.area_id
+	if st.area_id == 0:
+		st.area_id = area
+	if area != st.area_id or now - active > int(ScriptRegisters.CLEAR_AFTER * 1000.0):
 		registers.clear()
-		program.area_id = area
+		st.area_id = area
 	# REGISTRY FORGETS ON HIT: a hit since the last cast clears it
 	if hp != null and NullLawsRef.on("counters_forget", _caster):
 		if _law_hit_msec < 0:
@@ -306,7 +311,7 @@ func on_area_impact(cast: SkillCast, center: Vector3, direction: Vector3) -> voi
 
 ## HIT rules: checked for every target, before damage is applied.
 func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
-	program.last_active_msec = Time.get_ticks_msec()
+	program.state().last_active_msec = Time.get_ticks_msec()
 	var hit_writes: Array[ProgramEffect] = []    # land after every per-hit rule has read the set
 	for rule in _rules():
 		if rule.is_always() or rule.loop != null or rule.scope() != ProgramCondition.Scope.HIT:
@@ -422,3 +427,15 @@ func _report_triggered(rule: ProgramRule, cast: SkillCast) -> void:
 	# Which rule of which skill: "<gem id>#<rule index>" (the exam debrief counts these)
 	if cast.skill != null and cast.skill.gem != null:
 		GameEvents.report("rule_fired", "%s#%s" % [cast.skill.gem.id, _rule_key(rule)])
+
+
+## A rule (or if block) that calls a routine ran: "routine_called", "<routine index>|<skill gem id>"
+## for each call (the Engineer exam counts them). Set by SkillProgram.resolve; only the player's casts.
+func _report_calls(rule: ProgramRule, cast: SkillCast) -> void:
+	if SkillTargets.is_enemy(cast.caster) or cast.skill == null or cast.skill.gem == null:
+		return
+	var holder: Object = rule.branch() if rule.is_branch() else rule
+	if holder == null or not holder.has_meta(&"calls"):
+		return
+	for index in holder.get_meta(&"calls"):
+		GameEvents.report("routine_called", "%d|%s" % [int(index), cast.skill.gem.id])

@@ -18,7 +18,13 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 		"PROCESS TERMINATED":
 			out.append("I pulled you out before they did. A rule that fires earlier keeps them off you.")
 		"SPEC NOT MET":
-			if spec.required_variable:
+			if spec.required_routine:
+				var callers: int = r.get("callers", 0)
+				if fires < spec.required_fires:
+					out.append("Your routine ran %d times. I asked for %d. Call it from rules that fire, or from always:." 							% [fires, spec.required_fires])
+				else:
+					out.append("Your routine ran, but only from %d skill%s. I asked for %d. One source, every skill." 							% [callers, "" if callers == 1 else "s", int(r.get("callers_needed", spec.required_callers))])
+			elif spec.required_variable:
 				out.append("Your registry paid out %d times. I asked for %d. Add to it on every hit, or ask for less." \
 						% [fires, spec.required_fires])
 			elif spec.required_stop_loop:
@@ -31,7 +37,14 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 			out.append(["Passed. Barely, but passed.", "Solid work.", "Flawless. Nothing wasted."][r["grade"]])
 
 	# The rule against the casts (a loop: its repeats against the casts)
-	if spec.required_variable:
+	if spec.required_routine:
+		var callers: int = r.get("callers", 0)
+		if casts > 0 and fires == 0:
+			out.append("You cast %d times and your routine never ran. A routine nobody calls is just a comment." % casts)
+		elif casts > 0:
+			out.append("%d casts, and your routine ran %d times, from %d skill%s. Written once." % [casts, fires, callers,
+				"" if callers == 1 else "s"])
+	elif spec.required_variable:
 		if casts > 0 and fires == 0:
 			out.append("You cast %d times and never read what you wrote down. Records nobody reads are just a leak." % casts)
 		elif casts > 0:
@@ -58,6 +71,8 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 	elif casts > 0 and fires == 0:
 		out.append("You cast %d times and %s never fired once." % [casts, cond])
 
+	if spec.required_routine and r["passed"]:
+		out.append("Change that routine now, and every skill that calls it changes with it. That's the point.")
 	if spec.required_variable and r["passed"] and r["grade"] < 2:
 		out.append("Those were recordings. The real ones are past the District Gate, and I can't pull you out of there.")
 

@@ -217,6 +217,9 @@ func describe(limits: SkillProgramLimits) -> String:
 		whens.append(c.describe())
 	var dos: Array[String] = []
 	for e in effects:
+		if e.is_call():
+			dos.append("CALL routine %d" % (e.op + 1))
+			continue
 		if ScriptRegisters.is_write(e.knob):
 			dos.append(e.describe_write())
 			continue
@@ -236,7 +239,9 @@ func describe(limits: SkillProgramLimits) -> String:
 			ifs.append(c.describe().trim_prefix("WHEN "))
 		var bdos: Array[String] = []
 		for e in b.effects:
-			if ScriptRegisters.is_write(e.knob):
+			if e.is_call():
+				bdos.append("CALL routine %d" % (e.op + 1))
+			elif ScriptRegisters.is_write(e.knob):
 				bdos.append(e.describe_write())
 			else:
 				var bk := limits.get_knob(e.knob) if limits != null else null

@@ -22,7 +22,10 @@ static var _mat: StandardMaterial3D
 
 var _skills: SkillComponent
 var _health: HealthComponent
-var _marked: Dictionary = {}               # enemy instance id -> its marker (Node3D)
+## Enemy instance id -> its marker (Node3D). A marker is the enemy's child, so it can be freed with
+## the enemy (left the area, the exam cleared its wave...) while still listed here: always check
+## is_instance_valid() before giving one a type, or Godot stops on the freed instance.
+var _marked: Dictionary = {}
 var _wait := 0.0
 var _time := 0.0
 
@@ -81,16 +84,17 @@ func _refresh() -> void:
 	var now := registered()
 	for id in _marked.keys():
 		if not now.has(id):
-			var m: Node = _marked[id]
-			if is_instance_valid(m):
-				m.queue_free()
+			var gone: Variant = _marked[id]           # untyped: it may already be freed
+			if is_instance_valid(gone):
+				(gone as Node).queue_free()
 			_marked.erase(id)
 	for id in now:
 		var enemy := instance_from_id(id) as Node3D if id is int else null
 		if enemy == null or not enemy.is_inside_tree() or SkillBehavior.is_dead(enemy):
 			continue
-		var m := _marked.get(id) as Node3D
-		if m == null or not is_instance_valid(m):
+		var held: Variant = _marked.get(id)            # untyped: freed with an earlier enemy?
+		var m: Node3D = held as Node3D if is_instance_valid(held) else null
+		if m == null:
 			m = _make_marker(enemy)
 			_marked[id] = m
 		(m.get_node("Key") as Label3D).text = " ".join(now[id])
@@ -139,7 +143,7 @@ static func _make_shared() -> void:
 
 func _exit_tree() -> void:
 	for id in _marked:
-		var m: Node = _marked[id]
-		if is_instance_valid(m):
-			m.queue_free()
+		var held: Variant = _marked[id]
+		if is_instance_valid(held):
+			(held as Node).queue_free()
 	_marked.clear()

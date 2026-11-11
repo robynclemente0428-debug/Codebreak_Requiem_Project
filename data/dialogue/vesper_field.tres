@@ -7,13 +7,16 @@ script = ExtResource("1_dlg")
 source = "# Vesper in the Null Zone (Act IV): she goes ahead of you and waits at each zone's entrance.
 # She changes as you go deeper: in The Fray she translates; in The Weaver's Loom she finishes the
 # Null's sentences before it does; at The Core's Gate she asks you not to kill the Gatekeeper.
-# Her lines also follow DECODE THE NULL (the fragments) and the Null Laws (NullLaws).
+# Her lines also follow DECODE THE NULL (the fragments) and the Null Laws (NullLaws). In The
+# Deleted Quarter she reads Checkpoint's rebuilt streets; in The Rule Forge she warns of the fast laws.
 ~ start
 @ here:act_4_the_fray -> fray
 @ here:act_4_weavers_loom -> loom
 @ here:act_4_core_gate -> gate
 @ here:act_4_expedition_end -> expedition
 @ here:act_4_echo_wells -> wells
+@ here:act_4_deleted_quarter -> deleted
+@ here:act_4_rule_forge -> forge
 -> idle
 
 ~ fray
@@ -95,6 +98,33 @@ Vesper: There. That's your convoy's call sign. And that's Brack's voice, saying 
 
 ~ wells_after
 Vesper: It's quieter without your packets in it. The Null kept the echo, though. It keeps everything.
+-> end
+
+~ deleted
+@ quest_done:q07_null_weaver_prime -> deleted_after
+Vesper: You know these streets. Checkpoint's. Only they were deleted, and the Null put them back from memory.
+Vesper: It remembers them wrong. Doors where the walls were. A district folded into itself.
+Vesper: And the husks. Copies, like the ones in the Dangling Quarter. Give them a different rule each cast, or they won't feel you.
+* WHY REBUILD THEM AT ALL? -> deleted_why
+* LET'S GO -> end
+
+~ deleted_why
+Vesper: Practice, I think. It's learning to build. These are its first drafts.
+-> end
+
+~ deleted_after
+Vesper: The Weaver's quiet now, but the drafts keep coming. It's still learning to build.
+-> end
+
+~ forge
+@ quest_done:under_new_rules -> forge_after
+Vesper: This is where it tries its laws out before it uses them. Hear that? It changes its mind every half a minute here.
+Vesper: Have a script set ready for every law, and swap the moment the banner turns. There's no waiting one out in here.
+Vesper: It keeps its best work here, too. Whatever you find will be worth the trouble.
+-> end
+
+~ forge_after
+Vesper: You've fought under every law it has. It's started trying new ones on you. I think that's a compliment.
 -> end
 
 ~ idle

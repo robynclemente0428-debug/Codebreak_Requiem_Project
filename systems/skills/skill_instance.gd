@@ -7,6 +7,8 @@ extends Resource
 var program: SkillProgram
 ## Result of the last check, for tooltips. Null when there is no program.
 var program_validation: ProgramValidation
+## The character's routines (SkillComponent.routines): what the program's  call  lines run.
+var routines: Array = []
 
 ## True if the most recent roll_damage() was a critical hit (for damage numbers or sounds later).
 var last_roll_was_crit := false
@@ -94,8 +96,10 @@ func _apply_program() -> void:
 	if not program_validation.valid:
 		push_warning("[Skill] %s: program ignored: %s" % [gem.id, "; ".join(program_validation.errors)])
 		return
-	var has_conditional := false
-	for rule in program.rules:
+	# A script with  call  lines runs as its resolved copy: each call replaced by its routine's lines.
+	var run := program.resolve(limits.routines, limits) if program.has_calls() else program
+	var has_conditional := run != program       # calls are reported as they run (the Engineer exam)
+	for rule in run.rules:
 		if not rule.is_baked():
 			has_conditional = true         # WHEN rules and loops run per cast in ProgramSupport
 			continue
@@ -117,7 +121,7 @@ func _apply_program() -> void:
 	if has_conditional:
 		# FIRST, so its per-cast flag bonuses (WHEN every 3rd cast -> Echoes +2, ...) are already
 		# on the cast when the other supports read their flags in their own before_release.
-		support_behaviors.push_front(ProgramSupport.new(program, limits))
+		support_behaviors.push_front(ProgramSupport.new(run, limits))
 
 ## The knobs, budget and tiers a program on this skill may use: the gem's own limits plus
 ## the knobs of every compatible socketed support. Null if the gem can't be programmed.
@@ -126,7 +130,10 @@ func get_program_limits() -> SkillProgramLimits:
 	for support in supports:
 		if _tags_compatible(support.allowed_tags, gem.tags):
 			active.append(support)
-	return SkillProgramLimits.for_socket(gem, active, class_trait, rank, bonus_points, bonus_steps)
+	var limits := SkillProgramLimits.for_socket(gem, active, class_trait, rank, bonus_points, bonus_steps)
+	if limits != null:
+		limits.routines = routines
+	return limits
 
 ## Never edit the shared resource: every skill gets its own copy of each modifier.
 func _tagged(m: Modifier, source: String) -> Modifier:

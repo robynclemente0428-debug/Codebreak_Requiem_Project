@@ -14,6 +14,11 @@ extends Resource
 ## Kept so old scripts load (the slot of the old counters). Unused.
 @export var reg: int = 0
 
+## The knob a  call routine()  line carries (the Engineer rank's routines, ProgramRoutine). Its
+## `op` is the routine's index in SkillComponent.routines. It is one block, and stands for the
+## routine's lines (SkillProgram.resolve); it never reaches the skill as a knob.
+const CALL_KNOB := &"call"
+
 
 static func make(knob_id: StringName, step_count: int) -> ProgramEffect:
 	var e := ProgramEffect.new()
@@ -27,6 +32,17 @@ static func make_write(op_text: String) -> ProgramEffect:
 	var e := make(ScriptRegisters.WRITE_KNOB, 1)
 	e.op = maxi(ScriptRegisters.WRITE_OPS.find(op_text), 0)
 	return e
+
+
+## call <routine>(): runs routine `index` (SkillComponent.routines) here.
+static func make_call(index: int) -> ProgramEffect:
+	var e := make(CALL_KNOB, 1)
+	e.op = index
+	return e
+
+
+func is_call() -> bool:
+	return knob == CALL_KNOB
 
 
 ## What a write acts on. Always the enemy hit: the registry is a set of enemies.
@@ -62,11 +78,17 @@ func to_dict() -> Dictionary:
 		d["ramp"] = 0
 	if ScriptRegisters.is_write(knob):
 		d["set_op"] = op
+	if is_call():
+		d = {"knob": String(CALL_KNOB), "steps": 1, "routine": op}
 	return d
 
 
 static func from_dict(d: Dictionary) -> ProgramEffect:
 	var e := make(StringName(str(d.get("knob", ""))), int(d.get("steps", 0)))
+	if e.is_call():
+		e.steps = 1
+		e.op = int(d.get("routine", 0))
+		return e
 	e.ramp = 0 if int(d.get("ramp", -1)) >= 0 else -1
 	if ScriptRegisters.is_write(e.knob):
 		if d.has("set_op"):

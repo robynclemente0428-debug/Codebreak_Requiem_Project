@@ -234,6 +234,8 @@ func _apply_saved_skills(data: Dictionary) -> void:
 		skills.restore_set_names(data['script_set_names'])
 	if data.get('script_library') is Array:
 		skills.restore_library(data['script_library'])
+	if data.get('script_routines') is Array:          # before the programs: their calls run these
+		skills.restore_routines(data['script_routines'])
 	for i in mini(saved.size(), skills.sockets.size()):
 		var entry: Dictionary = saved[i]
 		var gem_def := ItemDatabase.get_item(str(entry.get('gem', '')))
@@ -266,6 +268,7 @@ func write_save() -> void:
 	else:
 		data.merge(loadout_save(), true)
 	data['script_library'] = skills.library.duplicate(true)
+	data['script_routines'] = skills.routines_to_list()
 	data['currency'] = currency.to_dict()
 	data['quests'] = quests.to_dict()   
 
