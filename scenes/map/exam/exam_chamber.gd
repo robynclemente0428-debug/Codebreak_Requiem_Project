@@ -57,6 +57,7 @@ var _fires := 0
 var _casts := 0
 var _rule_fires := {}                    # "gem#index" -> times
 var _routine_callers := {}               # the Engineer exam: skill gem id -> true, once its routine ran
+var _order := {"hit_in": 0, "hit_out": 0, "kill_out": 0}   # the Defragmenter exam: fragments (FragmentLock)
 var _ended := false
 var _real_loadout := {}                  # what the player walked in with (_enter_sandbox)
 var _ring_mat: StandardMaterial3D
@@ -185,6 +186,9 @@ func _spec_problem() -> String:
 Open routines.gd in the script editor ([K]), write the lines once under def name():, then add call name() to a rule of each skill. Apply each one." % [
 				need, _shared_routine_callers()]
 		return ""
+	if spec.required_order and not _any_applied(_sorts_and_picks):
+		return "SPEC NOT MET: no applied script sorts the registry and reads a place in it.
+Three lines: always: registry.add(target), then registry.sort(key=hp) (least life first). Then a rule: when target is registry[0]: with a damage buff. Open your skill script with [K]."
 	if spec.required_variable and not _any_applied(_keeps_a_count):
 		return "SPEC NOT MET: no applied script keeps a registry.\nOne rule adds to it: always: registry.add(target) (every enemy the cast hits). Another reads it: when target in registry, or when registry.size >= N. Or make a buff grow with registry.size. Open your skill script with [K]."
 	if spec.required_stop_loop and not _any_applied(_has_stop_loop):
@@ -214,6 +218,7 @@ func _reset_run() -> void:
 	_casts = 0
 	_rule_fires.clear()
 	_routine_callers.clear()
+	_order = {"hit_in": 0, "hit_out": 0, "kill_out": 0}
 	_ended = false
 	var health: HealthComponent = _player.get("health")
 	_max_health = health.stats.get_stat(StatTypes.Stat.MAX_HEALTH)
@@ -308,6 +313,15 @@ func _on_event(kind: String, target: String, _amount: int) -> void:
 		"loop_repeat":
 			if spec.required_stop_loop and target == "stop":
 				_fires += 1
+		FragmentLock.HIT_EVENT:
+			if spec.required_order:
+				_order["hit_in" if target == "in_order" else "hit_out"] += 1
+		FragmentLock.KILL_EVENT:
+			if spec.required_order:
+				if target == "in_order":
+					_fires += 1
+				else:
+					_order["kill_out"] += 1
 		"routine_called":
 			if spec.required_routine:
 				_fires += 1
@@ -363,6 +377,7 @@ func _result(fail: String) -> Dictionary:
 		"tier": tier, "time": _time, "fast": fast, "damage": _damage / _max_health, "unhurt": unhurt,
 		"fires": _fires, "casts": _casts, "waves": _wave, "rule_fires": _rule_fires.duplicate(),
 		"callers": _routine_callers.size(), "callers_needed": _callers_needed() if spec.required_routine else 0,
+		"order_hits": _order["hit_in"], "misorder_hits": _order["hit_out"], "misorder_kills": _order["kill_out"],
 		"new_best": false, "first_pass": false,
 	}
 
@@ -388,6 +403,8 @@ func _uses_condition(program: SkillProgram) -> bool:
 		return program.has_calls()
 	if spec.required_stop_loop:
 		return _has_stop_loop(program)
+	if spec.required_order:
+		return _sorts_and_picks(program)
 	if spec.required_variable:
 		return _keeps_a_count(program)
 	for rule in program.flat_rules():
@@ -425,9 +442,21 @@ func _shared_routine_callers() -> int:
 
 static func _has_stop_loop(program: SkillProgram) -> bool:
 	for rule in program.rules:
-		if rule.loop != null and rule.loop.stops_itself():
+		if rule.loop_stops_itself():
 			return true
 	return false
+
+
+## The Defragmenter exam: the script adds to the registry, sorts it, and reads a place in it.
+static func _sorts_and_picks(program: SkillProgram) -> bool:
+	var sorts := false
+	var picks := false
+	for rule in program.flat_rules():
+		for e in rule.effects:
+			sorts = sorts or ScriptRegisters.is_sort(e)
+		for c in rule.conditions:
+			picks = picks or c is RegistryPositionCondition
+	return sorts and picks and program.keeps_a_count()
 
 
 static func _keeps_a_count(program: SkillProgram) -> bool:

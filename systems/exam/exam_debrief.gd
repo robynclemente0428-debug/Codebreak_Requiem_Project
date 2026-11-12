@@ -24,6 +24,10 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 					out.append("Your routine ran %d times. I asked for %d. Call it from rules that fire, or from always:." 							% [fires, spec.required_fires])
 				else:
 					out.append("Your routine ran, but only from %d skill%s. I asked for %d. One source, every skill." 							% [callers, "" if callers == 1 else "s", int(r.get("callers_needed", spec.required_callers))])
+			elif spec.required_order:
+				var knit: int = r.get("misorder_kills", 0)
+				out.append("You put %d fragments back in order. I asked for %d.%s" % [fires, spec.required_fires,
+					" %d died out of order, and the rest knit back each time." % knit if knit > 0 					else " Sort by hp, and hit registry[0] hardest."])
 			elif spec.required_variable:
 				out.append("Your registry paid out %d times. I asked for %d. Add to it on every hit, or ask for less." \
 						% [fires, spec.required_fires])
@@ -44,6 +48,20 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 		elif casts > 0:
 			out.append("%d casts, and your routine ran %d times, from %d skill%s. Written once." % [casts, fires, callers,
 				"" if callers == 1 else "s"])
+	elif spec.required_order:
+		var in_order: int = r.get("order_hits", 0)
+		var out_of_order: int = r.get("misorder_hits", 0)
+		var knit: int = r.get("misorder_kills", 0)
+		if in_order + out_of_order > 0:
+			var share := float(in_order) / (in_order + out_of_order)
+			if share >= 0.6:
+				out.append("%d%% of your hits landed in order. Your script knew which end to start from." % roundi(share * 100.0))
+			elif share >= 0.3:
+				out.append("%d%% of your hits landed in order. The rest did a third of the work. Weight registry[0] harder, or trade area for focus." % roundi(share * 100.0))
+			else:
+				out.append("Only %d%% of your hits landed in order. You hit everything, so mostly you hit the wrong thing." % roundi(share * 100.0))
+		if knit > 0 and r["fail"] != "SPEC NOT MET":         # a spec failure already said it
+			out.append("%d fragment%s died out of order, and the rest healed for it. Order matters more than speed." % [knit, "" if knit == 1 else "s"])
 	elif spec.required_variable:
 		if casts > 0 and fires == 0:
 			out.append("You cast %d times and never read what you wrote down. Records nobody reads are just a leak." % casts)
@@ -73,6 +91,8 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 
 	if spec.required_routine and r["passed"]:
 		out.append("Change that routine now, and every skill that calls it changes with it. That's the point.")
+	if spec.required_order and r["passed"]:
+		out.append("The memory wasn't lost. It was out of order. Now you know where to start.")
 	if spec.required_variable and r["passed"] and r["grade"] < 2:
 		out.append("Those were recordings. The real ones are past the District Gate, and I can't pull you out of there.")
 

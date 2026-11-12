@@ -13,6 +13,9 @@ extends Resource
 @export var ramp: int = -1
 ## Kept so old scripts load (the slot of the old counters). Unused.
 @export var reg: int = 0
+## Only for registry.sort (op "sort", the Defragmenter rank): the order, key * 2 (+1 reversed),
+## keys in ScriptRegisters.SORT_KEYS.
+@export var sort_by: int = 0
 
 ## The knob a  call routine()  line carries (the Engineer rank's routines, ProgramRoutine). Its
 ## `op` is the routine's index in SkillComponent.routines. It is one block, and stands for the
@@ -31,6 +34,13 @@ static func make(knob_id: StringName, step_count: int) -> ProgramEffect:
 static func make_write(op_text: String) -> ProgramEffect:
 	var e := make(ScriptRegisters.WRITE_KNOB, 1)
 	e.op = maxi(ScriptRegisters.WRITE_OPS.find(op_text), 0)
+	return e
+
+
+## registry.sort(key=...): `order` as in sort_by.
+static func make_sort(order: int) -> ProgramEffect:
+	var e := make_write("sort")
+	e.sort_by = order
 	return e
 
 
@@ -55,6 +65,8 @@ func write_op() -> String:
 
 
 func describe_write() -> String:
+	if write_op() == "sort":
+		return "registry.sort(%s)" % ScriptRegisters.sort_text(sort_by)
 	return "registry.%s(target)" % write_op()
 
 
@@ -78,6 +90,8 @@ func to_dict() -> Dictionary:
 		d["ramp"] = 0
 	if ScriptRegisters.is_write(knob):
 		d["set_op"] = op
+		if write_op() == "sort":
+			d["sort_by"] = sort_by
 	if is_call():
 		d = {"knob": String(CALL_KNOB), "steps": 1, "routine": op}
 	return d
@@ -93,6 +107,7 @@ static func from_dict(d: Dictionary) -> ProgramEffect:
 	if ScriptRegisters.is_write(e.knob):
 		if d.has("set_op"):
 			e.op = int(d["set_op"])
+			e.sort_by = int(d.get("sort_by", 0))
 		else:
 			# A script from the counters: "-=" or "= 0" took away, everything else added.
 			var old_op := int(d.get("op", 1))

@@ -65,6 +65,7 @@ const DEFAULTS := {
 	},
 	"layout": {
 		"script_panes": {},               # SCRIPTING tab bars: "explorer" / "snippets" / "output" -> split_offset
+		"snippet_folds": {},              # SNIPPETS sections folded: "knobs" / "conditions" / ... -> true
 	},
 }
 

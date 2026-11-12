@@ -251,8 +251,8 @@ func _page_text(id: String) -> String:
 			return _h("Unlocks") \
 				+ _short("Pass rank exams with Examiner Sudo (in town) to unlock more.") \
 				+ _rank_line(r, 1, "OPERATOR", "a second script set to swap to") \
-				+ _rank_line(r, 2, "ARCHITECT", "loops: repeat your skill") \
-				+ _rank_line(r, 3, "STRATEGIST", "the Registry (remember enemies) and if blocks") \
+				+ _rank_line(r, 2, "ARCHITECT", "loops: repeat your skill, if blocks, and break") \
+				+ _rank_line(r, 3, "STRATEGIST", "the Registry (remember enemies)") \
 				+ _rank_line(r, 4, "ENGINEER", "more rules and more points") \
 				+ "\n" + _tip("Better exam grades give more points. You can retake an exam.")
 	return ""

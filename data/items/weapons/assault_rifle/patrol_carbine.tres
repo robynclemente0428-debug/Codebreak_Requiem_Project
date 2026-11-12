@@ -11,8 +11,8 @@ display_name = "Patrol Carbine"
 mesh = ExtResource("1_rj0cv")
 weapon_type = ExtResource("2_type")
 base_stats = {
-3: 5.0,
-4: 9.0,
+3: 6.0,
+4: 11.0,
 5: 6.0
 }
 item_level = 8

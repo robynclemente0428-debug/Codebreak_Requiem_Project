@@ -11,7 +11,8 @@ extends Resource
 ##
 ##   while enemies_nearby(3, 4.0m):    WHILE  the conditions are checked again before every
 ##       cast(max=4)                          repeat; it stops when they turn false (or at max)
-##       if killed: break              BREAK  stop early: once a repeat kills, or hits nothing
+##       if killed:                    BREAK  an if block of the rule that ends in  break
+##           break                            (ProgramBranch.breaks): stop early when it's true
 ##
 ## Balance (see ProgramLoopRunner for the runtime side):
 ##   - every cast has a hard cap of repeats (BASE_CAP, For Loop gem: more). All loops of one cast
@@ -24,6 +25,8 @@ extends Resource
 ##     run one level deep), so loops can't multiply with Multicast or Aftershock.
 
 enum Mode { FOR, WHILE }
+## Old saves only: a loop used to carry its own break. ProgramRule.from_dict turns it into an
+## if block that breaks (ProgramBranch.legacy_break); nothing reads it after loading.
 enum Break { NONE, KILL, MISS }
 
 const BASE_CAP := 5
@@ -46,45 +49,26 @@ static func make(p_mode: Mode, p_count := 1) -> ProgramLoop:
 	return l
 
 
-## The loop block, plus one more when it has a break.
+## The loop block (a break is a block of its own, counted with its if block).
 func action_count() -> int:
-	return 1 + (1 if break_on != Break.NONE else 0)
+	return 1
 
 
 ## Points before the rule's condition discount. `gem_mult` is the For Loop gem's discount.
-func cost(gem_mult := 1.0) -> float:
+## `has_break`: the rule has an if block that breaks (it can only cut the loop short).
+func cost(gem_mult := 1.0, has_break := false) -> float:
 	var c := (FOR_COST if mode == Mode.FOR else WHILE_COST) * count
-	if break_on != Break.NONE:
+	if has_break:
 		c *= BREAK_COST_MULT
 	return c * gem_mult
 
 
-## "killed" / "missed": the word shown in  if killed: break
-## True for a loop that can end before its count: a while (its conditions turn false), or a
-## for with break. What Brack calls a stop condition, and what the Architect exam asks for.
-func stops_itself() -> bool:
-	return mode == Mode.WHILE or break_on != Break.NONE
-
-
-func break_word() -> String:
-	return "missed" if break_on == Break.MISS else "killed"
-
-
 func describe() -> String:
-	var s := "repeat %dx" % count if mode == Mode.FOR else "repeat while true (max %d)" % count
-	match break_on:
-		Break.KILL:
-			s += ", break on kill"
-		Break.MISS:
-			s += ", break if nothing hit"
-	return s
+	return "repeat %dx" % count if mode == Mode.FOR else "repeat while true (max %d)" % count
 
 
 func to_dict() -> Dictionary:
-	var d := {"mode": "while" if mode == Mode.WHILE else "for", "count": count}
-	if break_on != Break.NONE:
-		d["break"] = "miss" if break_on == Break.MISS else "kill"
-	return d
+	return {"mode": "while" if mode == Mode.WHILE else "for", "count": count}
 
 
 static func from_dict(d: Dictionary) -> ProgramLoop:

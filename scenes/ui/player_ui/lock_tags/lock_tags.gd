@@ -17,6 +17,8 @@ extends Control
 ## shown here whatever the rank: this is the lesson). The enemy's tag pulses while the card is up.
 ## Met locks are kept in the character's save (SAVE_KEY), so each card shows once. Two new locks
 ## at once (a rare with two) queue, one card after the other. Its X button closes it early.
+## The card is an Announcer headline: it waits while AREA CLEARED or a Null Law is up, sits at
+## headline_top(), and if a more important headline cuts it short it shows again afterwards.
 
 const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 const FONT_SIZE := 13
@@ -34,8 +36,7 @@ const COL_BG := Color(0.02, 0.05, 0.08, 0.82)
 const COL_STATE := Color(1.0, 0.45, 0.45)
 ## Locks this character has met (their LOCK_NAMEs), in its save: each NEW LOCK card shows once.
 const SAVE_KEY := "locks_met"
-## The NEW LOCK card: its top this far down the screen (above the player), and how long it holds.
-const CARD_Y := 0.27
+## The NEW LOCK card: its width, and how long it holds.
 const CARD_WIDTH := 460.0
 const CARD_HOLD := 7.0
 
@@ -50,9 +51,13 @@ var _met_slot: Variant = null         # whose save _met came from
 var _queue: Array[Dictionary] = []    # NEW LOCK cards waiting their turn
 var _card: IntroCard
 var _card_lock := ""                  # the lock the card is introducing ("" = none)
+var _card_info := {}                  # what the card is showing (back to the queue if cut short)
+var _card_asked := false              # waiting for Announcer's headline slot
+const CARD_HEADLINE := &"new_lock"    # its Announcer headline key
 
 
 func _ready() -> void:
+	process_priority = Announcer.PLACE_AFTER       # places itself after Announcer's layout
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if ResourceLoader.exists(DEFAULT_FONT):
@@ -61,6 +66,7 @@ func _ready() -> void:
 		_font = ThemeDB.fallback_font
 	_card = IntroCard.new()
 	_card.build(_font, CARD_WIDTH, Callable(self, "draw_icon"))
+	Announcer.see_through(_card)
 	add_child(_card)
 
 
@@ -242,15 +248,44 @@ func _meet(lock: EnemyTrait, enemy: Node3D) -> void:
 
 func _update_card() -> void:
 	if _card.busy():
-		_card.position = Vector2(roundf((size.x - _card.size.x) * 0.5), roundf(size.y * CARD_Y))
+		_place_card()
 		return
-	_card_lock = ""
+	if _card_lock != "":                  # it just finished (faded or closed)
+		Announcer.headline_done(CARD_HEADLINE)
+		_card_lock = ""
+		_card_info = {}
+	if _queue.is_empty() or _card_asked:
+		return
+	_card_asked = true
+	Announcer.headline(CARD_HEADLINE, Announcer.NORMAL, CARD_HOLD + 0.85, _show_card, _cut_card, -1.0)
+
+
+## Announcer's slot is ours: the next card in the queue goes up.
+func _show_card() -> float:
+	_card_asked = false
 	if _queue.is_empty():
-		return
-	var next: Dictionary = _queue.pop_front()
-	_card_lock = next["name"]
-	_card.show_lock(next, CARD_HOLD)
-	_card.position = Vector2(roundf((size.x - _card.size.x) * 0.5), roundf(size.y * CARD_Y))
+		Announcer.headline_done.call_deferred(CARD_HEADLINE)
+		return 0.0
+	_card_info = _queue.pop_front()
+	_card_lock = _card_info["name"]
+	_card.show_lock(_card_info, CARD_HOLD)
+	_place_card()
+	return _card.size.y
+
+
+## A more important headline took the slot: the card goes, and waits to show again.
+func _cut_card() -> void:
+	_card.stop()
+	if not _card_info.is_empty():
+		_queue.push_front(_card_info)
+	_card_info = {}
+	_card_lock = ""
+
+
+func _place_card() -> void:
+	_card.position = Vector2(roundf((size.x - _card.size.x) * 0.5),
+			roundf(Announcer.headline_top() - get_global_rect().position.y))
+	Announcer.set_headline_height(CARD_HEADLINE, _card.size.y)   # it settles after a frame
 
 
 ## The met locks of the character playing (loaded again if another character is picked).
@@ -374,6 +409,13 @@ class IntroCard extends PanelContainer:
 		_tween.tween_callback(func() -> void:
 			visible = false
 			_busy = false)
+
+	## Gone at once (another headline took its place).
+	func stop() -> void:
+		if _tween != null and _tween.is_valid():
+			_tween.kill()
+		visible = false
+		_busy = false
 
 	func show_lock(info: Dictionary, hold: float) -> void:
 		var col: Color = info["color"]

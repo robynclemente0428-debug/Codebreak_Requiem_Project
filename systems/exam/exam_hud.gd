@@ -26,9 +26,14 @@ var _result: PanelContainer
 var _result_box: VBoxContainer
 var _flash: Label
 var _flash_tween: Tween
+## The result panel's width (narrower on a screen with less room: a big UI size), and the margin
+## it keeps from the screen's sides. Every line in it wraps, so it never grows past this.
+const RESULT_WIDTH := 760.0
+const RESULT_MARGIN := 16.0                       # px
 
 
 func _ready() -> void:
+	process_priority = Announcer.PLACE_AFTER       # places itself after Announcer's layout
 	layer = 21                                    # over the HUD, so the result's buttons work
 	_font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else null
 	var root := Control.new()
@@ -48,7 +53,7 @@ func _ready() -> void:
 	_card.add_child(_card_box)
 
 	_result = _panel()
-	_result.custom_minimum_size.x = 620
+	_result.custom_minimum_size.x = RESULT_WIDTH    # set again for the screen in show_result
 	_result.visible = false
 	root.add_child(_result)
 	_result_box = _vbox(8)
@@ -56,13 +61,14 @@ func _ready() -> void:
 
 	_flash = _label("", 30, ACCENT)
 	_flash.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_flash.offset_top = 260
+	_flash.offset_top = Announcer.HEADLINE_MIN       # moved to Announcer.headline_top() as it shows
 	_flash.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_flash.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_flash.custom_minimum_size.x = 900
 	_flash.offset_left = -450
 	_flash.offset_right = 450
 	_flash.modulate.a = 0.0
+	Announcer.see_through(_flash)
 	root.add_child(_flash)
 
 
@@ -147,12 +153,14 @@ func update_run(wave: int, waves: int, t: float, limit: float, fires: int, need:
 func show_result(r: Dictionary) -> void:
 	_card.visible = false
 	_clear(_result_box)
+	_result.custom_minimum_size.x = _result_width()
 	var spec := chamber.spec
 	if r["passed"]:
 		var g: int = r["grade"]
 		_result_box.add_child(_label("%s  //  %s" % [spec.title, ExamSpec.GRADES[g]], 28, GRADE_COLORS[g]))
 	else:
-		_result_box.add_child(_label("%s  //  FAILED: %s" % [spec.title, r["fail"]], 26, COL_WARN))
+		_result_box.add_child(_wrapped("%s  //  FAILED: %s" % [spec.title, r["fail"]], 26, COL_WARN,
+				_result_text_width()))                 # a long reason wraps instead of widening it
 	_result_box.add_child(_rule())
 	# The numbers, each marked with whether it earned its grade point
 	var tier: String = r["tier"]
@@ -166,7 +174,7 @@ func show_result(r: Dictionary) -> void:
 	_result_box.add_child(_rule())
 	_result_box.add_child(_label("EXAMINER SUDO:", 16, ACCENT))
 	for line in ExamDebrief.lines(spec, r):
-		_result_box.add_child(_wrapped(line, 16, COL_TEXT))
+		_result_box.add_child(_wrapped(line, 16, COL_TEXT, _result_text_width()))
 	if r["passed"]:
 		var note := ""
 		if r["first_pass"]:
@@ -179,7 +187,7 @@ func show_result(r: Dictionary) -> void:
 		else:
 			var qm: QuestManager = chamber._player.get("quests")
 			note = "Your best is still %s." % ExamSpec.GRADES[qm.exam_grade(spec.rank_id)]
-		_result_box.add_child(_label(note, 16, COL_GOLD))
+		_result_box.add_child(_wrapped(note, 16, COL_GOLD, _result_text_width()))   # the unlocks run long
 	_result_box.add_child(_rule())
 	var buttons := HBoxContainer.new()
 	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -191,22 +199,75 @@ func show_result(r: Dictionary) -> void:
 	_center_result.call_deferred()
 
 
+## Shrinks the panel to its content and centres it. Twice, a frame apart: a wrapping label only
+## knows its height once it has its width, so the first measure can come out far too tall.
 func _center_result() -> void:
 	_result.reset_size()
+	_place_result()
+	await get_tree().process_frame
+	if not is_instance_valid(_result) or not _result.visible:
+		return
+	_result.reset_size()
+	_place_result()
+
+
+## Centred; a panel taller than the screen keeps its top (the grade) in view.
+func _place_result() -> void:
 	var screen := get_viewport().get_visible_rect().size
 	_result.position = ((screen - _result.size) * 0.5).round()
+	_result.position.y = maxf(_result.position.y, RESULT_MARGIN)
+
+
+## The panel's width on this screen: RESULT_WIDTH, or less when the screen is narrower.
+func _result_width() -> float:
+	return minf(RESULT_WIDTH, get_viewport().get_visible_rect().size.x - RESULT_MARGIN * 2.0)
+
+
+## The width its text wraps at: the panel's, less its 16 px margins and 2 px borders.
+func _result_text_width() -> float:
+	return _result_width() - 36.0
 
 
 # ---------- HELPERS ----------
+## The big line at the top centre (the countdown, a wave's name, why a run failed). It's an
+## Announcer headline that takes the slot from anything else: an exam can't wait its turn.
 func _show_flash(text: String, col: Color, hold: float) -> void:
+	Announcer.headline(&"exam", Announcer.URGENT, hold + 0.4,
+			_play_flash.bind(text, col, hold), _stop_flash, 1.0)
+
+
+func _play_flash(text: String, col: Color, hold: float) -> float:
 	_flash.text = text
 	_flash.add_theme_color_override("font_color", col)
 	_flash.modulate.a = 1.0
+	_place_flash()
 	if _flash_tween:
 		_flash_tween.kill()
 	_flash_tween = create_tween()
 	_flash_tween.tween_interval(hold)
 	_flash_tween.tween_property(_flash, "modulate:a", 0.0, 0.4)
+	return 40.0 * (text.count("\n") + 1)
+
+
+## The big line follows Announcer's headline_top() while it shows (the strip above can change).
+func _process(_delta: float) -> void:
+	if _flash != null and _flash.modulate.a > 0.0:
+		_place_flash()
+
+
+func _place_flash() -> void:
+	var y := Announcer.headline_top() - (_flash.get_parent() as Control).get_global_rect().position.y
+	if not is_equal_approx(_flash.offset_top, y):
+		_flash.offset_top = y
+	# Its real height: a long line wraps onto more lines on a narrow screen
+	Announcer.set_headline_height(&"exam", maxf(_flash.size.y, _flash.get_combined_minimum_size().y))
+
+
+## Something else cut it short (only another exam line can: they all take the slot).
+func _stop_flash() -> void:
+	if _flash_tween:
+		_flash_tween.kill()
+	_flash.modulate.a = 0.0
 
 
 static func _clock(t: float) -> String:
@@ -265,10 +326,10 @@ func _label(text: String, size_px: int, col: Color) -> Label:
 	return l
 
 
-func _wrapped(text: String, size_px: int, col: Color) -> Label:
+func _wrapped(text: String, size_px: int, col: Color, width := 400.0) -> Label:
 	var l := _label(text, size_px, col)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	l.custom_minimum_size.x = 400
+	l.custom_minimum_size.x = width
 	return l
 
 

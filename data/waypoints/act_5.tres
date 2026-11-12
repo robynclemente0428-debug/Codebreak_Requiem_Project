@@ -24,6 +24,7 @@ kind = 1
 map_position = Vector2(0.5, 0.3)
 links = Array[String](["act5_core", "act5_hall"])
 note = "Level 36  -  The Core replays every process you have fought"
+threats = Array[String](["fragmented"])
 random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act5_hall"]

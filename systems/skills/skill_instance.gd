@@ -27,6 +27,9 @@ var rank := 0
 var bonus_points := 0.0
 ## Extra knob steps from ScriptBudget (exam DISTINCTIONs; set by SkillComponent).
 var bonus_steps := 0
+## Whose skill this is (set by SkillComponent; null for enemies): its equipped weapon type can add
+## to the mana cost (WeaponTypeDefinition.skill_mana_cost). Weak, so the skill never keeps it alive.
+var owner_ref: WeakRef
 
 ## Skill-local numbers only (currently just the mana cost). Everything that changes what the
 ## skill does to the world lives in _modifiers and is applied on top of the caster's stats.
@@ -252,7 +255,22 @@ func weapon_allows(equipment: EquipmentComponent) -> bool:
 	return definition_allows(gem, equipment)
 
 func get_mana_cost() -> float:
-	return maxf(stats.get_stat(StatTypes.Stat.MANA_COST), 0.0)
+	return maxf(stats.get_stat(StatTypes.Stat.MANA_COST), 0.0) + weapon_mana_cost()
+
+
+## What the owner's equipped weapon type adds to each cast (the sniper: +5), for skills that need
+## a weapon. Read live, so swapping weapons changes it without a rebuild.
+func weapon_mana_cost() -> float:
+	if gem == null or gem.required_weapon_types.is_empty() or owner_ref == null:
+		return 0.0
+	var owner_node := owner_ref.get_ref() as Node
+	var equipment := owner_node.get("equipment") as EquipmentComponent if owner_node != null else null
+	if equipment == null:
+		return 0.0
+	var weapon: ItemInstance = equipment.get_equipped(EquipmentSlots.Slot.WEAPON)
+	if weapon == null or weapon.definition == null or weapon.definition.weapon_type == null:
+		return 0.0
+	return weapon.definition.weapon_type.skill_mana_cost
 
 func can_afford(mana: ManaComponent) -> bool:
 	return mana == null or mana.has_enough(get_mana_cost())

@@ -2,7 +2,9 @@ class_name AreaClearedBanner
 extends CanvasLayer
 ## The "AREA CLEARED" announcement: a band across the screen that opens, the title decoding out
 ## of scrambled binary, the area's name and what the clear gave. Then it fades out and frees
-## itself. DungeonPopulator shows one when the last enemy of an instance dies.
+## itself. DungeonPopulator shows one when the last enemy of an instance dies. It's an Announcer
+## headline: it waits for the slot if another headline is up, and its top is Announcer's
+## headline_top() (under the tutorial banner).
 ##
 ##   AreaClearedBanner.announce(get_tree(), "The Spillway", "+1 SCRIPT POINT ON EVERY SKILL")
 
@@ -14,8 +16,8 @@ const COL_TITLE := Color(0.90, 0.98, 1.0)
 const COL_NAME := Color(0.62, 0.80, 0.86)
 const COL_REWARD := Color(0.45, 1.0, 0.6)
 const COL_BAND := Color(0.02, 0.06, 0.09, 0.86)
-const BAND_Y := 0.30                    # band centre, as a share of the screen height
 const BAND_H := 170.0                   # px when open
+const KEY := &"area_cleared"           # its Announcer headline key (see_through: OPACITY)
 # Timing, in seconds from the start
 const OPEN := 0.25                      # band opens
 const DECODE := 0.7                     # title finishes decoding
@@ -29,30 +31,29 @@ var _name: Label
 var _reward: Label
 
 
-## Where the band ends (px from the top of the screen) while a banner is up, else -1. The quest
-## tracker's messages (a beacon coming online, QUEST READY...) move below it meanwhile.
-static func bottom_y(tree: SceneTree) -> float:
-	for b in tree.get_nodes_in_group("area_cleared_banner"):
-		var banner := b as AreaClearedBanner
-		if banner != null and not banner.is_queued_for_deletion() and banner._band != null:
-			var screen := banner._band.get_viewport_rect().size
-			return screen.y * BAND_Y + BAND_H * 0.5
-	return -1.0
-
-
-## Shows the banner over the game. `reward` "" leaves the reward line out.
+## Shows the banner over the game (once the headline slot is free). `reward` "" leaves the
+## reward line out.
 static func announce(tree: SceneTree, area_name: String, reward: String) -> void:
-	for old in tree.get_nodes_in_group("area_cleared_banner"):
-		old.queue_free()                    # never two at once
-	var b := AreaClearedBanner.new()
-	b.add_to_group("area_cleared_banner")
-	tree.root.add_child(b)
-	b._fill(area_name, reward)
+	var shown := {}                         # the banner, once it's up (for hide)
+	var show := func() -> float:
+		for old in tree.get_nodes_in_group("area_cleared_banner"):
+			old.queue_free()                # never two at once
+		var b := AreaClearedBanner.new()
+		b.add_to_group("area_cleared_banner")
+		tree.root.add_child(b)
+		b._fill(area_name, reward)
+		shown["b"] = b
+		return BAND_H
+	var hide := func() -> void:
+		if is_instance_valid(shown.get("b")):
+			shown["b"].queue_free()
+	Announcer.headline(KEY, Announcer.HIGH, HOLD + FADE, show, hide)
 
 
 func _init() -> void:
 	layer = 15                              # over the world and name plates, under the HUD (20)
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	process_priority = Announcer.PLACE_AFTER       # places itself after Announcer's layout
 	var font: Font = load(FONT) if ResourceLoader.exists(FONT) else null
 	_band = Control.new()
 	_band.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -62,6 +63,7 @@ func _init() -> void:
 	_title = _label(font, 58, COL_TITLE)
 	_name = _label(font, 22, COL_NAME)
 	_reward = _label(font, 20, COL_REWARD)
+	Announcer.see_through(self)
 
 
 func _label(font: Font, size: int, col: Color) -> Label:
@@ -110,7 +112,7 @@ func _process(delta: float) -> void:
 
 func _layout() -> void:
 	var screen := _band.get_viewport_rect().size
-	var cy := screen.y * BAND_Y
+	var cy := _centre_y()
 	_title.position = Vector2(0.0, cy - 66.0)
 	_name.position = Vector2(0.0, cy + 6.0)
 	_reward.position = Vector2(0.0, cy + 38.0)
@@ -118,11 +120,16 @@ func _layout() -> void:
 		l.size.x = screen.x
 
 
+## The band's centre line: its top edge (open) at Announcer's headline_top().
+func _centre_y() -> float:
+	return Announcer.headline_top() + BAND_H * 0.5 + 8.0
+
+
 ## The band: a dark strip with bright rules top and bottom, opening from its centre line, and a
 ## light sweep running across it while the title decodes.
 func _draw_band() -> void:
 	var screen := _band.get_viewport_rect().size
-	var cy := screen.y * BAND_Y
+	var cy := _centre_y()
 	var open := ease(clampf(_t / OPEN, 0.0, 1.0), 0.4)
 	var h := BAND_H * open
 	var top := cy - h * 0.5 - 8.0

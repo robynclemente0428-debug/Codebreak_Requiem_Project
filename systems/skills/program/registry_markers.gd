@@ -3,7 +3,9 @@ extends Node
 ## Shows which enemies are in the Registry (ScriptRegisters): a pulsing ring at a registered
 ## enemy's feet, with the hotkey of the skill whose registry holds it underneath ("LMB", or
 ## "LMB Q" when two skills registered it). Each skill's script keeps its own registry, so the key
-## says which `target in registry` rules will see it.
+## says which `target in registry` rules will see it. A script that sorts its registry or reads a
+## place in it (Defragmenter: registry.sort, registry[0]) adds the enemy's place: "LMB[0]", so
+## the player can watch the order change as the fight does.
 ##
 ## The player adds one as a child (player.gd). It reads the registries of the active script set
 ## REFRESH times a second; the registries are never changed here. An enemy leaves the ring when
@@ -58,12 +60,26 @@ func registered() -> Dictionary:
 		if program == null or program.registers.is_empty() or _stale(program):
 			continue
 		var key := _key_of(i)
+		var order: Array = ScriptRegisters.ordered(program.registers, program.sort_by, get_parent() as Node3D) 				if _uses_order(program) else []
 		for id in program.registers:
 			var keys: Array = out.get(id, [])
-			if not key in keys:
-				keys.append(key)
+			var label := key if order.is_empty() else "%s[%d]" % [key, order.find(id)]
+			if not label in keys:
+				keys.append(label)
 			out[id] = keys
 	return out
+
+
+## True when the script sorts its registry or reads a place in it (the markers then show places).
+static func _uses_order(program: SkillProgram) -> bool:
+	for rule in program.flat_rules():
+		for e in rule.effects:
+			if ScriptRegisters.is_sort(e):
+				return true
+		for c in rule.conditions:
+			if c is RegistryPositionCondition:
+				return true
+	return false
 
 
 ## The fight is over for this program: its registry will be cleared on the next cast

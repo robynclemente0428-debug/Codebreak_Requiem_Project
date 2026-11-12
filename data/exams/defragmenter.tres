@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="ExamSpec" format=3]
+
+[ext_resource type="Script" path="res://systems/exam/exam_spec.gd" id="1_spec"]
+[ext_resource type="Resource" path="res://data/enemies/sample_copy.tres" id="2_copy"]
+[ext_resource type="Resource" path="res://data/enemies/sample_leak.tres" id="3_leak"]
+[ext_resource type="Resource" path="res://data/enemies/sample_marker.tres" id="5_marker"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act5_stack_meshes.tres" id="6_tiles"]
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="4_def"]
+
+[resource]
+script = ExtResource("1_spec")
+rank_id = "defragmenter"
+title = "DEFRAGMENTER EXAM"
+brief = Array[String](["Fragmented memory: three waves of samples, every one FRAGMENTED. A pack only takes full damage in order: the one with the least life left first. Its tag says its place, [0] of 4.", "Hit out of order and a hit does 30%. Kill one out of order and the rest heal.", "The sandbox lends you sorting. registry.sort(key=hp) puts your registry in order, least life first. when target is registry[0]: is the first in that order. Add enemies to the registry first: always: registry.add(target).", "Your applied script must sort the registry and read a place in it. Put at least 12 of the 15 fragments back in order: kill each one while it is [0]. Clear every wave within 120 seconds.", "Graded on: your scripts' efficiency tier, time (par 80 s), damage taken (par 35%). Memory isn't lost. It's out of order."])
+required_condition = ""
+required_condition_label = "in order"
+required_fires = 12
+required_order = true
+lends = Array[String](["sorting"])
+time_limit = 120.0
+par_time = 80.0
+par_damage = 0.35
+fail_health = 0.25
+wave_enemy = ExtResource("3_leak")
+wave_sizes = Array[int]([5, 4, 6])
+wave_enemies = Array[ExtResource("4_def")]([ExtResource("3_leak"), ExtResource("2_copy"), ExtResource("5_marker")])
+wave_mods = Array[String](["fragmented", "fragmented,armoured", "fragmented,rapid"])
+enemy_level = 6
+spawn_radius = 8.5
+arena_tiles = ExtResource("6_tiles")
+wave_names = Array[String](["SCATTERED BLOCKS", "SHELLS IN PIECES", "LAST SECTORS"])
+wave_notes = Array[String](["Five pieces of one memory. Weakest first.", "Armoured, and out of order they barely feel it.", "Fast. The order changes as they move: let the script keep up."])
+wave_tints = Array[Color]([Color(1, 0.84, 0.42, 1), Color(0.55, 0.75, 1, 1), Color(1, 0.45, 0.35, 1)])

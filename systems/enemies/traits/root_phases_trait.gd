@@ -3,7 +3,8 @@ extends EnemyTrait
 ## THE ROOT PROCESS: no lock ("it cannot be reasoned with"), but three phases, one per third of
 ## its life, each with a different pattern from an earlier boss. Its model holds a Summoner and
 ## a LoopCharger; this switches them on and off.
-##   1  SPAWN   its Summoner calls in adds (the Queen's pattern)
+##   1  SPAWN   its Summoner calls in adds (the Queen's pattern), Fragmented (FragmentLock): they
+##              only take full damage in order, which the Defragmenter exam taught
 ##   2  LOOP    the adds stop; its LoopCharger charges a loop marked in red (Loop Hound Alpha's)
 ##   3  FORK    the charges stop (after the one running); it swaps forms on a short timer
 ##              (FormShift, the Gatekeeper's pattern, twice as fast)
@@ -28,6 +29,9 @@ func setup(p_enemy: Node3D) -> void:
 	for n in enemy.find_children("*", "", true, false):
 		if n is Summoner:
 			_summoner = n
+			var frag := load("res://data/enemy_traits/fragmented.tres") as EnemyModifierDefinition
+			if frag != null and not frag in _summoner.summon_mods:
+				_summoner.summon_mods.append(frag)
 		elif n is LoopCharger:
 			_charger = n
 

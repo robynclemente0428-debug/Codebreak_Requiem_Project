@@ -635,6 +635,7 @@ func _rebuild(s: Socket) -> void:
 	skill.rank = rank()
 	skill.bonus_points = bonus_points()
 	skill.bonus_steps = bonus_steps()
+	skill.owner_ref = weakref(get_parent())         # its weapon can add to the mana cost (the sniper)
 	skill.rebuild()
 	s.skill = skill
 	_apply_trait_rule_bonuses()

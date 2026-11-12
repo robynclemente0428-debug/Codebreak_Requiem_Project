@@ -5,7 +5,7 @@ extends RefCounted
 ##
 ## One "iteration" = the original cast or one repeat. When it is done (a short gap for most
 ## skills, the explosion for Blast), the runner decides whether to repeat:
-##   1. BREAK: a loop whose break fired (a kill, or nothing hit) stops
+##   1. BREAK: a loop with an if block that ends in break, and is true now, stops
 ##   2. FOR loops that fired on the cast still owe repeats -> repeat
 ##   3. WHILE loops: their conditions are checked again -> repeat while true, up to their max
 ##   then the shared cap and the mana for the repeat must allow it.
@@ -28,9 +28,14 @@ var cap := ProgramLoop.BASE_CAP
 var index := 0
 var finished := false
 
-## What the iteration in progress did (for break, target_alive and Pointer).
+## What the iteration in progress did (for target_alive and Pointer).
 var hits := 0
 var kills := 0
+## What the last iteration to land did: what  if killed  /  if hit_nothing  read
+## (KilledCondition, HitNothingCondition), for the break check and for the next repeat.
+var landed := false
+var landed_hits := 0
+var landed_kills := 0
 var last_targets: Array = []
 var last_impact: Variant = null
 var last_direction := Vector3.ZERO
@@ -123,6 +128,9 @@ func _iteration_done(cast: SkillCast) -> void:
 	if finished or cast != current or _iter_done:
 		return
 	_iter_done = true
+	landed = true
+	landed_hits = hits
+	landed_kills = kills
 	if not root.is_valid() or SkillBehavior.is_dead(root.caster):
 		_log("stop: caster gone or dead")
 		_finish()
@@ -159,7 +167,7 @@ func _iteration_done(cast: SkillCast) -> void:
 		_current_paid = cost
 	index += 1
 	if not SkillTargets.is_enemy(root.caster):      # the Architect exam counts these
-		GameEvents.report("loop_repeat", "stop" if rule.loop.stops_itself() else "for")
+		GameEvents.report("loop_repeat", "stop" if rule.loop_stops_itself() else "for")
 	_repeat(rule)
 
 
@@ -194,15 +202,8 @@ func _next_rule() -> ProgramRule:
 					_tickets.append(r)
 		_late_fors.clear()
 	for rule in _tickets + _whiles:
-		if _stopped.has(rule):
-			continue
-		match rule.loop.break_on:
-			ProgramLoop.Break.KILL:
-				if kills > 0:
-					_stopped[rule] = true
-			ProgramLoop.Break.MISS:
-				if hits == 0:
-					_stopped[rule] = true
+		if not _stopped.has(rule) and _breaks_now(rule):
+			_stopped[rule] = true
 	while not _tickets.is_empty():
 		var r: ProgramRule = _tickets.pop_front()
 		if not _stopped.has(r):
@@ -215,6 +216,25 @@ func _next_rule() -> ProgramRule:
 			support.announce(current, r)          # spends Variable Store charge, quests, traits
 			return r
 	return null
+
+
+## True when one of the loop rule's if blocks that ends in  break  is true for the iteration
+## that just landed. Its own conditions are judged on it (the rule's own were, to start the loop).
+func _breaks_now(rule: ProgramRule) -> bool:
+	for i in rule.branches.size():
+		var b := rule.branches[i]
+		if not b.breaks or b.conditions.is_empty():
+			continue
+		var all := true
+		for c in b.conditions:
+			if not c.is_true(current, null):
+				all = false
+				break
+		if all:
+			_log("break: if %s" % " and ".join(b.conditions.map(func(c: ProgramCondition) -> String: return c.type_id())))
+			support.announce(current, rule.branch_rule(i))   # quests and traits see the break fire
+			return true
+	return false
 
 
 func _repeat(rule: ProgramRule, retry := false) -> void:
@@ -231,6 +251,7 @@ func _repeat(rule: ProgramRule, retry := false) -> void:
 		if not (t in _hit_so_far):
 			_hit_so_far.append(t)
 	child.extra["loop_hit_so_far"] = _hit_so_far.duplicate()     # Pointer looks for someone new
+	child.extra[ProgramSupport.LOOP_RULE_KEY] = support.rule_key(rule)   # its if blocks' per-hit lines
 	support.apply_repeat_rules(child, rule)      # loop == N, stack_overflow... and the loop body
 	var from = null if retry else last_impact
 	var dir := last_direction

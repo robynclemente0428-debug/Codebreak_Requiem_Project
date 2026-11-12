@@ -11,5 +11,5 @@ exclusivity_tags = Array[int]([16])
 weight = 80
 min_item_level = 12
 stat = 14
-min_value = 10.0
-max_value = 15.0
+min_value = 4.0
+max_value = 7.0

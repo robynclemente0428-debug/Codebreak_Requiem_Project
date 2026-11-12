@@ -26,6 +26,9 @@ var registers := {}
 ## When the owner last landed a hit (-1 = not yet), and the area its registry belongs to.
 var last_active_msec := -1
 var area_id := 0
+## The registry's order this cast (ScriptRegisters.ordered, ProgramEffect.sort_by): set by a sort
+## line as its rule fires, back to 0 (oldest first) at the start of every cast. Not saved.
+var sort_by := 0
 
 ## ---- Routines (ProgramRoutine, the Engineer rank) ----
 ## A script with  call  lines runs as its resolved copy (resolve): every call replaced by its
@@ -100,6 +103,7 @@ func resolve(routines: Array, limits: SkillProgramLimits = null) -> SkillProgram
 		for b in r.branches:
 			var nb := ProgramBranch.new()
 			nb.conditions.assign(b.conditions)
+			nb.breaks = b.breaks
 			out._origin[nb] = b
 			failed = out._call_problems.size()
 			var inner := out._expand(b.effects, nb.effects, r, routines, limits, true)
@@ -113,6 +117,7 @@ func resolve(routines: Array, limits: SkillProgramLimits = null) -> SkillProgram
 			var routine: ProgramRoutine = c[1]
 			for rb in routine.body.branches:
 				var nb := ProgramBranch.new()
+				nb.breaks = rb.breaks
 				for cond in rb.conditions:
 					var cc := (cond as ProgramCondition).duplicate() as ProgramCondition
 					out._origin[cc] = call
@@ -258,19 +263,22 @@ func _validate_plain(limits: SkillProgramLimits) -> ProgramValidation:
 		if not rule.is_branch() and not rule.branches.is_empty():
 			if not limits.allows("if"):
 				v.add_issue("%s: if blocks aren't available at your rank." % label,
-					"if blocks aren't available at your rank (Strategist)", "delete the if block", rule, rule.branches[0])
-			elif rule.loop != null:
-				v.add_issue("%s: a rule with a loop can't have if blocks." % label,
-					"a rule with a loop can't have if blocks",
-					"move the if block's lines to a rule without a loop, or delete the loop", rule, rule.branches[0])
+					"if blocks aren't available at your rank (Architect)", "delete the if block", rule, rule.branches[0])
 		if rule.is_branch():
-			if rule.parent.loop != null or not limits.allows("if"):
+			if not limits.allows("if"):
 				continue                               # reported on the rule above
 			if rule.own_conditions().is_empty():
 				v.add_issue("%s has no condition." % label, "this if has no condition yet",
-					"drag a condition onto this if line (target in registry, target_life_below...)", rule)
+					"drag a condition onto this if line (killed, hit_nothing, target_life_below...)", rule)
 				continue
-			if rule.effects.is_empty():
+			if rule.branch().breaks and rule.parent.loop == null:
+				v.add_issue("%s: break only works in a rule with a loop." % label,
+					"break only works in a rule with a loop",
+					"add a for or while loop to this rule, or delete the break", rule)
+				continue
+			if rule.effects.is_empty() and rule.branch().breaks:
+				pass                                   # a break on its own is a whole if block
+			elif rule.effects.is_empty():
 				if not rule.branch().has_meta(&"call_failed"):     # a failed call says so itself
 					v.add_issue("%s does nothing." % label, "this if does nothing yet",
 						"drag a knob from SNIPPETS under it, or delete the if", rule)
@@ -331,7 +339,7 @@ func _validate_plain(limits: SkillProgramLimits) -> ProgramValidation:
 				v.add_issue("%s: %s" % [label, loop_problem[0]], String(loop_problem[0]).trim_suffix("."),
 					loop_problem[1], rule, rule.loop)
 				continue
-			raw_cost += rule.loop.cost(limits.loop_cost_mult())
+			raw_cost += rule.loop.cost(limits.loop_cost_mult(), rule.has_break())
 		for e in rule.effects:
 			var knob := limits.get_knob(e.knob)
 			if knob == null:
@@ -381,7 +389,7 @@ func _validate_plain(limits: SkillProgramLimits) -> ProgramValidation:
 						"%s only works in an always: rule (it's read before the cast starts)" % e.knob,
 						"move this line into an always: rule without a loop", rule, e)
 					continue
-				if knob.first_cast_only and (rule.loop != null or rule.only_on_repeats()):
+				if knob.first_cast_only and (rule.loop != null or rule.in_loop() or rule.only_on_repeats()):
 					v.add_issue("%s: %s does nothing on loop repeats." % [label, knob.display_name],
 						"%s does nothing on loop repeats: its gem only acts on the original cast" % e.knob,
 						"move this line to a rule without a loop (and without target_alive, stack_overflow or loop_index)", rule, e)
@@ -463,6 +471,7 @@ func _validate_plain(limits: SkillProgramLimits) -> ProgramValidation:
 						capacity, int(cap_knob.step)], rule, charge)
 
 	_check_registers(v)
+	_check_sorting(v, limits)
 
 	if v.points_used > limits.point_budget + EPSILON:
 		var over_by := v.points_used - limits.point_budget
@@ -513,6 +522,32 @@ func _check_registers(v: ProgramValidation) -> void:
 					"nothing ever adds to the registry, so this buff stays at nothing", fix, rule, e)
 
 
+## The Defragmenter rank's sorting: registry.sort lines and registry[i] reads need the rank (or
+## the sandbox lending it), and something that adds to the registry, or there is nothing to order.
+## (Above the rank the editor doesn't offer them: only an old save or library script has one.)
+func _check_sorting(v: ProgramValidation, limits: SkillProgramLimits) -> void:
+	var seen := {}
+	var adds := _adds_to_registry()
+	var fix := "add registry.add(target) to a rule: always: adds every enemy the skill hits"
+	var allowed := limits == null or limits.allows("sort")
+	for rule in flat_rules():
+		seen[rule.owner] = seen.get(rule.owner, 0) + 1
+		var label := "%s rule %d" % [_owner_name(rule.owner), seen[rule.owner]]
+		for e in rule.effects:
+			if not ScriptRegisters.is_sort(e):
+				continue
+			if not allowed:
+				v.add_issue("%s: sorting isn't available at your rank." % label,
+					"sorting isn't available at your rank (Defragmenter)", "delete this line", rule, e)
+			elif not adds:
+				v.add_issue("%s: nothing ever adds to the registry, so there's nothing to sort." % label,
+					"nothing ever adds to the registry, so there's nothing to sort", fix, rule, e)
+		for c in rule.own_conditions():
+			if c is RegistryPositionCondition and not adds:
+				v.add_issue("%s: nothing ever adds to the registry, so it has no %s." % [label, (c as RegistryPositionCondition).pos_text()],
+					"nothing ever adds to the registry, so it has no %s" % (c as RegistryPositionCondition).pos_text(), fix, rule, c)
+
+
 ## Tells every "target in registry" check whether this script spends marks (has a
 ## registry.remove), which sets its discount (VarCondition.cost_multiplier). Called by validate,
 ## so pricing, the editor and the applied skill all agree.
@@ -544,7 +579,7 @@ func keeps_a_count() -> bool:
 		return false
 	for rule in flat_rules():
 		for c in rule.conditions:
-			if c is VarCondition:
+			if c is VarCondition or c is RegistryPositionCondition:
 				return true
 		for e in rule.effects:
 			if e.ramps():

@@ -2,7 +2,7 @@ class_name StimHud
 extends Control
 ## Stims in play: the hotkeys (stim_1 / stim_2, keys 1 and 2 by default, rebindable in
 ## Settings > Controls), restoring life / mana, charges from kills, and the HUD gauges that
-## sit to the left of the life bar.
+## sit between the life bar and the skill hotbar.
 ##
 ##  - Using a stim spends its per-use charges and restores its amount over its duration
 ##    (instantly if the duration is 0). The same stim can't be used again while it's working.
@@ -20,6 +20,8 @@ const COL_MANA := Color(0.30, 0.64, 1.0)
 const COL_DIM := Color(0.55, 0.78, 0.85)
 const GAUGE := Vector2(46, 150)
 const GAP := 14.0
+## The least space kept between the gauges and the life bar or the hotbar (px).
+const MIN_GAP := 16.0
 
 var _font: Font
 var _active: Dictionary = {}        # slot -> {"left": amount still to restore, "rate": per second, "until": msec}
@@ -114,14 +116,22 @@ func _restore(item: ItemInstance, amount: float) -> void:
 		p.mana.restore(amount)
 
 
-## Keeps the gauges just right of the life bar, so moving the life bar moves them too.
+## Keeps the gauges centred in the gap between the life bar and the skill hotbar, so the space
+## on each side is the same and moving either one moves them too. With no hotbar, or too little
+## room between the two, they sit MIN_GAP right of the life bar.
 func _follow_life_bar() -> void:
 	var hp := get_tree().get_first_node_in_group("hp_hud") as Control
 	if hp == null or not hp.is_visible_in_tree():
 		return
 	var r := hp.get_global_rect()
 	var w := offset_right - offset_left
-	position = Vector2(r.end.x + 16.0, r.end.y - size.y + 4.0).round()
+	var x := r.end.x + MIN_GAP
+	var bar := get_tree().get_first_node_in_group("skill_bar") as Control
+	if bar != null and bar.is_visible_in_tree():
+		var room := bar.get_global_rect().position.x - r.end.x
+		if room >= w + MIN_GAP * 2.0:
+			x = r.end.x + (room - w) * 0.5
+	position = Vector2(x, r.end.y - size.y + 4.0).round()
 	size = Vector2(w, size.y)
 
 

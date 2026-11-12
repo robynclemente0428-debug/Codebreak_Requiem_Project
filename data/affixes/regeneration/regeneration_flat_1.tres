@@ -10,4 +10,4 @@ tags = Array[int]([8])
 exclusivity_tags = Array[int]([16])
 stat = 14
 min_value = 1.0
-max_value = 4.0
+max_value = 3.0

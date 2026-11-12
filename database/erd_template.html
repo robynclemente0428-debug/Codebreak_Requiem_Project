@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CodeBreak Requiem ERD</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: toolbar, then a pan-and-zoom sheet of area panels; inside each panel parents sit left, children right */
+:root {
+  --bg: #e9eef1; --sheet: #f4f7f9; --panel: #ffffff; --card: #ffffff; --fg: #15232a; --muted: #5b6d75;
+  --line: #d3dde2; --rel: #7f959e; --accent: #00838f; --stub: #f1f5f7; --pk: #b7791f;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --sans: "Inter", system-ui, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0a1013; --sheet: #0e161a; --panel: #121c21; --card: #172329; --fg: #e2ecef; --muted: #91a6ad;
+  --line: #2a3b42; --rel: #5d757e; --accent: #4fd8e4; --stub: #121c21; --pk: #e0a84a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0a1013; --sheet: #0e161a; --panel: #121c21; --card: #172329; --fg: #e2ecef; --muted: #91a6ad;
+  --line: #2a3b42; --rel: #5d757e; --accent: #4fd8e4; --stub: #121c21; --pk: #e0a84a; color-scheme: dark }
+
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; display: flex; flex-direction: column; }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 16px;
+  border-bottom: 1px solid var(--line); background: var(--panel); }
+.bar h1 { font-family: var(--mono); font-size: 16px; margin: 0; }
+.bar .sub { color: var(--muted); font-size: 13px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; color: var(--muted); font-size: 12px; }
+.legend svg { vertical-align: middle; color: var(--fg); }
+.tools { display: flex; gap: 6px; align-items: center; margin-left: auto; flex-wrap: wrap; }
+.tools input { font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--sheet); color: var(--fg); width: 170px; }
+.tools button { font: 600 13px var(--mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--sheet); color: var(--fg); cursor: pointer; }
+.tools button:hover, .tools button:focus-visible, .tools input:focus-visible { border-color: var(--accent); outline: none; }
+#viewport { flex: 1; overflow: hidden; position: relative; background: var(--sheet); cursor: grab; touch-action: none; }
+#viewport.dragging { cursor: grabbing; }
+#stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; padding: 40px; display: flex; flex-direction: column; gap: 44px; }
+#lines { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; z-index: 0; }
+.arow { display: flex; gap: 44px; align-items: flex-start; }
+.area { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px 22px;
+  display: flex; flex-direction: column; gap: 16px; }
+.area header { display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid var(--hue); padding-bottom: 8px; }
+.area h2 { margin: 0; font: 700 15px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--hue); }
+.area header span { color: var(--muted); font-size: 12px; }
+.layers { display: flex; gap: 96px; align-items: flex-start; }
+.layer { display: flex; flex-direction: column; gap: 18px; }
+.card { width: 240px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .06); position: relative; z-index: 1; transition: opacity .15s; }
+.card .th { font: 700 13px var(--mono); padding: 7px 10px; color: #fff; background: var(--hue); }
+.card.stub { background: var(--stub); border: 1.5px dashed var(--rel); box-shadow: none; width: 200px; }
+.card.stub .th { background: none; color: var(--fg); display: flex; justify-content: space-between; gap: 6px; }
+.card.stub .th small { font: 500 10px var(--sans); color: var(--muted); align-self: center; white-space: nowrap; }
+.row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 4px; padding: 3px 10px;
+  font: 12px var(--mono); border-top: 1px solid var(--line); align-items: center; }
+.row.newgroup { border-top: 1.5px solid var(--rel); }
+.row .k { font-size: 9px; font-weight: 700; }
+.row .k.pk { color: var(--pk); }
+.row .k.fk { color: var(--accent); }
+.row .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row.pkrow .n { font-weight: 600; }
+.row .t { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.row .ref { color: var(--accent); font-size: 10.5px; font-weight: 600; }
+#lines path { fill: none; stroke: var(--rel); stroke-width: 1.5; transition: opacity .15s; }
+#lines path.hi { stroke: var(--accent); stroke-width: 2.4; }
+.focus .card:not(.hi) { opacity: .3; }
+.focus #lines path:not(.hi) { opacity: .1; }
+.card.hi { outline: 2px solid var(--accent); }
+.hint { position: absolute; right: 12px; bottom: 10px; font-size: 12px; color: var(--muted); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; pointer-events: none; }
+.png #viewport { overflow: visible; cursor: default; }
+.png #stage { position: relative; }
+.png .tools, .png .hint { display: none; }
+@media (prefers-reduced-motion: reduce) { .card, #lines path { transition: none; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>CodeBreak: Requiem ERD</h1>
+  <span class="sub" id="sub"></span>
+  <div class="legend">
+    <span><svg width="46" height="16"><path d="M2 8H44 M34 2V14 M38 2V14" stroke="currentColor" fill="none" stroke-width="1.4"/></svg> exactly one</span>
+    <span><svg width="46" height="16"><path d="M2 8H44 M2 1L13 8L2 15" stroke="currentColor" fill="none" stroke-width="1.4"/><circle cx="18" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> zero or many</span>
+    <span><svg width="46" height="16"><path d="M2 8H44 M10 2V14" stroke="currentColor" fill="none" stroke-width="1.4"/><circle cx="18" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> zero or one</span>
+    <span><svg width="34" height="18"><rect x="1" y="1" width="32" height="16" rx="3" fill="none" stroke="currentColor" stroke-dasharray="3 2"/></svg> table from another area</span>
+    <span><b style="color:var(--accent);font:600 11px var(--mono)">→ stat</b> refers to a lookup table</span>
+  </div>
+  <div class="tools">
+    <label for="find" hidden>Find a table</label>
+    <input id="find" type="search" placeholder="Find a table…" list="names">
+    <datalist id="names"></datalist>
+    <button id="zout" type="button" aria-label="Zoom out">−</button>
+    <button id="zin" type="button" aria-label="Zoom in">+</button>
+    <button id="fit" type="button">Fit</button>
+  </div>
+</div>
+<div id="viewport">
+  <div id="stage"><svg id="lines" xmlns="http://www.w3.org/2000/svg"></svg></div>
+  <div class="hint">Drag to pan · scroll to zoom · click a table to highlight its links</div>
+</div>
+<script>
+const DATA = /*DATA*/null;
+const PNG = location.search.includes("png");
+if (PNG) { document.documentElement.dataset.theme = "light"; document.body.classList.add("png"); }
+const HUES = ["#1f6f9a", "#a0407a", "#7a5a12", "#2f7d4f", "#3c5a9a", "#8a4fb0", "#9a5a1f", "#6b5bb5",
+              "#b4532a", "#5d4fb0", "#00747f", "#4f6b2a", "#5b6b73"];
+const stage = document.getElementById("stage"), svg = document.getElementById("lines"), viewport = document.getElementById("viewport");
+const LOOK = new Set(DATA.lookups);
+const areas = [];               // {title, cards: {name: el}, rows: {name: {col: el}}}
+const areaHue = {};
+let hi = 0;
+for (const row of DATA.rows) for (const a of row) areaHue[a.title] = HUES[hi++ % HUES.length];
+
+function makeCard(area, item) {
+  const t = DATA.tables[item.name];
+  const card = document.createElement("div");
+  card.className = "card" + (item.stub ? " stub" : "");
+  card.style.setProperty("--hue", areaHue[item.stub ? DATA.home[item.name] : area.title]);
+  card.innerHTML = item.stub
+    ? `<div class="th">${item.name}<small>in ${DATA.home[item.name]}</small></div>`
+    : `<div class="th">${item.name}</div>`;
+  area.rows[item.name] = {};
+  const cols = item.stub ? t.columns.filter(c => item.cols.includes(c.name)) : t.columns;
+  let lastGroup = null;
+  for (const c of cols) {
+    const fk = t.fks.find(f => f.from === c.name);
+    const r = document.createElement("div");
+    r.className = "row" + (c.pk ? " pkrow" : "") + (lastGroup && c.group !== lastGroup ? " newgroup" : "");
+    lastGroup = c.group;
+    const key = c.pk && c.fk ? "PK FK" : c.pk ? "PK" : c.fk ? "FK" : "";
+    const right = !item.stub && fk && LOOK.has(fk.table)
+      ? `<span class="ref">→ ${fk.table}</span>` : `<span class="t">${c.type}${c.nn ? "" : "?"}</span>`;
+    r.innerHTML = `<span class="k ${c.pk ? "pk" : c.fk ? "fk" : ""}">${key}</span><span class="n" title="${c.name}">${c.name}</span>${right}`;
+    card.appendChild(r);
+    area.rows[item.name][c.name] = r;
+  }
+  area.cards[item.name] = card;
+  return card;
+}
+
+for (const row of DATA.rows) {
+  const rowEl = document.createElement("div");
+  rowEl.className = "arow";
+  for (const a of row) {
+    const area = { title: a.title, cards: {}, rows: {}, stubs: new Set() };
+    const el = document.createElement("section");
+    el.className = "area";
+    el.style.setProperty("--hue", areaHue[a.title]);
+    el.innerHTML = `<header><h2>${a.title}</h2><span>${a.note}</span></header>`;
+    const layers = document.createElement("div");
+    layers.className = "layers";
+    for (const L of a.layers) {
+      const col = document.createElement("div");
+      col.className = "layer";
+      for (const item of L) { col.appendChild(makeCard(area, item)); if (item.stub) area.stubs.add(item.name); }
+      layers.appendChild(col);
+    }
+    el.appendChild(layers);
+    rowEl.appendChild(el);
+    areas.push(area);
+  }
+  stage.appendChild(rowEl);
+}
+document.getElementById("names").innerHTML = Object.keys(DATA.tables).sort().map(n => `<option value="${n}">`).join("");
+const relCount = Object.values(DATA.tables).reduce((n, t) => n + t.fks.length, 0);
+document.getElementById("sub").textContent = `${Object.keys(DATA.tables).length} tables · ${relCount} relationships · ${areas.length} areas`;
+
+// ---------- lines (only inside each area) ----------
+const paths = [];
+function box(el) {
+  const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+  return { l: r.left - s.left, r: r.right - s.left, y: (r.top + r.bottom) / 2 - s.top };
+}
+const bar = (x, y, d, o) => `M${x + d * o} ${y - 6}V${y + 6}`;
+const ring = (x, y, d, o) => { const cx = x + d * o; return `M${cx - 4} ${y}a4 4 0 1 0 8 0a4 4 0 1 0 -8 0`; };
+const crow = (x, y, d) => `M${x} ${y - 7}L${x + d * 12} ${y}L${x} ${y + 7}`;
+
+function drawLines() {
+  stage.style.transform = "none";
+  svg.innerHTML = "";
+  svg.setAttribute("width", stage.scrollWidth); svg.setAttribute("height", stage.scrollHeight);
+  paths.length = 0;
+  for (const area of areas) {
+    for (const name of Object.keys(area.cards)) {
+      if (area.stubs.has(name)) continue;
+      const t = DATA.tables[name];
+      t.fks.forEach((fk, i) => {
+        if (LOOK.has(fk.table) || !area.cards[fk.table]) return;
+        const a = box(area.rows[name][fk.from]), b = box(area.rows[fk.table][fk.to]);
+        let ax, bx, da, db, d;
+        if (fk.table === name) {                                   // self reference
+          ax = a.r; bx = b.r; da = db = 1;
+          const out = 34 + i * 8;
+          d = `M${ax} ${a.y}C${ax + out} ${a.y} ${bx + out} ${b.y} ${bx} ${b.y}`;
+        } else {
+          const ca = box(area.cards[name]), cb = box(area.cards[fk.table]);
+          if (cb.r <= ca.l) { ax = a.l; bx = b.r; da = -1; db = 1; }
+          else if (cb.l >= ca.r) { ax = a.r; bx = b.l; da = 1; db = -1; }
+          else { ax = a.r; bx = b.r; da = db = 1; }
+          const k = da === db ? 50 : Math.max(36, Math.abs(bx - ax) * 0.5);
+          d = `M${ax} ${a.y}C${ax + da * k} ${a.y} ${bx + db * k} ${b.y} ${bx} ${b.y}`;
+        }
+        const col = t.columns.find(c => c.name === fk.from);
+        d += bar(bx, b.y, db, 8) + (col && col.nn ? bar(bx, b.y, db, 13) : ring(bx, b.y, db, 17));
+        d += fk.one ? bar(ax, a.y, da, 9) + ring(ax, a.y, da, 17) : crow(ax, a.y, da) + ring(ax, a.y, da, 17);
+        const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        p.setAttribute("d", d);
+        svg.appendChild(p);
+        paths.push({ el: p, area, a: name, b: fk.table });
+      });
+    }
+  }
+  applyView();
+}
+
+// ---------- highlight ----------
+let pinned = null;
+function highlight(target) {
+  stage.classList.toggle("focus", !!target);
+  stage.querySelectorAll(".card.hi").forEach(c => c.classList.remove("hi"));
+  paths.forEach(p => p.el.classList.remove("hi"));
+  if (!target) return;
+  const { area, name } = target;
+  area.cards[name].classList.add("hi");
+  for (const p of paths) if (p.area === area && (p.a === name || p.b === name)) {
+    p.el.classList.add("hi"); area.cards[p.a].classList.add("hi"); area.cards[p.b].classList.add("hi");
+    svg.appendChild(p.el);
+  }
+}
+for (const area of areas) for (const [name, card] of Object.entries(area.cards)) {
+  const target = { area, name };
+  card.addEventListener("mouseenter", () => { if (!pinned) highlight(target); });
+  card.addEventListener("mouseleave", () => { if (!pinned) highlight(null); });
+  card.addEventListener("click", e => {
+    pinned = pinned && pinned.area === area && pinned.name === name ? null : target;
+    highlight(pinned); e.stopPropagation();
+  });
+}
+
+// ---------- pan & zoom ----------
+const view = { x: 0, y: 0, s: 1 };
+function applyView() { if (!PNG) stage.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.s})`; }
+function fit() {
+  const W = stage.scrollWidth, H = stage.scrollHeight, vw = viewport.clientWidth, vh = viewport.clientHeight;
+  view.s = Math.min(vw / W, vh / H); view.x = (vw - W * view.s) / 2; view.y = 0; applyView();
+}
+function zoomAt(f, cx, cy) {
+  const s = Math.min(2.5, Math.max(0.1, view.s * f));
+  view.x = cx - (cx - view.x) * (s / view.s); view.y = cy - (cy - view.y) * (s / view.s); view.s = s; applyView();
+}
+viewport.addEventListener("wheel", e => {
+  e.preventDefault();
+  const r = viewport.getBoundingClientRect();
+  zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+}, { passive: false });
+let drag = null;
+viewport.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false }; viewport.classList.add("dragging"); });
+window.addEventListener("pointermove", e => {
+  if (!drag) return;
+  view.x = drag.vx + e.clientX - drag.x; view.y = drag.vy + e.clientY - drag.y;
+  if (Math.abs(e.clientX - drag.x) + Math.abs(e.clientY - drag.y) > 4) drag.moved = true;
+  applyView();
+});
+window.addEventListener("pointerup", () => { viewport.classList.remove("dragging"); setTimeout(() => drag = null); });
+viewport.addEventListener("click", () => { if (drag && drag.moved) return; pinned = null; highlight(null); });
+document.getElementById("zin").onclick = () => zoomAt(1.25, viewport.clientWidth / 2, viewport.clientHeight / 2);
+document.getElementById("zout").onclick = () => zoomAt(0.8, viewport.clientWidth / 2, viewport.clientHeight / 2);
+document.getElementById("fit").onclick = fit;
+document.getElementById("find").addEventListener("change", e => {
+  const name = e.target.value.trim();
+  const area = areas.find(a => a.title === DATA.home[name]);
+  if (!area) return;
+  pinned = { area, name }; highlight(pinned);
+  stage.style.transform = "none";
+  const b = box(area.cards[name]);
+  view.s = Math.max(view.s, 0.9);
+  view.x = viewport.clientWidth / 2 - (b.l + 120) * view.s;
+  view.y = 80 - (b.y - 60) * view.s;
+  applyView();
+});
+
+function start() { drawLines(); if (!PNG) fit(); }
+(document.fonts ? document.fonts.ready : Promise.resolve()).then(start);
+window.addEventListener("resize", () => { if (!PNG) fit(); });
+</script>
+</body>
+</html>

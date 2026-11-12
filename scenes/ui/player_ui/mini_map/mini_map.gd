@@ -11,7 +11,9 @@ extends Control
 ##
 ## Quests: NPCs with a quest for you carry the same "!" / "+" as their name plate, and whatever
 ## an active quest still needs (the enemy to kill, the person to talk to, the key or its carrier,
-## a ward beacon) gets a gold quest ring.
+## a ward beacon) gets a gold quest ring. When a quest's next step is in another area, the way
+## out toward it (a portal, or on the convoy the route terminal) gets a gold ring too, with the
+## quest's name on the full-screen map (QuestRoutes).
 ## Quest targets show anywhere on the map, even past the fog, and get an arrow on the rim when
 ## they're off the edge, so you can always find them.
 ##
@@ -144,6 +146,11 @@ var _overlay_wait := 0.0                # the full-screen map redraws at most 30
 var _wants := {"kill": {}, "rarity": {}, "talk": {}, "recover": {}}
 var _wants_wait := 0.0
 var _rim: Array = []                    # [screen pos, colour] of quest targets off the map edge
+## The way toward a quest step in another area (QuestRoutes), refreshed with _wants:
+var _route_portals: Array = []          # [Portal, quest title] to ring
+var _route_terminal := ""               # a quest title: the route terminal is the way (the convoy)
+var _area_portals: Array = []           # this area's Portal nodes (found once per area)
+var _portals_area: Node = null
 ## How often the enemies are looked at (seconds). Painting uses the last look, so the map still
 ## moves smoothly under the player between looks.
 const SCAN_EVERY := 0.1
@@ -616,6 +623,7 @@ func _paint(c: Control, full := false) -> void:
 	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
 	_rim.clear()
 	_paint_portals(c, rot)
+	_paint_quest_routes(c, rot, full)
 	_paint_enemies(c, rot, full)
 	_paint_quest_spots(c, rot, full)
 	_paint_npcs(c, rot, full)
@@ -840,9 +848,13 @@ func _paint_terminals(c: Control, rot: float, full: bool) -> void:
 		if absf(screen.x) > half.x or absf(screen.y) > half.y:
 			_rim.append([screen, COL_ROUTE])
 			continue
+		if _route_terminal != "":
+			_route_ring(c, pos)
 		_glyph_badge(c, pos, rot, "R", COL_ROUTE)
 		if full:
 			_upright_tag(c, screen + Vector2(0.0, -14.0), "ROUTE TERMINAL", COL_ROUTE, rot)
+			if _route_terminal != "":
+				_upright_tag(c, screen + Vector2(0.0, -28.0), _route_terminal.to_upper(), COL_QUEST, rot)
 
 
 ## The convoy's deck systems (DeckSystem): a diamond with the system's letter (P, C, S), pale
@@ -928,6 +940,38 @@ func _refresh_wants() -> void:
 						_wants["recover"][o.target] = true
 			if st.def.ordered:
 				break                              # later steps don't count yet
+	_refresh_routes(qm)
+
+
+## Which portal leads toward a quest step in another area (QuestRoutes): the next one on the
+## shortest way there. Where the way starts at the route terminal (the convoy, the Quarantine
+## Yard), the terminal is ringed instead.
+func _refresh_routes(qm: QuestManager) -> void:
+	_route_portals.clear()
+	_route_terminal = ""
+	var am := get_tree().get_first_node_in_group("area_manager") as AreaManager
+	var area: Node = am.current_area if am != null else null
+	if area == null or not is_instance_valid(area):
+		return
+	if area != _portals_area:
+		_portals_area = area
+		_area_portals = area.find_children("*", "Portal", true, false)
+	var here := area.scene_file_path
+	var goals := QuestRoutes.goals(qm, here)
+	if goals.is_empty():
+		return
+	var hops := QuestRoutes.first_hops(here, goals)
+	for p in _area_portals:
+		var portal := p as Portal
+		if portal == null or not is_instance_valid(portal) or not portal.visible:
+			continue
+		var to := QuestRoutes.normal(portal.target_area)
+		if hops.has(to):
+			_route_portals.append([portal, str(hops[to])])
+		elif goals.has(to):
+			_route_portals.append([portal, str(goals[to])])
+	if hops.has(QuestRoutes.TERMINAL) and not _terminals.is_empty():
+		_route_terminal = str(hops[QuestRoutes.TERMINAL])     # the convoy, the Yard: by route terminal
 
 
 ## Ward beacons and dropped quest keys that an active quest still asks for.
@@ -953,6 +997,34 @@ func _is_quest_enemy(n: Node) -> bool:
 				or _wants["recover"].has(str(n.get_meta(&"carries_key", "")))
 		_quest_flags[id] = flag
 	return flag
+
+
+## The portals toward a quest step in another area: a gold ring round the portal's diamond, the
+## quest's name over it on the full-screen map, a gold rim arrow while it's off the map.
+func _paint_quest_routes(c: Control, rot: float, full: bool) -> void:
+	var half := c.size * 0.5 - Vector2(16.0, 16.0)
+	for r in _route_portals:
+		var held: Variant = r[0]                     # untyped: it may already be freed
+		if not is_instance_valid(held):
+			continue
+		var portal := held as Node3D
+		if not portal.is_inside_tree():
+			continue
+		var pos := (_to_cell_f(portal.global_position) - _center) * _px
+		var screen := pos.rotated(rot)
+		if absf(screen.x) > half.x or absf(screen.y) > half.y:
+			_rim.append([screen, COL_QUEST])
+			continue
+		_route_ring(c, pos)
+		if full:
+			_upright_tag(c, screen + Vector2(0.0, -14.0), str(r[1]).to_upper(), COL_QUEST, rot)
+
+
+## The quest-gold ring of a way out: wider than a portal's own pulse, so the two read apart.
+func _route_ring(c: Control, pos: Vector2) -> void:
+	var pulse := 0.5 + 0.5 * sin(_t * 4.0)
+	c.draw_circle(pos, 12.0 + pulse * 2.5, Color(COL_QUEST, 0.16 * _map_alpha))
+	c.draw_arc(pos, 10.0 + pulse * 1.5, 0.0, TAU, 32, Color(COL_QUEST, 0.95 * _map_alpha), 2.0, true)
 
 
 ## A pulsing gold ring round a quest target at `pos` (map space), with its name over it on the

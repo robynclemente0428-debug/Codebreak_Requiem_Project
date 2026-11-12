@@ -6,9 +6,9 @@
 
 [sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("3_prog")
-description = "Script a skill: when my_life_below()"
+description = "Script a skill: when stack_overflow"
 kind = "program_condition"
-target = "caster_life_below"
+target = "stack_overflow"
 
 
 [sub_resource type="Resource" id="Objective_2"]
@@ -23,9 +23,9 @@ script = ExtResource("2_quest")
 id = "q04_the_overflow"
 title = "THE OVERFLOW"
 description = "A giant Stack Crawler is sitting on Hex's power cells out in the Signal Wastes.
-LOCK: OVERFLOW. Its buffer holds against anyone at healthy life: only a player at half life or lower gets through.
-TIP: fight it low. Script a when my_life_below() rule with leech, barrier or guard to stay alive down there, and damage for the window.
-SCRIPT TASK: make a skill hit harder when your life is low."
+LOCK: OVERFLOW. Its buffer holds 5 hits per cast. One cast that lands 6 or more overflows it: the port opens, and everything that cast held lands at once.
+TIP: loop a skill all the way to the cap. The repeat that reaches it is the 6th hit, and when stack_overflow: fires right there: make it hit hardest. Then the buffer spills in a ring: step out, or shield up (barrier, guard).
+SCRIPT TASK: give a looped skill a when stack_overflow rule."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q02_corrupted_gate_guard"])

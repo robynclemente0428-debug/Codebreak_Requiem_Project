@@ -317,6 +317,9 @@ func _check(cond: String) -> bool:
 				result = _quests.can_start(_quests.get_def(arg))
 			"recovered":                          # a quest item or event (QuestItems id)
 				result = _quests.has_recovered(arg)
+			"exam_ungraded":                      # @ exam_ungraded:defragmenter: the rank's exam quest is
+				# done but no sandbox grade was ever recorded: passed before the exam was a sandbox one
+				result = _quests.is_completed("exam_" + arg) and _quests.exam_grade(arg) < 0
 			"deed":                               # @ deed:ending:merge, or @ deed:ending:any
 				var d := arg.split(":", true, 1)
 				if d.size() == 2 and d[1] == "any":

@@ -15,8 +15,11 @@ const TYPES := {
 	"loop_index": preload("res://systems/skills/program/conditions/loop_index_condition.gd"),
 	"target_alive": preload("res://systems/skills/program/conditions/target_alive_condition.gd"),
 	"stack_overflow": preload("res://systems/skills/program/conditions/stack_overflow_condition.gd"),
+	"killed": preload("res://systems/skills/program/conditions/killed_condition.gd"),
+	"hit_nothing": preload("res://systems/skills/program/conditions/hit_nothing_condition.gd"),
 	# Variables (see ScriptRegisters)
 	"var_compare": preload("res://systems/skills/program/conditions/var_condition.gd"),
+	"registry_pos": preload("res://systems/skills/program/conditions/registry_position_condition.gd"),   # Defragmenter
 	# Only offered with their support gem (see ProgramCondition.required_support)
 	"charge_at_least": preload("res://systems/skills/program/conditions/charge_at_least_condition.gd"),
 	"missed": preload("res://systems/skills/program/conditions/missed_condition.gd"),

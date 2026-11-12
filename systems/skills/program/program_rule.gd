@@ -16,7 +16,8 @@ const REMOVED_KNOBS: Array[StringName] = [&"max_targets", &"cleave_targets"]
 @export var effects: Array[ProgramEffect] = []
 ## null = no loop.
 @export var loop: ProgramLoop
-## "if" blocks nested in this rule (ProgramBranch). Not allowed with a loop.
+## "if" blocks nested in this rule (ProgramBranch). In a loop rule they're checked on every
+## repeat, and one may end in  break.
 @export var branches: Array[ProgramBranch] = []
 
 ## Set only on the rule branch_rule() builds for a branch: the rule it is nested in, and which
@@ -55,6 +56,26 @@ func flat() -> Array[ProgramRule]:
 	for i in branches.size():
 		out.append(branch_rule(i))
 	return out
+
+
+## True for an if block of a rule with a loop: it's judged on each repeat, and its lines only
+## change the repeats it's true for (ProgramSupport.apply_repeat_rules).
+func in_loop() -> bool:
+	return parent != null and parent.loop != null
+
+
+## True when one of this rule's if blocks ends in  break.
+func has_break() -> bool:
+	for b in branches:
+		if b.breaks:
+			return true
+	return false
+
+
+## True for a loop that can end before its count: a while (its conditions turn false), or one
+## with a break. What Brack calls a stop condition, and what the Architect exam asks for.
+func loop_stops_itself() -> bool:
+	return loop != null and (loop.mode == ProgramLoop.Mode.WHILE or has_break())
 
 
 ## The branch a branch rule stands for (null for an ordinary rule).
@@ -188,7 +209,7 @@ func action_count() -> int:
 		if not ScriptRegisters.is_write(e.knob):
 			n += 1
 	for b in branches:
-		n += b.conditions.size()
+		n += b.conditions.size() + (1 if b.breaks else 0)
 		for e in b.effects:
 			if not ScriptRegisters.is_write(e.knob):
 				n += 1
@@ -286,4 +307,8 @@ static func from_dict(d: Dictionary) -> ProgramRule:
 	for bd in d.get("branches", []):
 		if bd is Dictionary:
 			r.branches.append(ProgramBranch.from_dict(bd))
+	if r.loop != null and r.loop.break_on != ProgramLoop.Break.NONE:
+		# Old saves: the loop's own break becomes  if killed: break  /  if hit_nothing: break
+		r.branches.append(ProgramBranch.legacy_break(r.loop.break_on == ProgramLoop.Break.KILL))
+		r.loop.break_on = ProgramLoop.Break.NONE
 	return r

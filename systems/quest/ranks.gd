@@ -25,11 +25,13 @@ const LADDER := [
 ##   rules     extra rules per program        blocks   extra blocks per program
 ##   hints     the threat panel shows how to counter each threat
 ##   library   the SCRIPTING editor's save / load library (SkillComponent.library)
-##   loops     for / while / break and the blocks about repeats (see LOCKED_BLOCKS)
+##   loops     for / while / break, if blocks, and the blocks about repeats (see LOCKED_BLOCKS)
 ##   variables the Registry, a set of enemies: registry.add(target), registry.remove(target),
 ##             when target in registry, registry.size (see ScriptRegisters)
 ##   routines  routines.gd and  call name()  lines: lines written once, run from any skill
 ##             (ProgramRoutine, SkillComponent.routines)
+##   sorting   registry.sort(key=...) and  when target is registry[0]:  the registry in an
+##             order, and reads by place in it (ScriptRegisters, RegistryPositionCondition)
 ##   budget    extra script points on every skill (ScriptBudget adds exam grades and clears)
 ##   tier_blocks  every efficiency tier (Elegant, Lean) allows this many more blocks, so the
 ##             tiers keep pace with the rules the ranks add (SkillProgramLimits.for_socket).
@@ -40,7 +42,7 @@ const PERKS := [
 	{"rules": 1, "blocks": 4, "library": true, "loops": true},   # ARCHITECT
 	{"sets": 3, "rules": 1, "variables": true, "tier_blocks": 1},   # STRATEGIST
 	{"rules": 2, "budget": 2, "tier_blocks": 1, "routines": true},   # ENGINEER
-	{"budget": 2},                                        # DEFRAGMENTER
+	{"budget": 2, "sorting": true},                       # DEFRAGMENTER
 	{"budget": 2},                                        # THEORIST
 ]
 ## One line per perk for the rank-up message and the character panel tooltip.
@@ -50,20 +52,22 @@ const PERK_TEXT := {
 	"blocks": "+%d blocks per script",
 	"hints": "Threat counter hints",
 	"library": "Script library (save / load scripts)",
-	"loops": "Loops (for / while / break)",
-	"variables": "The Registry (a set of enemies: add, remove, in, .size), and if blocks inside a rule",
+	"loops": "Loops (for / while / break) and if blocks inside a rule",
+	"variables": "The Registry (a set of enemies: add, remove, in, .size)",
 	"budget": "+%d script points on every skill",
 	"routines": "Routines: write lines once in routines.gd, run them from any skill with call name() (1 block)",
 	"tier_blocks": "Elegant and Lean allow +%d block",
+	"sorting": "Sorting: registry.sort(key=hp) puts the registry in order, and when target is registry[0] picks by place",
 }
 ## Perks that are on / off (the rest are numbers).
-const FLAG_PERKS := ["hints", "library", "loops", "variables", "routines"]
+const FLAG_PERKS := ["hints", "library", "loops", "variables", "routines", "sorting"]
 
 ## Script blocks a perk unlocks. Below that rank they don't exist for the player: the editor
 ## doesn't list them, the gem vendor doesn't sell them, and a script using one doesn't compile.
 ##   "loop"            for / while / break (ProgramLoop)
 ##   "if"              if blocks nested in a rule (ProgramBranch)
 ##   "call"            call lines and routines.gd (ProgramRoutine)
+##   "sort"            registry.sort lines (ProgramEffect op "sort")
 ##   "cond:<type id>"  a condition block (ProgramConditions.TYPES)
 ##   "knob:<id>"       a knob (SkillKnob.id)
 ##   "gem:<id>"        a support gem (SupportGemDefinition.id)
@@ -72,11 +76,15 @@ const LOCKED_BLOCKS := {
 	"cond:loop_index": "loops",
 	"cond:target_alive": "loops",
 	"cond:stack_overflow": "loops",
+	"cond:killed": "loops",
+	"cond:hit_nothing": "loops",
 	"gem:for_loop_support": "loops",
 	"cond:var_compare": "variables",
 	"knob:var": "variables",
-	"if": "variables",
+	"if": "loops",
 	"call": "routines",
+	"sort": "sorting",
+	"cond:registry_pos": "sorting",
 }
 
 

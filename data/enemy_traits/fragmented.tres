@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EnemyModifierDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="1_def"]
+[ext_resource type="Script" path="res://systems/enemies/traits/fragment_lock_trait.gd" id="2_trait"]
+
+[resource]
+script = ExtResource("1_def")
+id = "fragmented"
+display_name_prefix = "Fragmented"
+on_spawn_script = ExtResource("2_trait")
+weight = 0

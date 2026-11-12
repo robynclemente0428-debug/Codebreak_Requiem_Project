@@ -9,4 +9,5 @@ display_name = "Sniper"
 tags = Array[int]([0, 2, 3, 6, 7])
 animation_set = "rifle"
 two_handed = true
+skill_mana_cost = 5.0
 metadata/_custom_type_script = "uid://cps3ri322o16r"

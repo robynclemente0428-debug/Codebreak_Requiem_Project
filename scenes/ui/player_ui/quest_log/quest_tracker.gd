@@ -1,6 +1,7 @@
 class_name QuestTracker
 extends Control
-## Always-visible overlay: active quests and their objectives, plus a toast banner.
+## Always-visible overlay: active quests and their objectives, plus the message feed (short
+## lines stacked at the top centre, placed by Announcer).
 ## Sits in the top-right corner under the minimap (and moves up when the minimap is hidden).
 ## Its header has a [-] / [+] button (or the minimize key) that folds it down to one line.
 ## Only that button takes the mouse; the rest never blocks clicks meant for the game.
@@ -31,8 +32,7 @@ var _count_label: Label
 var _min_btn: Button
 var _minimized := false
 var _minimap: Control
-var _toast: Label
-var _toast_tween: Tween
+var _feed: VBoxContainer          # the messages on screen, oldest at the top
 var _scan: Scan                   # CRT scanlines and a sweep over the panel, like the minimap's
 var _style: StyleBoxFlat          # the panel's, brightened while hovered
 
@@ -42,6 +42,7 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	process_priority = Announcer.FEED_AFTER        # places itself after Announcer and the headlines
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_font = font
@@ -147,19 +148,14 @@ func _build_ui() -> void:
 	_box.add_theme_constant_override("separation", 3)
 	outer.add_child(_box)
 
-	_toast = Label.new()
-	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_toast.anchor_left = 0.0
-	_toast.anchor_right = 1.0
-	_toast.offset_top = TOAST_TOP
-	_toast.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_toast.add_theme_font_size_override("font_size", base_font_size + 10)
-	_toast.add_theme_color_override("font_outline_color", Color.BLACK)
-	_toast.add_theme_constant_override("outline_size", 6)
-	if _font:
-		_toast.add_theme_font_override("font", _font)
-	_toast.modulate.a = 0.0
-	add_child(_toast)
+	_feed = VBoxContainer.new()
+	_feed.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_feed.anchor_left = 0.0
+	_feed.anchor_right = 1.0
+	_feed.offset_top = Announcer.FEED_MIN
+	_feed.add_theme_constant_override("separation", FEED_SEPARATION)
+	_feed.modulate.a = Announcer.OPACITY          # every line under it, a little see-through
+	add_child(_feed)
 
 
 func _make_min_button() -> Button:
@@ -245,27 +241,64 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 # ---------- MESSAGES ----------
-const TOAST_TOP := 215.0          # under the tutorial banner (TutorialHints.BANNER_Y + its height)
-const TOAST_GAP := 14.0           # below the AREA CLEARED band while it's up
+## At most this many lines at once: a new one past it pushes the oldest out.
+const FEED_MAX := 3
+const FEED_SEPARATION := 6                # px between lines (also in _fit_feed's sums)
+## Seconds a line holds before fading, plus this much for each line after its first.
+const FEED_HOLD := 2.4
+const FEED_HOLD_PER_LINE := 0.8
+const FEED_FADE := 0.6
 
 
-## The message line sits under the tutorial banner, or under the AREA CLEARED band while that is
-## on screen (it would cover the band's text otherwise: a ward beacon coming online clears the
-## area in the same moment).
-func _place_toast() -> void:
-	if _toast == null:
+## The feed sits where Announcer says (under the tutorial banner, or under a headline such as
+## AREA CLEARED while one is up). It drops out of the way at once and glides back up.
+func _place_feed(delta: float) -> void:
+	if _feed == null:
 		return
-	var band := AreaClearedBanner.bottom_y(get_tree())
-	var top := TOAST_TOP if band < 0.0 else maxf(TOAST_TOP, band - global_position.y + TOAST_GAP)
-	if not is_equal_approx(_toast.offset_top, top):
-		_toast.offset_top = top
+	var want := Announcer.feed_top() - global_position.y
+	var top := want
+	if _feed.get_child_count() > 0 and want < _feed.offset_top:
+		top = lerpf(_feed.offset_top, want, minf(1.0, delta * 12.0))
+	if not is_equal_approx(_feed.offset_top, top):
+		_feed.offset_top = top
+		_feed.offset_bottom = top
+	_fit_feed(Announcer.column_bottom() - (global_position.y + top))
+
+
+## Shows the lines that fit in `room` px, oldest first. The rest wait, hidden with their clocks
+## stopped, until a headline or the strip makes room (on a small screen or a big UI size).
+func _fit_feed(room: float) -> void:
+	var used := 0.0
+	var full := false
+	for line in _feed.get_children():
+		var l := line as Label
+		if l == null or l.is_queued_for_deletion():
+			continue
+		var h := l.get_combined_minimum_size().y
+		full = full or used + h > room
+		_set_waiting(l, full)
+		if not full:
+			used += h + FEED_SEPARATION
+
+
+## A line waits hidden, its hold-and-fade clock paused, or comes back and carries on.
+func _set_waiting(l: Label, waiting: bool) -> void:
+	if l.visible != waiting:
+		return
+	l.visible = not waiting
+	var t: Tween = l.get_meta(&"tween") if l.has_meta(&"tween") else null
+	if t != null and t.is_valid():
+		if waiting:
+			t.pause()
+		else:
+			t.play()
 
 
 # ---------- FOLLOWING THE MINIMAP ----------
 ## Stays right under the minimap, and glides up into its place when the minimap is hidden.
 ## Fades with the minimap's opacity ([ and ], see Minimap.opacity), so the two read as one.
-func _process(_delta: float) -> void:
-	_place_toast()
+func _process(delta: float) -> void:
+	_place_feed(delta)
 	if _scan != null:
 		_scan.visible = _panel != null and _panel.visible
 	if _panel == null or not _panel.visible:
@@ -397,15 +430,54 @@ func show_toast(text: String, colour: Color) -> void:
 	_show_toast(text, colour)
 
 
+## A new line at the bottom of the feed. The same text again while it's still up counts up
+## (x2, x3) instead of adding a line.
 func _show_toast(text: String, colour: Color) -> void:
-	_toast.text = text
-	_toast.add_theme_color_override("font_color", colour)
-	_toast.modulate.a = 1.0
-	if _toast_tween:
-		_toast_tween.kill()
-	_toast_tween = create_tween()
-	_toast_tween.tween_interval(2.0)
-	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.6)
+	for line in _feed.get_children():
+		if line.get_meta(&"text", "") == text and not line.is_queued_for_deletion() \
+				and line.get_meta(&"fading", false) == false:
+			var n: int = line.get_meta(&"count", 1) + 1
+			line.set_meta(&"count", n)
+			(line as Label).text = "%s  x%d" % [text, n]
+			_hold(line as Label)
+			return
+	var l := Label.new()
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	l.text = text
+	l.set_meta(&"text", text)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.add_theme_font_size_override("font_size", base_font_size + 10)
+	l.add_theme_color_override("font_color", colour)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 6)
+	if _font:
+		l.add_theme_font_override("font", _font)
+	_feed.add_child(l)
+	_hold(l)
+	# Past FEED_MAX the oldest leave at once (the rest move up into their place)
+	var live := _feed.get_children().filter(func(c: Node) -> bool: return not c.is_queued_for_deletion())
+	for i in range(live.size() - FEED_MAX):
+		live[i].queue_free()
+	# Fitted now, not next frame: a toast sent after this frame's _process (a timer, a signal)
+	# would otherwise show for a frame where there's no room for it
+	_fit_feed(Announcer.column_bottom() - (global_position.y + _feed.offset_top))
+
+
+## Shows `l` fully, holds it (again, if it was already up), fades it out and frees it.
+func _hold(l: Label) -> void:
+	var old: Tween = l.get_meta(&"tween") if l.has_meta(&"tween") else null
+	if old != null and old.is_valid():
+		old.kill()
+	l.modulate.a = 1.0
+	l.set_meta(&"fading", false)
+	var t := l.create_tween()
+	t.tween_interval(FEED_HOLD + FEED_HOLD_PER_LINE * l.text.count("\n"))
+	t.tween_callback(func() -> void: l.set_meta(&"fading", true))
+	t.tween_property(l, "modulate:a", 0.0, FEED_FADE)
+	t.tween_callback(l.queue_free)
+	l.set_meta(&"tween", t)
+	if not l.visible:
+		t.pause()                                   # still waiting for room (_fit_feed)
 
 
 # ---------- HELPERS ----------

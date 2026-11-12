@@ -1,0 +1,589 @@
+<title>CodeBreak Requiem ERD</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column; a jump bar of the six areas, then one diagram card per area */
+:root {
+  --bg: #f4f7f8; --surface: #ffffff; --fg: #142026; --muted: #56676f;
+  --line: #d5dfe3; --accent: #00838f; --accent-soft: #e0f4f6;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --sans: "Inter", system-ui, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0d1417; --surface: #141e22; --fg: #e3edf0; --muted: #93a7ae;
+  --line: #26363c; --accent: #4fd8e4; --accent-soft: #123036; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0d1417; --surface: #141e22; --fg: #e3edf0; --muted: #93a7ae;
+  --line: #26363c; --accent: #4fd8e4; --accent-soft: #123036; color-scheme: dark }
+
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1100px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 28px; }
+header { display: flex; flex-direction: column; gap: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--mono); font-size: clamp(24px, 4vw, 34px); margin: 0; text-wrap: balance; }
+h2 { font-family: var(--mono); font-size: 19px; margin: 0; }
+p { margin: 0; max-width: 68ch; color: var(--muted); }
+code { font-family: var(--mono); font-size: .9em; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; color: var(--fg); }
+nav { display: flex; flex-wrap: wrap; gap: 8px; }
+nav a { font-family: var(--mono); font-size: 13px; color: var(--fg); text-decoration: none;
+  border: 1px solid var(--line); background: var(--surface); padding: 6px 12px; border-radius: 999px; }
+nav a:hover, nav a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+section { display: flex; flex-direction: column; gap: 12px; scroll-margin-top: 16px; }
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.count { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.diagram { background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 16px; overflow-x: auto; }
+.diagram pre { margin: 0; min-width: 640px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 22px; font-size: 13px; color: var(--muted); }
+.legend b { font-family: var(--mono); color: var(--fg); font-weight: 500; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">database/schema.sql · SQLite · 70 tables</span>
+    <h1>CodeBreak: Requiem data model</h1>
+    <p>The game's content (the <code>.tres</code> files in <code>data/</code>) and each character's save, drawn as entity-relationship diagrams. The overview shows how the areas connect; each area below lists its tables with key columns.</p>
+  </header>
+
+  <div class="legend">
+    <span><b>||--o{</b> one to many</span>
+    <span><b>||--o|</b> one to zero-or-one</span>
+    <span><b>PK</b> primary key</span>
+    <span><b>FK</b> foreign key</span>
+    <span><b>json</b> stored whole as JSON</span>
+  </div>
+
+  <nav aria-label="Diagram sections">
+    <a href="#overview">Overview</a>
+    <a href="#items">Items &amp; gems</a>
+    <a href="#enemies">Enemies</a>
+    <a href="#world">World, quests &amp; exams</a>
+    <a href="#shops">Classes &amp; shops</a>
+    <a href="#player">Character &amp; gear</a>
+    <a href="#progress">Scripts &amp; progress</a>
+  </nav>
+
+  <section id="overview">
+    <div class="head"><h2>Overview</h2><span class="count">main tables only</span></div>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  subgraph Content["Game content (data/*.tres)"]
+    CC[character_class] --> CT[class_trait]
+    ITEM[item] --> WT[weapon_type]
+    ITEM --> ET[equipment_type]
+    ITEM --> SG[skill_gem]
+    ITEM --> SUP[support_gem]
+    ITEM --> STIM[stim]
+    AFF[affix]
+    EN[enemy] --> EM[enemy_modifier]
+    EN --> SG
+    Q[quest] --> OBJ[quest_objective]
+    Q --> RANK[rank]
+    EX[exam] --> RANK
+    EX --> EN
+    ACT[act] --> WP[waypoint]
+    WP --> Q
+    SHOP[shop] --> ITEM
+  end
+  subgraph Save["Player save (slot_N.json)"]
+    PC[player_character] --> II[item_instance]
+    PC --> SOCK[skill_socket]
+    PC --> CQ[character_quest]
+    PC --> LIB[script_library / routines]
+    SOCK --> PROG[skill_program]
+  end
+  PC --> CC
+  PC --> WP
+  II --> ITEM
+  II --> AFF
+  CQ --> Q
+</pre></div>
+  </section>
+
+  <section id="items">
+    <div class="head"><h2>Items &amp; gems</h2><span class="count">17 tables</span></div>
+    <p>One <code>item</code> row per ItemDefinition. <code>item_kind</code> says which one of the five type columns is filled.</p>
+    <div class="diagram"><pre class="mermaid">
+erDiagram
+  item {
+    text item_id PK
+    text display_name
+    text item_kind "weapon, equipment, skill_gem, support_gem, stim, quest"
+    text weapon_type_id FK
+    text equipment_type_id FK
+    text skill_gem_id FK
+    text support_gem_id FK
+    text stim_id FK
+    int item_level
+    int base_value
+  }
+  weapon_type {
+    text weapon_type_id PK
+    real base_range
+    int two_handed
+    real skill_mana_cost
+  }
+  equipment_type {
+    text equipment_type_id PK
+    int slot_id FK
+  }
+  equipment_slot {
+    int slot_id PK
+    text code "WEAPON, HEAD, STIM_1..."
+  }
+  skill_gem {
+    text skill_gem_id PK
+    int max_support_slots
+    real base_mana_cost
+    json base_flags_json
+  }
+  support_gem {
+    text support_gem_id PK
+    real mana_cost_increase
+    json program_knobs_json
+  }
+  stim {
+    text stim_id PK
+    text kind "HEALTH, MANA"
+    real base_amount
+    int max_charges
+  }
+  affix {
+    text affix_id PK
+    text affix_type "prefix, suffix"
+    text shape
+    int weight
+    int min_item_level
+    int stat_id FK
+    real min_value
+    real max_value
+  }
+  tag {
+    int tag_id PK
+    text tag_family "item, enemy, gem, affix_group"
+    text code
+  }
+  stat {
+    int stat_id PK
+    text code
+  }
+  item_base_stat {
+    text item_id PK
+    int stat_id PK
+    real value
+  }
+  skill_gem_modifier {
+    text skill_gem_id PK
+    int seq PK
+    int stat_id FK
+    int mod_op_id FK
+    real value
+  }
+  item ||--o| weapon_type : "is a"
+  item ||--o| equipment_type : "is a"
+  item ||--o| skill_gem : "is a"
+  item ||--o| support_gem : "is a"
+  item ||--o| stim : "is a"
+  equipment_type }o--|| equipment_slot : "goes in"
+  item ||--o{ item_base_stat : has
+  item_base_stat }o--|| stat : ""
+  item }o--o{ tag : "item_allowed_affix_tag"
+  affix }o--o{ tag : "affix_tag"
+  weapon_type }o--o{ tag : "weapon_type_tag"
+  skill_gem }o--o{ tag : "skill_gem_tag"
+  support_gem }o--o{ tag : "support_gem_allowed_tag"
+  skill_gem ||--o{ skill_gem_modifier : has
+  skill_gem }o--o{ weapon_type : "skill_gem_required_weapon"
+  affix }o--o| stat : rolls
+</pre></div>
+  </section>
+
+  <section id="enemies">
+    <div class="head"><h2>Enemies</h2><span class="count">9 tables</span></div>
+    <p>Enemy traits from <code>data/enemy_traits</code> are modifiers with an on-spawn script, so they share <code>enemy_modifier</code> with <code>is_trait = 1</code>.</p>
+    <div class="diagram"><pre class="mermaid">
+erDiagram
+  enemy {
+    text enemy_id PK
+    text display_name
+    real max_health
+    real armour
+    real move_speed
+    real aggro_range
+    real attack_range
+    real min_attack_damage
+    real max_attack_damage
+    int act_boss
+  }
+  enemy_skill {
+    text enemy_id PK
+    int seq PK
+    text skill_gem_id FK
+  }
+  enemy_skill_support {
+    text enemy_id PK
+    int seq PK
+    text support_gem_id PK
+  }
+  enemy_modifier {
+    text enemy_modifier_id PK
+    text display_name_prefix
+    int weight
+    text min_rarity FK
+    int is_trait
+  }
+  enemy_modifier_stat {
+    text enemy_modifier_id PK
+    int seq PK
+    int stat_id FK
+    real value
+  }
+  enemy_innate_trait {
+    text enemy_id PK
+    text trait_script PK
+  }
+  enemy_pool_rarity {
+    text enemy_id PK
+    text rarity_id PK
+  }
+  rarity {
+    text rarity_id PK
+    int sort_order
+  }
+  skill_gem {
+    text skill_gem_id PK
+  }
+  support_gem {
+    text support_gem_id PK
+  }
+  enemy ||--o{ enemy_skill : casts
+  enemy_skill }o--|| skill_gem : ""
+  enemy_skill ||--o{ enemy_skill_support : ""
+  enemy_skill_support }o--|| support_gem : ""
+  enemy ||--o{ enemy_innate_trait : has
+  enemy ||--o{ enemy_pool_rarity : "spawns as"
+  enemy_pool_rarity }o--|| rarity : ""
+  enemy_modifier ||--o{ enemy_modifier_stat : has
+  enemy_modifier }o--|| rarity : "min rarity"
+  enemy }o--o{ enemy_modifier : "enemy_allowed_modifier_tag (by tag)"
+</pre></div>
+  </section>
+
+  <section id="world">
+    <div class="head"><h2>World, quests &amp; exams</h2><span class="count">16 tables</span></div>
+    <p>Waypoints unlock through quests and recovered keys. Rank quests grant a rank, and each rank has one exam in Sudo's sandbox.</p>
+    <div class="diagram"><pre class="mermaid">
+erDiagram
+  act {
+    int act_number PK
+    text title
+    int convoy_route
+  }
+  waypoint {
+    text waypoint_id PK
+    int act_number FK
+    int seq
+    text kind "TOWN, DUNGEON, BOSS"
+    text scene_path
+    int dungeon_level
+    text route_after_id FK
+    text route_needs_key
+  }
+  waypoint_link {
+    text from_waypoint_id PK
+    text to_waypoint_id PK
+  }
+  waypoint_threat {
+    text waypoint_id PK
+    text threat_id PK
+  }
+  quest {
+    text quest_id PK
+    text title
+    int ordered
+    int reward_credits
+    int reward_support_choice
+    text next_quest_id FK
+    text grants_rank_id FK
+  }
+  quest_objective {
+    text quest_id PK
+    int seq PK
+    text kind "kill, recover, talk..."
+    text target
+    int required
+  }
+  quest_prerequisite {
+    text quest_id PK
+    text requires_quest_id PK
+  }
+  quest_reward_item {
+    text quest_id PK
+    int seq PK
+    text item_id FK
+  }
+  rank {
+    text rank_id PK
+    text display_name
+    int ladder_order
+  }
+  exam {
+    text exam_id PK
+    text rank_id FK
+    real time_limit
+    real par_time
+    int required_fires
+  }
+  exam_wave {
+    text exam_id PK
+    int wave_no PK
+    int size
+    text enemy_id FK
+  }
+  enemy {
+    text enemy_id PK
+  }
+  item {
+    text item_id PK
+  }
+  act ||--o{ waypoint : contains
+  waypoint ||--o{ waypoint_link : "links to"
+  waypoint ||--o{ waypoint_threat : has
+  waypoint }o--o{ quest : "waypoint_required_quest"
+  waypoint |o--o| waypoint : "route after"
+  quest ||--|{ quest_objective : has
+  quest ||--o{ quest_prerequisite : requires
+  quest ||--o{ quest_reward_item : rewards
+  quest_reward_item }o--|| item : ""
+  quest |o--o| quest : "next quest"
+  quest }o--o| rank : grants
+  rank ||--o| exam : "tested by"
+  exam ||--|{ exam_wave : runs
+  exam_wave }o--|| enemy : spawns
+  exam }o--o{ item : "exam_lent_item"
+</pre></div>
+  </section>
+
+  <section id="shops">
+    <div class="head"><h2>Classes &amp; shops</h2><span class="count">6 tables</span></div>
+    <div class="diagram"><pre class="mermaid">
+erDiagram
+  character_class {
+    text class_id PK
+    text display_name
+    int base_strength
+    int base_dexterity
+    int base_intelligence
+    text starting_weapon_id FK
+    text starting_skill_gem_id FK
+    text class_trait_id FK
+  }
+  class_trait {
+    text class_trait_id PK
+    real knob_cost_mult
+    real knob_effect_mult
+    real damage_per_10_armour
+    int phase_through_enemies
+  }
+  shop {
+    text shop_id PK
+    int random_slots
+    real buy_markup
+    real sell_ratio
+    int allow_reroll
+    int reroll_base_cost
+  }
+  shop_item {
+    text shop_id PK
+    text item_id PK
+    text list PK "fixed, random_pool, excluded"
+  }
+  shop_catalog_folder {
+    text shop_id PK
+    text folder PK
+  }
+  dialogue {
+    text dialogue_id PK
+    text source
+  }
+  item {
+    text item_id PK
+  }
+  character_class }o--|| class_trait : has
+  character_class }o--o| item : "starting gear"
+  shop ||--o{ shop_item : stocks
+  shop_item }o--|| item : ""
+  shop ||--o{ shop_catalog_folder : "pulls from"
+</pre></div>
+  </section>
+
+  <section id="player">
+    <div class="head"><h2>Character &amp; gear</h2><span class="count">9 tables</span></div>
+    <p>Every item copy a character owns is one <code>item_instance</code>. Where it sits is a row in exactly one of the backpack, equipped or socket tables.</p>
+    <div class="diagram"><pre class="mermaid">
+erDiagram
+  player_character {
+    int character_id PK
+    int slot_no "0 to 9"
+    text name
+    text class_id FK
+    int level
+    int xp
+    int strength
+    int dexterity
+    int intelligence
+    int credits
+    text last_town_id FK
+    int active_script_set
+    int playtime_seconds
+  }
+  item_instance {
+    int instance_id PK
+    int character_id FK
+    text item_id FK
+    text rarity_id FK
+    int item_level
+    int charges
+  }
+  item_instance_affix {
+    int instance_id PK
+    int seq PK
+    text affix_id FK
+    real rolled_value
+    real rolled_min
+    real rolled_max
+  }
+  inventory_entry {
+    int character_id PK
+    int position PK
+    int instance_id FK
+  }
+  equipped_item {
+    int character_id PK
+    int slot_id PK
+    int instance_id FK
+  }
+  skill_socket {
+    int socket_id PK
+    int character_id FK
+    int socket_index
+    int gem_instance_id FK
+    text action
+  }
+  skill_socket_support {
+    int socket_id PK
+    int position PK
+    int support_instance_id FK
+  }
+  character_class {
+    text class_id PK
+  }
+  item {
+    text item_id PK
+  }
+  affix {
+    text affix_id PK
+  }
+  player_character }o--|| character_class : plays
+  player_character ||--o{ item_instance : owns
+  item_instance }o--|| item : "copy of"
+  item_instance ||--o{ item_instance_affix : rolled
+  item_instance_affix }o--|| affix : ""
+  player_character ||--o{ inventory_entry : backpack
+  inventory_entry |o--|| item_instance : holds
+  player_character ||--o{ equipped_item : wears
+  equipped_item |o--|| item_instance : holds
+  player_character ||--o{ skill_socket : has
+  skill_socket |o--o| item_instance : "skill gem"
+  skill_socket ||--o{ skill_socket_support : ""
+  skill_socket_support |o--|| item_instance : "support gem"
+</pre></div>
+  </section>
+
+  <section id="progress">
+    <div class="head"><h2>Scripts &amp; progress</h2><span class="count">11 tables</span></div>
+    <p>Skill scripts are saved as JSON (<code>SkillProgram.to_dict()</code>). Quest status, exam grades, recovered keys and deeds come from <code>QuestManager.to_dict()</code>.</p>
+    <div class="diagram"><pre class="mermaid">
+erDiagram
+  player_character {
+    int character_id PK
+  }
+  skill_socket {
+    int socket_id PK
+    int character_id FK
+  }
+  skill_program {
+    int socket_id PK
+    int set_index PK
+    json program_json
+  }
+  script_set_name {
+    int character_id PK
+    int set_index PK
+    text name
+  }
+  script_library_entry {
+    int character_id PK
+    text skill_gem_id PK
+    text name PK
+    json program_json
+  }
+  script_routine {
+    int character_id PK
+    int seq PK
+    text name
+    json body_json
+  }
+  character_quest {
+    int character_id PK
+    text quest_id PK
+    text status "ACTIVE, READY_TO_TURN_IN, COMPLETED"
+  }
+  character_objective_progress {
+    int character_id PK
+    text quest_id PK
+    int seq PK
+    int count
+  }
+  exam_grade {
+    int character_id PK
+    text rank_id PK
+    int grade "0 PASS, 1 MERIT, 2 DISTINCTION"
+  }
+  recovered_item {
+    int character_id PK
+    text recover_id PK
+  }
+  deed {
+    int character_id PK
+    text kind PK
+    text target PK
+    int count
+  }
+  pending_support_choice {
+    int character_id PK
+    text quest_id PK
+  }
+  quest {
+    text quest_id PK
+  }
+  player_character ||--o{ skill_socket : has
+  skill_socket ||--o{ skill_program : "one per script set"
+  player_character ||--o{ script_set_name : names
+  player_character ||--o{ script_library_entry : "library (Architect)"
+  player_character ||--o{ script_routine : "routines (Engineer)"
+  player_character ||--o{ character_quest : tracks
+  character_quest ||--o{ character_objective_progress : counts
+  character_quest }o--|| quest : ""
+  player_character ||--o{ exam_grade : earned
+  player_character ||--o{ recovered_item : found
+  player_character ||--o{ deed : logged
+  player_character ||--o{ pending_support_choice : owed
+</pre></div>
+  </section>
+
+  <footer>The lookup tables <code>stat</code>, <code>tag</code> and <code>mod_op</code> appear only where they matter. The full column list for every table is in <code>database/schema.sql</code>.</footer>
+</div>

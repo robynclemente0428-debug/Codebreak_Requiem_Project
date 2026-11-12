@@ -7,7 +7,7 @@
 script = ExtResource("1_spec")
 rank_id = "architect"
 title = "ARCHITECT EXAM"
-brief = Array[String](["Tougher test processes, a few at a time, in 3 waves.", "Your script needs a loop that knows when to stop: a while loop, or a for loop with break.", "The sandbox lends you loops for this exam.", "The loop must repeat at least 6 times.", "Clear every wave within 90 seconds.", "Graded on: your script's efficiency tier, time (par 55 s), damage taken (par 30%)."])
+brief = Array[String](["Tougher test processes, a few at a time, in 3 waves.", "Your script needs a loop that knows when to stop: a while loop, or a for loop with an if block that breaks (if hit_nothing: break).", "The sandbox lends you loops and if blocks for this exam.", "The loop must repeat at least 6 times.", "Clear every wave within 90 seconds.", "Graded on: your script's efficiency tier, time (par 55 s), damage taken (par 30%)."])
 required_condition = ""
 required_condition_label = "loop repeats"
 required_fires = 6

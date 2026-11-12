@@ -37,6 +37,11 @@ var _hover_action: StringName = &""     # the hotkey whose slot the mouse is ove
 var _set_label: RichTextLabel           # "SCRIPT SET  A  B  C  [X]" over the bar's left end
 var _set_msg: Label                     # "SCRIPT SET B" (or why it didn't swap), fading
 var _set_tween: Tween
+## The bar stays centred unless the stim gauges (beside the life bar) would come closer than
+## STIM_CLEARANCE px: then it moves right just enough (_shift px). A wider life bar (its UI
+## scale) pushes the stims, and so the bar, along with it.
+const STIM_CLEARANCE := 40.0                  # px
+var _shift := 0.0
 
 
 func _enter_tree() -> void:
@@ -71,8 +76,8 @@ func _layout() -> void:
 	anchor_right = 0.5
 	anchor_top = 1.0
 	anchor_bottom = 1.0
-	offset_left = offset_from_center.x - width * 0.5
-	offset_right = offset_from_center.x + width * 0.5
+	offset_left = offset_from_center.x + _shift - width * 0.5
+	offset_right = offset_from_center.x + _shift + width * 0.5
 	offset_bottom = -offset_from_center.y
 	offset_top = offset_bottom - slot_size
 
@@ -220,7 +225,24 @@ func _on_skill_used(duration: float, action: StringName) -> void:
 			(_slots[a] as BarSlot).start_cooldown(duration, a == action)
 
 
+## Where the stims sit when they hug the life bar (StimHud.MIN_GAP to its right): measured from
+## the life bar, not the stims themselves, which centre in whatever room the bar leaves.
+func _keep_clear_of_stims() -> void:
+	var want := 0.0
+	var hp := get_tree().get_first_node_in_group("hp_hud") as Control
+	var stims := get_tree().get_first_node_in_group("stim_hud") as Control
+	if hp != null and stims != null and hp.is_visible_in_tree() and stims.is_visible_in_tree():
+		var stims_right := hp.get_global_rect().end.x + StimHud.MIN_GAP \
+				+ (stims.offset_right - stims.offset_left)
+		var centred_left := get_global_rect().position.x - _shift
+		want = maxf(0.0, stims_right + STIM_CLEARANCE - centred_left)
+	if not is_equal_approx(want, _shift):
+		_shift = want
+		_layout()
+
+
 func _process(delta: float) -> void:
+	_keep_clear_of_stims()
 	for action in _slots:
 		var slot: BarSlot = _slots[action]
 		slot.key_text = GemText.key_label(action)      # follows rebinding instantly

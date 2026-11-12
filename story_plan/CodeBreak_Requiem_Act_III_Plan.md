@@ -52,7 +52,7 @@ The difference from the Echo lock matters. Echo asks "switch anything"; Act III 
 
 The Registry is the game's data structure (a set of enemies). No functions are needed.
 
-**If blocks (Strategist).** A rule can hold `if` blocks, one level deep and not in a rule with a loop:
+**If blocks (unlocked at Architect, Act II; used with the Registry here).** A rule can hold `if` blocks, one level deep. In a rule with a loop they come after `cast()`, are checked each time a cast or repeat lands, and may end in `break` (`if hit_nothing: break`); `killed` and `hit_nothing` are the loop conditions for them:
 
 ```
 when every_nth_cast(3):

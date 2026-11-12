@@ -102,17 +102,17 @@ Hex: A big crawler is sitting on all my power cells. Kill it and I’ll pay well
 
 ~ accept_q04_the_overflow
 > start_quest q04_the_overflow
-Hex: It's out in the Signal Wastes. And it's a buffer, not a bug: it holds against anyone who's comfortable.
-# NEW: the Overflow's lock (OverflowLock)
-Hex: Full life, you bounce off. Get down to half and it overflows. That's when your hits land.
-Hex: So don't heal up. Script something that keeps you alive down there. Leech, a barrier, whatever keeps you standing.
+Hex: It's out in the Signal Wastes. And it's a buffer, not a bug: five slots, and nobody ever checked the bounds.
+# The Overflow's lock (OverflowLock): one cast that lands more hits than the buffer holds
+Hex: Hit it once, it files it away. Hit it five times in one go, it files that too. Six in one cast and it runs off the end.
+Hex: Loop something all the way to the cap. When it overflows it spills, so either step back or have a shield scripted.
 -> end
 
 ~ remind_q04_the_overflow
 # NEW line below
 Hex: My cells are still under that thing.
 # NEW line below
-Hex: Half life or lower, or it doesn't feel a thing.
+Hex: Six hits, one cast. Five it can hold.
 
 ~ ready_q04_the_overflow
 Hex: Done?

@@ -1,74 +1,159 @@
 class_name OverflowLock
 extends PortLock
-## OVERFLOW (The Overflow, Hex's Stack Crawler): its buffer holds against anyone at healthy life.
-## Only a player whose life is at or below `life_threshold` gets through (see PortLock): while
-## any player is that low, its port is open and it glows. Fighting at full life does nothing.
-## The answer is a script that keeps you alive down there: a when my_life_below() rule with
-## leech, barrier or guard, and damage for the window.
-##     "BUFFER HOLDS // LIFE 82% > 50%"     a hit from a player above the line (now and then)
-##     "BUFFER OVERFLOW // PORT OPEN"       a player dropped to the line
-##     "BUFFER STABLE // PORT CLOSED"       nobody is that low any more
+## OVERFLOW (The Overflow, Hex's Stack Crawler): a buffer with no bounds check. It holds
+## `buffer_size` hits per write; a write is one cast and everything it does: its loop's repeats
+## (ProgramLoopRunner), its projectiles, pierces and splashes. A write that lands more hits than
+## the buffer holds overflows it (see PortLock): the port opens for `open_seconds`, the write's
+## held damage lands at once, and the buffer SPILLS, a ring of corrupted data that hits everyone
+## in `spill_radius` for `spill_damage` of their life after `spill_delay` seconds (barrier and
+## guard soak it, like any hit). A write that stops short does nothing: "WRITE 3/5 // HOLDS".
+## The answer is volume in one cast: a loop to the cap (a single-target skill's 6th hit is the
+## repeat where  when stack_overflow:  fires), or a loop on a skill that fires several projectiles.
+## A plain fast attack lands one hit per cast, so it never overflows, however fast it is.
+## Surviving the spill is the defensive half: step out of the ring, or script barrier or guard
+## (when hit_recently(), when my_life_below()) to stand in it.
+##     "WRITE 3/5"                          a write is filling the buffer (now and then)
+##     "WRITE 4/5 // BUFFER HOLDS"          it ended short
+##     "BUFFER HOLDS // 1 HIT A CAST"       plain one-hit casts (now and then)
+##     "BUFFER OVERFLOW // PORT OPEN"       it ran past the end
+##     "SPILL"                              the ring reached its edge
 
 ## Shown on the lock banner (LockBanner) and under the boss's quest objective.
 const LOCK_NAME := "OVERFLOW"
-const HINT := "Hits only land while you are at half life or lower. Script leech, barrier or guard to survive down there."
+const HINT := "Its buffer holds 5 hits per cast. Land 6 or more with one cast (a loop to the cap, or several projectiles) and it overflows. Then stand clear of the spill, or shield up."
 
-## Share of max life a player must be at (or under) for their hits to land.
-@export_range(0.1, 0.9, 0.05) var life_threshold := 0.5
+## Hits one write can land before the buffer overflows (the next one does it).
+@export var buffer_size := 5
+## Seconds after a write's last hit (and its loop's end) before it counts as finished.
+@export var tail_time := 0.5
+## Seconds the port stays open after an overflow.
+@export var open_seconds := 6.0
+@export var spill_radius := 7.0
+## Share of each player's maximum life the spill takes (before barrier and guard).
+@export_range(0.0, 0.8, 0.05) var spill_damage := 0.25
+## Seconds the spill's ring takes to reach its edge: the time to step out.
+@export var spill_delay := 1.0
 
-const HOLD_GAP := 1.5                            # seconds between "BUFFER HOLDS" pops
+const FILL_GAP := 0.35                           # seconds between "WRITE n/5" pops
+const SHORT_GAP := 1.8                           # seconds between "1 HIT A CAST" pops
+const MAX_WRITE := 6.0                           # seconds: a loop never reporting its end can't hold one open
+const COL_SPILL := Color(1.0, 0.35, 0.3)
 
-var _was_open := false
-
-
-func is_open() -> bool:
-	for p in get_tree().get_nodes_in_group("players"):
-		var hp := p.get("health") as HealthComponent
-		if hp != null and hp.current_health > 0.0 and life_ratio(hp) <= life_threshold:
-			return true
-	return false
+## The writes under way: key (the loop runner, or the cast without one) -> {hits, held, last, started}
+var _writes := {}
+var _best := 0                                   # the fullest write right now, for the tag
 
 
-## Open for as long as someone stays low: the banner's bar stays full.
-func open_fraction() -> float:
-	return 1.0 if is_open() else 0.0
+## On its tag: how full the fullest write is.
+func tag_state() -> String:
+	if is_open():
+		return "OPEN"
+	return "%d/%d" % [_best, buffer_size] if _best > 0 else ""
 
 
 func modify_incoming(info: HitInfo) -> void:
-	var caster: Node = info.cast.caster if info.cast != null and info.cast.is_valid() else null
-	var hp := _owner_health(caster)
-	if hp != null and life_ratio(hp) <= life_threshold:
-		return                                        # low enough: the hit overflows the buffer
-	info.absorbed = true
-	if hp != null:
-		pop("BUFFER HOLDS // LIFE %d%% > %d%%" % [roundi(life_ratio(hp) * 100.0), roundi(life_threshold * 100.0)],
-			COL_SHORT, HOLD_GAP)
-	else:
-		pop("BUFFER HOLDS", COL_SHORT, HOLD_GAP)
-
-
-func _process(_delta: float) -> void:
-	if not is_instance_valid(enemy):
+	super(info)
+	if not info.absorbed:
+		return                                       # the port is open: hits land as usual
+	var key: Variant = _write_of(info.cast)
+	if key == null:
 		return
-	var open := is_open()
-	if open and not _was_open:
-		say("BUFFER OVERFLOW // PORT OPEN", COL_OPEN, 1.25)
-		SoundManager.play_ui(SOUND_OPEN, -2.0)
-	elif not open and _was_open:
-		say("BUFFER STABLE // PORT CLOSED", Color(COL_OPEN, 0.7), 0.8)
-	_was_open = open
-	_set_glow((0.75 + 0.25 * sin(Time.get_ticks_msec() / 160.0)) if open else 0.0)
+	var w: Dictionary = _writes.get(key, {"hits": 0, "held": 0.0, "last": _now(), "started": _now()})
+	w["hits"] = int(w["hits"]) + 1
+	w["held"] = float(w["held"]) + info.damage
+	w["last"] = _now()
+	_writes[key] = w
+	_best = maxi(_best, int(w["hits"]))
+	if int(w["hits"]) > buffer_size:
+		_overflow(float(w["held"]))
+		return
+	if int(w["hits"]) >= 2:                          # one hit a cast is told when it ends (_closed_process)
+		pop("WRITE %d/%d" % [w["hits"], buffer_size], COL_SHORT, FILL_GAP)
 
 
-static func life_ratio(hp: HealthComponent) -> float:
-	if hp.stats == null:
-		return 1.0
-	return hp.current_health / maxf(hp.stats.get_stat(StatTypes.Stat.MAX_HEALTH), 1.0)
+## The write a hit belongs to: its cast's loop (every repeat is the same write), or the cast.
+func _write_of(cast: SkillCast) -> Variant:
+	if cast == null:
+		return null
+	var runner := cast.extra.get(ProgramSupport.LOOP_KEY) as ProgramLoopRunner
+	return runner if runner != null else cast
 
 
-## The health of the player behind a hit: the caster, or the player that owns a hologram.
-func _owner_health(caster: Node) -> HealthComponent:
-	if caster != null and caster.is_in_group("players"):
-		return caster.get("health") as HealthComponent
-	var p := get_tree().get_first_node_in_group("players")
-	return p.get("health") as HealthComponent if p != null else null
+func _closed_process(_delta: float) -> void:
+	_best = 0
+	for key in _writes.keys():
+		var w: Dictionary = _writes[key]
+		var looping: bool = key is ProgramLoopRunner and is_instance_valid(key) and not (key as ProgramLoopRunner).finished
+		if looping and _now() - float(w["started"]) < MAX_WRITE:
+			w["last"] = _now()                         # still repeating: the write isn't done
+		if _now() - float(w["last"]) > tail_time:
+			_writes.erase(key)
+			if int(w["hits"]) >= 2:
+				fail("WRITE %d/%d // BUFFER HOLDS" % [w["hits"], buffer_size], COL_SHORT)
+			else:                                    # plain attacks: one hit a cast, said now and then
+				pop("BUFFER HOLDS // 1 HIT A CAST", Color(COL_REJECT, 0.85), SHORT_GAP)
+			continue
+		_best = maxi(_best, int(w["hits"]))
+
+
+func _overflow(held: float) -> void:
+	_writes.clear()
+	_best = 0
+	open_port("BUFFER OVERFLOW // PORT OPEN", held, open_seconds)
+	_spill()
+
+
+func _on_closed() -> void:
+	_writes.clear()
+	_best = 0
+
+
+# ---------- THE SPILL ----------
+## A flat ring grows from the boss to spill_radius over spill_delay, then everyone inside is hit.
+func _spill() -> void:
+	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
+		return
+	var at := enemy.global_position
+	var ring := MeshInstance3D.new()
+	var mesh := TorusMesh.new()
+	mesh.inner_radius = 0.92
+	mesh.outer_radius = 1.0
+	mesh.rings = 48
+	mesh.ring_segments = 4
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.albedo_color = Color(COL_SPILL.r * 1.6, COL_SPILL.g * 1.6, COL_SPILL.b * 1.6, 0.85)
+	mesh.material = mat
+	ring.mesh = mesh
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	ring.top_level = true
+	enemy.get_parent().add_child(ring)
+	ring.global_position = at + Vector3.UP * 0.08
+	ring.scale = Vector3(0.6, 1.0, 0.6)
+	var tw := ring.create_tween()
+	tw.tween_property(ring, "scale", Vector3(spill_radius, 1.0, spill_radius), spill_delay) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	tw.tween_callback(_spill_hit.bind(at))
+	tw.tween_property(mat, "albedo_color:a", 0.0, 0.35)
+	tw.tween_callback(ring.queue_free)
+
+
+func _spill_hit(at: Vector3) -> void:
+	if not is_inside_tree():
+		return
+	var hit_any := false
+	for p in get_tree().get_nodes_in_group("players"):
+		var body := p as Node3D
+		var hp := p.get("health") as HealthComponent
+		var stats := p.get("stats") as StatComponent
+		if body == null or hp == null or stats == null or hp.current_health <= 0.0:
+			continue
+		var flat := Vector2(body.global_position.x - at.x, body.global_position.z - at.z)
+		if flat.length() > spill_radius:
+			continue
+		hp.take_damage(stats.get_stat(StatTypes.Stat.MAX_HEALTH) * spill_damage, true)   # barrier and guard still soak it
+		hit_any = true
+	if hit_any:
+		say("SPILL", COL_SPILL, 1.1)

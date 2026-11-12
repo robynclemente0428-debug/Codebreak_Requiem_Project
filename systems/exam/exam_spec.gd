@@ -7,7 +7,8 @@ extends Resource
 ## Pass:  every wave cleared within time_limit, health never under fail_health, and a rule
 ##        using required_condition fired at least required_fires times (or, with
 ##        required_stop_loop, a self-stopping loop repeated that often; with required_routine,
-##        a shared routine ran that often, from that many skills).
+##        a shared routine ran that often, from that many skills; with required_order, that
+##        many fragments were killed in order).
 ## Grade: PASS / MERIT / DISTINCTION from points:
 ##        the script's efficiency tier (Lean 1, Elegant 2) + cleared within par_time (1)
 ##        + lost no more than par_damage of max health (1).   0-1 PASS, 2-3 MERIT, 4 DISTINCTION.
@@ -31,6 +32,10 @@ extends Resource
 ## call runs counts as a fire. The Engineer exam.
 @export var required_routine := false
 @export var required_callers := 3
+## Instead of a condition: the samples are FRAGMENTED (FragmentLock), an applied script must sort
+## its registry and read a place in it (registry.sort, registry[...]), and each fragment killed in
+## order counts as a fire. A kill out of order refragments the pack. The Defragmenter exam.
+@export var required_order := false
 ## Perks the sandbox lends during this exam (Ranks.PERKS flag keys), so an exam can ask for what
 ## its own rank unlocks: the Architect exam lends "loops".
 @export var lends: Array[String] = []

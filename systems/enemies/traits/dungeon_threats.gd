@@ -10,6 +10,8 @@ extends RefCounted
 ##   swarm       twice as many enemies, each a Swarmling (half health, smaller)
 ##   firewalled  enemies may be Firewalled: they block 75% of every hit
 ##   reflector   enemies may be Reflectors: every hit you land zaps you back
+##   fragmented  every enemy is a Fragment (FragmentLock): a pack only takes full damage in order
+##               of life left, least first. Act V only: "fixed" threats never roll at random.
 
 ## Shown for the threats an instance will roll when it opens (no instance open yet).
 const RANDOM := "random"
@@ -29,6 +31,12 @@ const INFO := {
 		"label": "REFLECTOR", "color": Color(0.80, 0.45, 1.0),
 		"trait": "res://data/enemy_traits/reflector.tres",
 		"hint": "Every hit you land zaps you back. Fewer, bigger hits.",
+	},
+	"fragmented": {
+		"label": "FRAGMENTED", "color": Color(1.0, 0.84, 0.42),
+		"trait": "res://data/enemy_traits/fragmented.tres",
+		"hint": "Each pack takes full damage only in order: least life left first. Sort the registry.",
+		"fixed": true, "every_enemy": true,
 	},
 	RANDOM: {
 		"label": "+ RANDOM", "color": Color(0.62, 0.68, 0.72),
@@ -62,7 +70,7 @@ static func roll_for(scene_path: String, rng_seed: int) -> PackedStringArray:
 	rng.seed = rng_seed + 9241
 	var pool: Array = []
 	for id in INFO:
-		if id != RANDOM and not (id in out):
+		if id != RANDOM and not (id in out) and not INFO[id].get("fixed", false):
 			pool.append(id)
 	# Shuffle with this rng (Array.shuffle uses the global one)
 	for i in range(pool.size() - 1, 0, -1):
@@ -113,7 +121,7 @@ static func trait_def(id: String) -> EnemyModifierDefinition:
 static func roll_traits(threats: PackedStringArray, rarity: String, rng: RandomNumberGenerator) -> Array:
 	var out: Array = []
 	for id in threats:
-		if id == "swarm":
+		if id == "swarm" or INFO.get(id, {}).get("every_enemy", false):
 			out.append(trait_def(id))                # every enemy in a swarm is a Swarmling
 		elif rng.randf() < float(TRAIT_CHANCE.get(rarity, 0.5)):
 			out.append(trait_def(id))

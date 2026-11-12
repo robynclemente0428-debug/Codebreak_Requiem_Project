@@ -28,7 +28,7 @@ enum Kind { TOWN, DUNGEON, BOSS }
 ## min to max. (0, 0) = always exactly `threats`.
 @export var random_threats := Vector2i.ZERO
 ## Convoy routes only: reached on foot through a gate in town, not by the convoy. It is on the
-## waypoint map (U) like any dungeon, and not on the route terminal (Checkpoint's Far Side).
+## waypoint map (U) like any dungeon, and not on the route terminal.
 @export var on_foot := false
 ## Convoy routes only (WaypointAct.convoy_route): the stop whose exit opens this one on the
 ## convoy's route terminal. Empty = open from the start.

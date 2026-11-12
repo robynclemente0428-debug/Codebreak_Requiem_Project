@@ -10,6 +10,8 @@ extends Node
 ## don't count for kill quests (killing a breeder's children forever shouldn't farm anything).
 
 @export var summon: EnemyDefinition
+## Modifiers every summon gets (the Root Process's adds come Fragmented). Empty = none.
+@export var summon_mods: Array[EnemyModifierDefinition] = []
 @export var interval: float = 10.0
 @export var first_delay: float = 3.0           # after the boss first notices a player
 @export var count: int = 3                     # per wave
@@ -74,7 +76,7 @@ func _spawn_wave() -> void:
 		var angle := start + TAU * float(i) / float(n)
 		var pos := _enemy.global_position + Vector3(cos(angle), 0.0, sin(angle)) * radius
 		pos = _on_navmesh(pos)
-		var e := EnemySpawner.spawn_enemy(summon, rarity, parent, pos + Vector3.UP * 0.1, level, [])
+		var e := EnemySpawner.spawn_enemy(summon, rarity, parent, pos + Vector3.UP * 0.1, level, summon_mods.duplicate())
 		if e == null:
 			continue
 		if numbers:

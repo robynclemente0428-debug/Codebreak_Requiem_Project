@@ -5,8 +5,8 @@ extends Control
 ## view, so the retro screen filter doesn't touch it). It sits under the threat card, and moves
 ## as that card folds and unfolds. When a law takes hold, a soft violet glow washes in from the
 ## screen's edges, the card itself flares, and a short line near the top names the law and what it
-## does to fights, for a few seconds. It sits between the tutorial banner and the quest toasts, and
-## clear of the NEW LOCK card.
+## does to fights, for a few seconds. That moment is an Announcer headline: it waits for the slot
+## if another headline (AREA CLEARED, a NEW LOCK card) is up, and sits at headline_top().
 
 const NullLawsRef := preload("res://systems/world/null_laws.gd")
 const FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
@@ -32,10 +32,10 @@ var _big: VBoxContainer
 var _big_name: Label
 var _big_effect: Label
 var _big_tween: Tween
+var _drift := 0.0                      # px above its place, while it settles in
 ## Seconds the announcement holds before it fades.
 const ANNOUNCE_HOLD := 2.5
-## Pixels from the top of the screen: under the tutorial banner, above the quest toasts (215).
-const ANNOUNCE_TOP := 132.0
+const HEADLINE := &"null_law"         # its Announcer headline key (see_through: OPACITY)
 ## How far it drifts down as it appears.
 const ANNOUNCE_DRIFT := 10.0
 ## Peak strength of the edge glow (0..1).
@@ -54,6 +54,7 @@ void fragment() {
 
 
 func _ready() -> void:
+	process_priority = Announcer.PLACE_AFTER       # places itself after Announcer's layout
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var font := load(FONT) as Font
@@ -105,8 +106,6 @@ func _ready() -> void:
 	_big = VBoxContainer.new()
 	_big.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_big.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_big.offset_top = ANNOUNCE_TOP
-	_big.offset_bottom = ANNOUNCE_TOP
 	_big.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_big.add_theme_constant_override("separation", 2)
 	add_child(_big)
@@ -118,10 +117,14 @@ func _ready() -> void:
 		l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.85))
 		_big.add_child(l)
 	_big.modulate.a = 0.0
+	Announcer.see_through(_big)
 
 
 func _process(_delta: float) -> void:
 	_panel.position = Vector2(TOP.x, _below_threats())
+	var y := Announcer.headline_top() - get_global_rect().position.y - _drift
+	_big.offset_top = y
+	_big.offset_bottom = y
 
 
 ## The top of the banner: under the threat card when it shows, else TOP.
@@ -148,32 +151,42 @@ func show_law(id: String) -> void:
 
 
 ## The law takes hold: a glow from the screen's edges, the card flares, and one line near the top
-## names the law and its fight effect.
+## names the law and its fight effect (once the headline slot is free; a newer law replaces it).
 func announce(id: String) -> void:
+	Announcer.headline(HEADLINE, Announcer.HIGH, 0.25 + ANNOUNCE_HOLD + 0.6,
+			_play_announce.bind(id), _stop_announce, 6.0)
+
+
+func _play_announce(id: String) -> float:
 	_big_name.text = "NULL LAW // %s" % NullLawsRef.name_of(id)
 	_big_effect.text = NullLawsRef.effect_of(id)
 	if _big_tween != null and _big_tween.is_valid():
 		_big_tween.kill()
 	_big.modulate.a = 0.0
-	_set_top(ANNOUNCE_TOP - ANNOUNCE_DRIFT)
+	_drift = ANNOUNCE_DRIFT
 	_panel.modulate = Color(1.8, 1.6, 2.0)                    # the card flares, then settles
 	_big_tween = create_tween().set_parallel(true)
 	_big_tween.tween_method(_set_glow, GLOW, 0.0, 1.2)
 	_big_tween.tween_property(_panel, "modulate", Color.WHITE, 0.8)
 	_big_tween.tween_property(_big, "modulate:a", 1.0, 0.25)
-	_big_tween.tween_method(_set_top, ANNOUNCE_TOP - ANNOUNCE_DRIFT, ANNOUNCE_TOP, 0.35) \
+	_big_tween.tween_property(self, "_drift", 0.0, 0.35) \
 			.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	_big_tween.tween_property(_big, "modulate:a", 0.0, 0.6).set_delay(0.25 + ANNOUNCE_HOLD)
+	var h := _big.get_combined_minimum_size().y
+	return h if h > 0.0 else 56.0
+
+
+## A more important headline took the slot: the line goes at once.
+func _stop_announce() -> void:
+	if _big_tween != null and _big_tween.is_valid():
+		_big_tween.kill()
+	_big.modulate.a = 0.0
+	_set_glow(0.0)
+	_panel.modulate = Color.WHITE
 
 
 func _set_glow(v: float) -> void:
 	_flash_mat.set_shader_parameter("amount", v)
-
-
-## The announcement's top edge, in pixels from the top of the screen.
-func _set_top(y: float) -> void:
-	_big.offset_top = y
-	_big.offset_bottom = y
 
 
 ## A rewrite is coming: `id` takes over when the bar runs out.

@@ -9,3 +9,7 @@ extends Resource
 @export var attack_behavior_script: Script
 @export var animation_set: String = "" 
 @export var two_handed: bool = false
+## Flat mana added to every cast of a skill that needs a weapon (SkillGemDefinition.required_weapon_types)
+## while this weapon type is equipped, after all other cost changes (SkillInstance.get_mana_cost).
+## The sniper's +5: Shoot is cheap, and one sniper shot does several rifle shots' work.
+@export var skill_mana_cost: float = 0.0

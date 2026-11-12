@@ -2,22 +2,24 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
-[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
-[ext_resource type="Script" path="res://systems/quest/program_objective.gd" id="4_prog"]
 
 [sub_resource type="Resource" id="Objective_0"]
-script = ExtResource("4_prog")
-description = "Apply one script with a loop, the registry and a rule with two conditions"
-kind = "program_defrag"
+script = ExtResource("1_obj")
+description = "Pass the Defragmenter exam in Sudo's sandbox"
+kind = "exam_passed"
+target = "defragmenter"
 
 [resource]
 script = ExtResource("2_quest")
 id = "exam_defragmenter"
 title = "RANK EXAM: DEFRAGMENTER"
-description = "Examiner Sudo's last exam. One skill's script that uses everything: a loop, the registry, and a rule with two conditions."
+description = "Examiner Sudo's last exam. The Core's memory isn't lost, only out of order, and pieces only fit back in order.
+Sit the exam in Sudo's sandbox. Three waves of FRAGMENTED samples: a pack only takes full damage in order, least life left first. The sandbox lends you sorting: registry.sort(key=hp) puts your registry in order, and when target is registry[0]: picks the first in it. Your script must sort the registry and read a place in it, and at least 12 of the 15 fragments must die in order.
+Graded PASS, MERIT or DISTINCTION. You can retake it later. Passing makes sorting yours, and opens the way down to The Kernel."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
-ordered = true
+ordered = false
 prerequisite_quest_ids = Array[String](["q09_core_sentinel"])
 reward_credits = 0
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "Sudo"
 metadata/act = "V"

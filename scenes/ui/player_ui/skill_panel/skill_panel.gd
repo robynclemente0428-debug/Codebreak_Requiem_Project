@@ -16,7 +16,7 @@ extends Control
 @export var panel_width: float = 780.0
 @export var panel_height: float = 660.0
 ## Size of the menu while the SCRIPTING tab is open (it is clamped to fit the screen).
-@export var script_panel_width: float = 1120.0
+@export var script_panel_width: float = 1200.0
 @export var script_panel_height: float = 800.0
 ## Text size of the code in the SCRIPTING tab. Everything in that tab scales with it.
 @export var script_font_size: int = 17

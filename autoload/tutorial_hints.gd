@@ -49,7 +49,8 @@ const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_SUB := Color(0.62, 0.80, 0.86)
 const COL_BG := Color(0.02, 0.06, 0.08, 0.90)
 const COL_HINT := Color(0.30, 0.95, 0.60)
-const BANNER_Y := 96.0                     # px from the top of the screen
+## The banner heads Announcer's strip at the top centre (Announcer sets its y).
+const STRIP_ORDER := 0                     # first: the top of the strip
 const BANNER_MAX_WIDTH := 860.0            # the second line wraps past this
 const ARROW_HEIGHT := 3.6                  # metres above the target's feet (clears name plates)
 const EDGE_MARGIN := 48.0                  # off-screen arrows stay this far from the edge
@@ -129,6 +130,7 @@ func _ready() -> void:
 	box.add_child(_sub)
 	_banner.visible = false
 	add_child(_banner)
+	Announcer.add_to_strip(_banner, STRIP_ORDER)
 
 
 func _make_label(font: Font, size: int, col: Color) -> Label:
@@ -167,7 +169,7 @@ func _process(delta: float) -> void:
 		# instead of keeping a too-tall first measurement.
 		_banner.reset_size()
 		var screen := _canvas.get_viewport_rect().size
-		_banner.position = Vector2((screen.x - _banner.size.x) * 0.5, BANNER_Y).round()
+		_banner.position.x = roundf((screen.x - _banner.size.x) * 0.5)   # y: Announcer's strip
 	_targets.assign(hint.get("targets", []))
 	_world_target = hint.get("world")
 	_world_height = hint.get("world_height", ARROW_HEIGHT)

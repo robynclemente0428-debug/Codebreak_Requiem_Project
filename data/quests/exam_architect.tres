@@ -15,7 +15,7 @@ script = ExtResource("2_quest")
 id = "exam_architect"
 title = "RANK EXAM: ARCHITECT"
 description = "Examiner Sudo wants structure: a loop that knows when to stop.
-Sit the exam in Sudo's sandbox with a while loop, or a for loop with break. The sandbox lends you loops for the exam.
+Sit the exam in Sudo's sandbox with a while loop, or a for loop with an if block that breaks. The sandbox lends you loops and if blocks for the exam.
 Graded PASS, MERIT or DISTINCTION. You can retake it later for a better grade."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
 ordered = false

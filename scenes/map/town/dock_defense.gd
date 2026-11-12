@@ -655,8 +655,9 @@ func _build_hud() -> void:
 	panel.custom_minimum_size.x = 460
 	panel.offset_left = -230
 	panel.offset_right = 230
-	panel.offset_top = 110
+	panel.offset_top = Announcer.STRIP_TOP
 	_hud.add_child(panel)
+	Announcer.add_to_strip(panel, 10)                # stacked under the tutorial banner
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 4)
 	panel.add_child(v)

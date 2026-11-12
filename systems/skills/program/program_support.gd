@@ -17,6 +17,9 @@ const HIT_WRITES_KEY := "registry_hit_writes"
 ## The rules (instance ids) whose WHEN fired for this cast, so their "if" blocks can tell
 ## (rule_fired). Repeats, copies and follow-up casts (SkillCast.spawn_child) keep it.
 const RULES_FIRED_KEY := "program_rules_fired"
+## On a loop repeat: which loop rule runs it (rule_key), so that rule's per-hit if blocks know
+## the repeat is theirs (modify_hit).
+const LOOP_RULE_KEY := "program_loop_rule"
 
 var program: SkillProgram
 var limits: SkillProgramLimits
@@ -37,6 +40,9 @@ const HIT_SPEED_WINDOW := 2.5     # seconds the bonus waits for the next attack
 var _hit_speed := 0.0
 var _hit_speed_msec := 0
 var _law_hit_msec := -1                    # REGISTRY FORGETS ON HIT: the last hit already forgotten
+## The registry in order (registry_order), worked out at most once a physics frame.
+var _order: Array = []
+var _order_frame := -1
 
 const NullLawsRef := preload("res://systems/world/null_laws.gd")   # Act IV's Null Laws
 
@@ -54,6 +60,8 @@ func before_release(cast: SkillCast) -> void:
 		return                                   # Multicast copy / repeat: rules already applied
 	_caster = cast.caster
 	_clear_stale_registers()
+	program.state().sort_by = 0                  # oldest first, until a sort line fires this cast
+	_order_frame = -1
 	# This cast started with any per-hit attack speed bonus (its cooldown and animation were set
 	# before now): it's used up. Hits from this cast can earn the next one.
 	_hit_speed = 0.0
@@ -73,8 +81,8 @@ func before_release(cast: SkillCast) -> void:
 		if rule.is_always() and rule.loop == null:
 			_report_calls(rule, cast)
 	for rule in _flat:
-		if rule.scope() != ProgramCondition.Scope.CAST:
-			continue
+		if rule.scope() != ProgramCondition.Scope.CAST or rule.in_loop():
+			continue                             # a loop's if blocks: judged on each repeat
 		if rule.loop != null:
 			if rule.loop.mode == ProgramLoop.Mode.WHILE:
 				whiles.append(rule)              # checked after the cast lands
@@ -114,12 +122,32 @@ func apply_repeat_rules(child: SkillCast, loop_rule: ProgramRule = null) -> void
 	child.extra[REPEAT_UNDO_KEY] = {}
 	for rule in _rules():
 		if rule.loop != null or rule.is_always() or rule.scope() != ProgramCondition.Scope.CAST \
-				or not _is_repeat_rule(rule):
+				or not _is_repeat_rule(rule) or rule.in_loop():
 			continue
 		if rule.all_true(child, null):
 			_fire_cast_rule(child, rule, {})
 	if loop_rule != null:
 		_apply_effects(child, loop_rule, {})
+		_apply_loop_branches(child, loop_rule)
+
+
+## The loop's if blocks for this repeat: each per-cast one whose own conditions are true now
+## (if killed: the last cast or repeat to land killed) adds its lines to the repeat. Per-hit ones
+## are read on each hit (modify_hit). Breaks were judged before the repeat started.
+func _apply_loop_branches(child: SkillCast, loop_rule: ProgramRule) -> void:
+	for i in loop_rule.branches.size():
+		var br := loop_rule.branch_rule(i)
+		if br.effects.is_empty() or br.scope() != ProgramCondition.Scope.CAST:
+			continue
+		if _own_true(br, child, null):
+			_fire_cast_rule(child, br, {})
+
+
+static func _own_true(rule: ProgramRule, cast: SkillCast, target: Node) -> bool:
+	for c in rule.own_conditions():
+		if not c.is_true(cast, target):
+			return false
+	return true
 
 
 ## Finishing Blow and Overclock count the skill's combo swings / shots in a row: every_nth_cast
@@ -135,7 +163,8 @@ static func _counts_swings(skill: SkillInstance) -> bool:
 ## already applied), then the rules about forks (WHEN forked ...) apply on top.
 func apply_fork_rules(child: SkillCast) -> void:
 	for rule in _rules():
-		if rule.loop != null or rule.is_always() or rule.scope() != ProgramCondition.Scope.CAST:
+		if rule.loop != null or rule.is_always() or rule.scope() != ProgramCondition.Scope.CAST \
+				or rule.in_loop():
 			continue
 		var about_forks := false
 		for c in rule.conditions:
@@ -180,6 +209,11 @@ func _rules() -> Array[ProgramRule]:
 	if _flat.is_empty() and program != null:
 		_flat = program.flat_rules()
 	return _flat
+
+
+## A rule's place in the program, stable across casts (rule_key, for ProgramLoopRunner).
+func rule_key(rule: ProgramRule) -> String:
+	return _rule_key(rule)
 
 
 ## A rule's place in the program, stable across casts: "2", or "2.0" for its first if block.
@@ -228,6 +262,9 @@ func _write_registers(rule: ProgramRule, cast: SkillCast) -> void:
 ## `target`: the enemy a per-hit rule is about, written at once. Without one (a cast rule), the
 ## write waits on the cast and acts on every enemy it hits (_write_hit_entries).
 func _queue_write(e: ProgramEffect, cast: SkillCast, target: Node) -> void:
+	if ScriptRegisters.is_sort(e):               # registry.sort: the order from now on
+		_set_order(e.sort_by)
+		return
 	if target != null:
 		ScriptRegisters.write(registers, e, target)
 	elif cast != null:                           # a new array: repeats and copies share the old one
@@ -316,7 +353,11 @@ func modify_hit(cast: SkillCast, target: Node, hit: HitInfo) -> void:
 	for rule in _rules():
 		if rule.is_always() or rule.loop != null or rule.scope() != ProgramCondition.Scope.HIT:
 			continue
-		if not rule.all_true(cast, target):
+		if rule.in_loop():
+			# A loop's per-hit if block: only on that loop's repeats, and only its own conditions
+			if cast.extra.get(LOOP_RULE_KEY, "") != _rule_key(rule.parent) or not _own_true(rule, cast, target):
+				continue
+		elif not rule.all_true(cast, target):
 			continue
 		_mark_fired(cast, rule)
 		_report_triggered(rule, cast)
@@ -356,7 +397,33 @@ func _write_hit_entries(cast: SkillCast, target: Node, hit_writes: Array[Program
 	for e in cast.extra.get(HIT_WRITES_KEY, []):
 		ScriptRegisters.write(registers, e, target)
 	for e in hit_writes:
-		ScriptRegisters.write(registers, e, target)
+		if ScriptRegisters.is_sort(e):           # a sort in a per-hit rule: the order from the next hit
+			_set_order(e.sort_by)
+		else:
+			ScriptRegisters.write(registers, e, target)
+
+
+func _set_order(sort_by: int) -> void:
+	if program.state().sort_by != sort_by:
+		program.state().sort_by = sort_by
+		_order_frame = -1
+
+
+## The registry's enemy ids in the script's order (registry.sort, oldest first without one).
+## Worked out at most once a physics frame, so every hit of one area cast sees the same order
+## (RegistryPositionCondition). Enemies added by a hit this frame join it next frame.
+func registry_order() -> Array:
+	var frame := Engine.get_physics_frames()
+	if frame != _order_frame:
+		_order_frame = frame
+		_order = ScriptRegisters.ordered(registers, program.state().sort_by, _caster)
+	return _order
+
+
+## Where `target` is in registry_order(), -1 when it isn't in the registry.
+func position_of(target: Node) -> int:
+	var at: Variant = ScriptRegisters.entry_key(target)
+	return registry_order().find(at) if at != null else -1
 
 
 ## A per-hit rule's leech, barrier or guard. Leech adds to this hit's own leech. Barrier and guard
