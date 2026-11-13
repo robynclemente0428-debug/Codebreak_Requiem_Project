@@ -12,6 +12,8 @@ extends RefCounted
 ##   reflector   enemies may be Reflectors: every hit you land zaps you back
 ##   fragmented  every enemy is a Fragment (FragmentLock): a pack only takes full damage in order
 ##               of life left, least first. Act V only: "fixed" threats never roll at random.
+##   paged       every enemy is a Page (PagedLock): out of memory now and then, unless one of your
+##               registries references it. The Page File (Act V), fixed like fragmented.
 
 ## Shown for the threats an instance will roll when it opens (no instance open yet).
 const RANDOM := "random"
@@ -36,6 +38,12 @@ const INFO := {
 		"label": "FRAGMENTED", "color": Color(1.0, 0.84, 0.42),
 		"trait": "res://data/enemy_traits/fragmented.tres",
 		"hint": "Each pack takes full damage only in order: least life left first. Sort the registry.",
+		"fixed": true, "every_enemy": true,
+	},
+	"paged": {
+		"label": "PAGED", "color": Color(0.55, 0.9, 1.0),
+		"trait": "res://data/enemy_traits/paged.tres",
+		"hint": "Enemies page out of memory unless something references them. Keep them in your registry.",
 		"fixed": true, "every_enemy": true,
 	},
 	RANDOM: {

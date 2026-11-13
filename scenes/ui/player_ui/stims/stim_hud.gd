@@ -181,12 +181,14 @@ func _add_charges(item: ItemInstance, amount: float) -> void:
 	item.charges = mini(item.charges + whole, int(item.stim_roll["max_charges"]))
 
 
-## Fills every equipped stim (towns call this).
-func refill_all() -> void:
+## Fills every equipped stim (towns call this). `share` below 1 fills only that much of each, never
+## taking charges away (the Quarantine Yard without its med stores: YardCrates).
+func refill_all(share := 1.0) -> void:
 	for slot in EquipmentSlots.STIM_SLOTS:
 		var item := _stim(slot)
 		if item != null:
-			item.charges = int(item.stim_roll["max_charges"])
+			var top := int(item.stim_roll["max_charges"])
+			item.charges = maxi(item.charges, ceili(top * clampf(share, 0.0, 1.0)))
 
 
 # ---------- DRAWING ----------

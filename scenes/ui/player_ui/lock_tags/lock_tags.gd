@@ -17,7 +17,7 @@ extends Control
 ## shown here whatever the rank: this is the lesson). The enemy's tag pulses while the card is up.
 ## Met locks are kept in the character's save (SAVE_KEY), so each card shows once. Two new locks
 ## at once (a rare with two) queue, one card after the other. Its X button closes it early.
-## The card is an Announcer headline: it waits while AREA CLEARED or a Null Law is up, sits at
+## The card is an Announcer headline: it waits while AREA CLEARED is up, sits at
 ## headline_top(), and if a more important headline cuts it short it shows again afterwards.
 
 const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"

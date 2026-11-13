@@ -70,6 +70,20 @@ func copy_skill(gem: SkillGemDefinition) -> void:
 	_ready_at[skill] = Time.get_ticks_msec() + 1500
 
 
+## A Null Echo (NullEcho): a skill it copied from the player, used first from now on. It keeps any
+## it copied before, after this one.
+func add_copied(skill: SkillInstance) -> void:
+	if skill == null or skill in _skills:
+		return
+	_skills.push_front(skill)
+	_ready_at[skill] = Time.get_ticks_msec() + 900
+
+
+## Nothing is cast for `seconds` (a Null Echo crashing on a routine that isn't there).
+func stun(seconds: float) -> void:
+	_busy_until = maxi(_busy_until, Time.get_ticks_msec() + int(seconds * 1000.0))
+
+
 ## A "for i in range(repeats)" program on the skill, run by the same loop code as the player's.
 ## Enemies have no rank or budget, so it gets the top rank and points to spare.
 func _give_loop(skill: SkillInstance, repeats: int) -> void:

@@ -19,11 +19,11 @@ id = "act4_fray"
 display_name = "The Fray"
 scene = "res://scenes/map/dungeon/act_4_the_fray.tscn"
 spawn_id = &"fray_in"
-dungeon_level = 30
+dungeon_level = 31
 kind = 1
 map_position = Vector2(0.44, 0.5)
 links = Array[String](["act4_threshold", "act4_deleted"])
-note = "Level 30  -  Where AXIOM's rules start to come apart"
+note = "Level 31  -  Where AXIOM's rules start to come apart"
 random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act4_deleted"]
@@ -32,24 +32,24 @@ id = "act4_deleted"
 display_name = "The Deleted Quarter"
 scene = "res://scenes/map/dungeon/act_4_deleted_quarter.tscn"
 spawn_id = &"dq_in"
-dungeon_level = 32
+dungeon_level = 35
 kind = 1
 map_position = Vector2(0.66, 0.44)
 links = Array[String](["act4_fray", "act4_loom", "act4_forge"])
-note = "Level 32  -  What the Null deleted, rebuilt wrong"
+note = "Level 35  -  What the Null deleted, rebuilt wrong"
 random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act4_forge"]
 script = ExtResource("2_wp")
 id = "act4_forge"
-display_name = "The Rule Forge"
+display_name = "The Mirror Forge"
 scene = "res://scenes/map/dungeon/act_4_rule_forge.tscn"
 spawn_id = &"forge_in"
-dungeon_level = 33
+dungeon_level = 36
 kind = 1
 map_position = Vector2(0.6, 0.18)
 links = Array[String](["act4_deleted"])
-note = "Level 33  -  Challenge: the laws change every 30 seconds"
+note = "Level 36  -  Challenge: Null Echoes two to a room, and a champion that calls all your routines"
 threats = Array[String](["reflector"])
 random_threats = Vector2i(1, 1)
 
@@ -59,11 +59,11 @@ id = "act4_loom"
 display_name = "The Weaver's Loom"
 scene = "res://scenes/map/dungeon/act_4_weavers_loom.tscn"
 spawn_id = &"loom_in"
-dungeon_level = 33
+dungeon_level = 36
 kind = 2
 map_position = Vector2(0.88, 0.32)
 links = Array[String](["act4_deleted"])
-note = "Level 33  -  Null Weaver Prime"
+note = "Level 36  -  Null Weaver Prime"
 random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act4_gate"]
@@ -72,11 +72,11 @@ id = "act4_gate"
 display_name = "The Core's Gate"
 scene = "res://scenes/map/dungeon/act_4_core_gate.tscn"
 spawn_id = &"gate_in"
-dungeon_level = 35
+dungeon_level = 40
 kind = 2
 map_position = Vector2(0.42, 0.86)
 links = Array[String](["act4_threshold"])
-note = "Level 35  -  Null Gatekeeper"
+note = "Level 40  -  Null Gatekeeper"
 random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act4_expedition"]
@@ -85,11 +85,11 @@ id = "act4_expedition"
 display_name = "The Expedition's End"
 scene = "res://scenes/map/dungeon/act_4_expedition_end.tscn"
 spawn_id = &"exp_in"
-dungeon_level = 31
+dungeon_level = 33
 kind = 2
 map_position = Vector2(0.3, 0.16)
 links = Array[String](["act4_threshold"])
-note = "Level 31  -  The Auditor (AUDIT). The Compiler Guild's last camp"
+note = "Level 33  -  The Auditor (AUDIT). The Compiler Guild's last camp"
 random_threats = Vector2i(1, 1)
 
 [sub_resource type="Resource" id="Waypoint_act4_wells"]
@@ -98,16 +98,16 @@ id = "act4_wells"
 display_name = "The Echo Wells"
 scene = "res://scenes/map/dungeon/act_4_echo_wells.tscn"
 spawn_id = &"wells_in"
-dungeon_level = 34
+dungeon_level = 38
 kind = 1
 map_position = Vector2(0.74, 0.78)
 links = Array[String](["act4_threshold"])
-note = "Level 34  -  Where Hardfault's relay signal fell in"
+note = "Level 38  -  Where Hardfault's relay signal fell in"
 random_threats = Vector2i(1, 1)
 
 [resource]
 script = ExtResource("1_act")
 act_number = 4
 title = "ACT IV"
-subtitle = "THE NULL ZONE  -  Into the Null  -  Levels 30-35"
+subtitle = "THE NULL ZONE  -  Into the Null  -  Levels 31-40"
 waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act4_threshold"), SubResource("Waypoint_act4_fray"), SubResource("Waypoint_act4_deleted"), SubResource("Waypoint_act4_forge"), SubResource("Waypoint_act4_loom"), SubResource("Waypoint_act4_gate"), SubResource("Waypoint_act4_expedition"), SubResource("Waypoint_act4_wells")])

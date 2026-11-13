@@ -4,7 +4,6 @@ extends ProgramCondition
 
 @export var fraction: float = 0.5
 
-const NullLawsRef := preload("res://systems/world/null_laws.gd")   # Act IV's Null Laws
 
 
 func type_id() -> String:
@@ -20,8 +19,6 @@ func defensive() -> bool:
 
 
 func is_true(cast: SkillCast, _target: Node) -> bool:
-	if NullLawsRef.on("life_inverted", cast.caster):          # LIFE READS INVERTED
-		return ProgramCondition.health_fraction(cast.caster) > 1.0 - fraction
 	return ProgramCondition.health_fraction(cast.caster) < fraction
 
 

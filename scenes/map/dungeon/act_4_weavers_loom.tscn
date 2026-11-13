@@ -15,7 +15,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="n_vesper"]
 [ext_resource type="Resource" path="res://data/dialogue/vesper_field.tres" id="n_vesper_dlg"]
 [ext_resource type="Script" path="res://systems/world/stand_near_arrival.gd" id="n_stand"]
-[ext_resource type="Script" path="res://systems/world/null_law_director.gd" id="n_laws"]
+[ext_resource type="Script" path="res://systems/world/null_echo_director.gd" id="n_echoes"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 agent_height = 1.8
@@ -23,7 +23,7 @@ agent_radius = 0.3
 
 [node name="WeaversLoom" type="Node3D"]
 script = ExtResource("1_dun")
-dungeon_level = 33
+dungeon_level = 36
 respawn_spawn_id = &"loom_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
@@ -72,7 +72,7 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_4_deleted_quarter.tscn"
 target_spawn = &"dq_out"
 arrival_spawn_id = &"loom_in"
-dungeon_level = 32
+dungeon_level = 35
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
@@ -127,7 +127,7 @@ dialogue = ExtResource("n_vesper_dlg")
 [node name="StandNearArrival" type="Node" parent="Vesper"]
 script = ExtResource("n_stand")
 
-[node name="NullLaws" type="Node" parent="."]
-script = ExtResource("n_laws")
-laws = Array[String](["loops_plus_one", "counters_forget"])
-metadata/_note = "The Weaver holds two of the laws still in its lair: only the two that don't bend the conditions its GRAMMAR speaks (life and distance) run here."
+[node name="NullEchoes" type="Node" parent="."]
+script = ExtResource("n_echoes")
+copies = 2
+metadata/_note = "The Weaver's Loom: its Null Echoes watch longer and copy the first two skills they see (NullEcho)."

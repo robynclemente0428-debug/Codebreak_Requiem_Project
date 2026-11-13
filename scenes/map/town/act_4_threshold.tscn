@@ -78,8 +78,10 @@ transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 46.5
 script = ExtResource("portalm")
 target_area = "res://scenes/map/dungeon/act_4_the_fray.tscn"
 target_spawn = &"fray_in"
-dungeon_level = 30
+dungeon_level = 31
 arrival_spawn_id = &"from_fray"
+sealed_by_key = "fray_road"
+open_after_quest = "exam_engineer"
 room_size = Vector2i(3, 3)
 
 [node name="PortalToGate" type="Marker3D" parent="Layout"]
@@ -87,19 +89,19 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34, 0, 23.5)
 script = ExtResource("portalm")
 target_area = "res://scenes/map/dungeon/act_4_core_gate.tscn"
 target_spawn = &"gate_in"
-dungeon_level = 35
+dungeon_level = 40
 arrival_spawn_id = &"from_gate"
 sealed_by_key = "core_road"
-open_after_quest = "exam_engineer"
+open_after_quest = "q07_null_weaver_prime"
 room_size = Vector2i(3, 3)
-metadata/_note = "The road to the Core's entrance, once Sudo has ranked you Engineer."
+metadata/_note = "The road to the Core's entrance, once Null Weaver Prime has fallen."
 
 [node name="PortalToExpedition" type="Marker3D" parent="Layout"]
 transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 31, 0, 40.5)
 script = ExtResource("portalm")
 target_area = "res://scenes/map/dungeon/act_4_expedition_end.tscn"
 target_spawn = &"exp_in"
-dungeon_level = 31
+dungeon_level = 33
 arrival_spawn_id = &"from_expedition"
 room_size = Vector2i(3, 3)
 metadata/_note = "South-west: the Compiler Guild expedition's last camp."
@@ -109,7 +111,7 @@ transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 41, 0, 40.5)
 script = ExtResource("portalm")
 target_area = "res://scenes/map/dungeon/act_4_echo_wells.tscn"
 target_spawn = &"wells_in"
-dungeon_level = 34
+dungeon_level = 38
 arrival_spawn_id = &"from_wells"
 room_size = Vector2i(3, 3)
 metadata/_note = "South-east: the Echo Wells, where Hardfault's relay signal ended up."

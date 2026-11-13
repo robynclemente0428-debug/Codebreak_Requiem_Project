@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Defeat The Watchdog in The Page File"
+kind = "kill"
+target = "watchdog"
+
+[resource]
+script = ExtResource("2_quest")
+id = "paged_out"
+title = "PAGED OUT"
+description = "Under Sentinel's Hall, on the way down to the Kernel, is where the Core sends what it can't hold. Vesper says the Null is paging people out in there, a little at a time.
+THREAT: PAGED. A page stays in memory only while something references it: an enemy that isn't in one of your registries keeps dropping out of memory, and your hits pass through it.
+BOSS LOCK: HEARTBEAT. The Watchdog at the far end guards the way on to the Scheduler. It needs a hit at least every 3 seconds, or it resets, healing and rebooting. It pages out too, and its timer keeps running while it's out.
+TIP: reference everything. A registry.add(target) line that runs as you open, or kernel.gd's  when enemy_spotted: registry.add(target). Watch the Null's own line in there: it empties your registries on every kill."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
+ordered = true
+prerequisite_quest_ids = Array[String](["exam_defragmenter"])
+reward_credits = 350
+metadata/giver = "Vesper"
+metadata/act = "V"

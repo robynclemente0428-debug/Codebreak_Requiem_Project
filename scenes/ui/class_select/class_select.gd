@@ -40,6 +40,7 @@ func _ready() -> void:
 	preview_container.gui_input.connect(_on_preview_input)
 
 	error_label.text = ""
+	_polish_layout()
 	_build_passive_section()
 	_load_classes()
 	_build_cards()
@@ -86,9 +87,9 @@ func _select(index: int) -> void:
 	skill_label.text = c.starting_skill_gem.display_name if c.starting_skill_gem else "None"
 
 	_show_passive(c)
-	for sc in [info_scroll, list_scroll]:
-		_style_scrollbar(sc.get_v_scroll_bar(), c.accent_color)
 	_build_attributes(c)
+	info_scroll.scroll_vertical = 0               # each class's details start from the top
+	_update_fades.call_deferred()
 	_show_model(c)
 	_play_swap_animation()
 	error_label.text = ""
@@ -132,18 +133,91 @@ func _add_gap_before(heading: Node) -> void:
 	box.move_child(_add_gap(box), heading.get_index())
 
 
-## The theme's scrollbar has no width and a dim grabber, so it's styled here in the class colour.
-func _style_scrollbar(bar: ScrollBar, accent: Color) -> void:
-	bar.custom_minimum_size = Vector2(10, 0)
+# ---------- LAYOUT POLISH ----------
+const ACCENT := Color("#00E5FF")
+const PANEL_INSET := 6          # keeps scrolled content and scrollbars inside the panel border
+
+var _fades: Dictionary = {}     # ScrollContainer -> its bottom fade
+
+
+## Panels get an inner margin, both scroll areas a thin cyan scrollbar and a fade at the bottom
+## while there is more to scroll to; the Create button loses the theme's outward expand margin
+## so it lines up with the panels above it.
+func _polish_layout() -> void:
+	for sc: ScrollContainer in [list_scroll, info_scroll]:
+		var panel := sc.get_parent() as PanelContainer
+		var box := (panel.get_theme_stylebox("panel") as StyleBoxFlat).duplicate() as StyleBoxFlat
+		box.set_content_margin_all(PANEL_INSET)
+		panel.add_theme_stylebox_override("panel", box)
+		_style_scrollbar(sc.get_v_scroll_bar())
+		sc.get_v_scroll_bar().value_changed.connect(func(_v): _update_fades())
+		sc.get_v_scroll_bar().changed.connect(_update_fades)
+		_fades[sc] = _add_fade(panel, box.bg_color)
+
+	var sep := StyleBoxLine.new()
+	sep.color = Color(ACCENT, 0.3)
+	sep.thickness = 2
+	var hsep := info_scroll.find_child("HSeparator", true, false) as Control
+	if hsep != null:
+		hsep.add_theme_stylebox_override("separator", sep)
+
+	for state in ["normal", "hover", "pressed", "focus", "hover_pressed"]:
+		var sb := create_button.get_theme_stylebox(state)
+		if sb is StyleBoxFlat:
+			var flat := sb.duplicate() as StyleBoxFlat
+			flat.expand_margin_left = 0
+			flat.expand_margin_right = 0
+			flat.content_margin_left = 28
+			flat.content_margin_right = 28
+			create_button.add_theme_stylebox_override(state, flat)
+
+
+## The same slim cyan scrollbar on both lists, whatever class is picked.
+func _style_scrollbar(bar: ScrollBar) -> void:
+	bar.custom_minimum_size = Vector2(6, 0)
 	var track := StyleBoxFlat.new()
-	track.bg_color = Color(accent, 0.12)
-	track.set_corner_radius_all(5)
+	track.bg_color = Color(ACCENT, 0.08)
+	track.set_corner_radius_all(3)
+	track.content_margin_top = 4
+	track.content_margin_bottom = 4
 	bar.add_theme_stylebox_override("scroll", track)
-	for entry in [["grabber", 0.6], ["grabber_highlight", 0.85], ["grabber_pressed", 1.0]]:
+	bar.add_theme_stylebox_override("scroll_focus", track)
+	for entry in [["grabber", 0.45], ["grabber_highlight", 0.8], ["grabber_pressed", 1.0]]:
 		var g := StyleBoxFlat.new()
-		g.bg_color = Color(accent, entry[1])
-		g.set_corner_radius_all(5)
+		g.bg_color = Color(ACCENT, entry[1])
+		g.set_corner_radius_all(3)
 		bar.add_theme_stylebox_override(entry[0], g)
+
+
+## A gradient over the bottom of a panel, in the panel's own colour: "there's more below".
+func _add_fade(panel: PanelContainer, bg: Color) -> TextureRect:
+	var grad := Gradient.new()
+	grad.offsets = PackedFloat32Array([0.0, 1.0])
+	grad.colors = PackedColorArray([Color(bg, 0.0), Color(bg, 1.0)])
+	var tex := GradientTexture2D.new()
+	tex.gradient = grad
+	tex.fill_from = Vector2(0, 0)
+	tex.fill_to = Vector2(0, 1)
+	tex.width = 4
+	tex.height = 64
+	var fade := TextureRect.new()
+	fade.texture = tex
+	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fade.stretch_mode = TextureRect.STRETCH_SCALE
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade.size_flags_vertical = Control.SIZE_SHRINK_END     # the panel puts it at the bottom
+	fade.custom_minimum_size = Vector2(0, 56)
+	fade.visible = false
+	panel.add_child(fade)
+	return fade
+
+
+func _update_fades() -> void:
+	for sc: ScrollContainer in _fades:
+		var bar := sc.get_v_scroll_bar()
+		var more := bar.max_value - bar.page - bar.value > 2.0
+		var fade := _fades[sc] as Control
+		fade.visible = more
 
 
 func _show_passive(c: ClassData) -> void:

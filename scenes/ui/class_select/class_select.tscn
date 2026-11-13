@@ -149,15 +149,15 @@ horizontal_scroll_mode = 0
 [node name="ListMargin" type="MarginContainer" parent="Content/RootVBox/Columns/ClassListPanel/ListScroll" unique_id=802457878]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
 
 [node name="ClassList" type="VBoxContainer" parent="Content/RootVBox/Columns/ClassListPanel/ListScroll/ListMargin" unique_id=42986602]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 10
 
 [node name="PreviewPanel" type="PanelContainer" parent="Content/RootVBox/Columns" unique_id=1487994647]
 unique_name_in_owner = true
@@ -227,7 +227,7 @@ theme_override_constants/separation = 8
 [node name="ClassName" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=1001161328]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_font_sizes/font_size = 56
+theme_override_font_sizes/font_size = 48
 
 [node name="TagLine" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=1590567177]
 unique_name_in_owner = true
@@ -242,7 +242,7 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
-theme_override_font_sizes/font_size = 24
+theme_override_font_sizes/font_size = 22
 autowrap_mode = 3
 
 [node name="AttrTitle" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=110654651]
@@ -264,30 +264,42 @@ text = "Starting Skill"
 [node name="SkillLabel" type="Label" parent="Content/RootVBox/Columns/InfoPanel/InfoScroll/InfoMargin/InfoVBox" unique_id=467870485]
 unique_name_in_owner = true
 layout_mode = 2
+theme_override_font_sizes/font_size = 26
 
 [node name="Footer" type="HBoxContainer" parent="Content/RootVBox" unique_id=1561616543]
+custom_minimum_size = Vector2(0, 64)
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 20
 
 [node name="NameTitle" type="Label" parent="Content/RootVBox/Footer" unique_id=1845871479]
 layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 32
 text = "Name"
+vertical_alignment = 1
 
 [node name="NameInput" type="LineEdit" parent="Content/RootVBox/Footer" unique_id=2049531585]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(460, 64)
+custom_minimum_size = Vector2(480, 64)
 layout_mode = 2
+size_flags_vertical = 4
 placeholder_text = "Enter Character Name"
 
 [node name="ErrorLabel" type="Label" parent="Content/RootVBox/Footer" unique_id=1572655065]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
 theme_override_font_sizes/font_size = 20
 vertical_alignment = 1
 autowrap_mode = 3
 
 [node name="CreateButton" type="Button" parent="Content/RootVBox/Footer" unique_id=899084756]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(360, 64)
 layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 32
 text = "Create Character"

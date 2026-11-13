@@ -7,8 +7,12 @@ extends DockDefense
 ##   1. A drone hangs near its crate and marks it (mark_time seconds, faster with more drones).
 ##      A fully marked crate is TAGGED, and the drone moves on to the next one.
 ##   2. Kill every drone before the sweep timer (load_time) ends: the tags come off, nothing lost.
-##   3. The timer ends first: every tagged crate is deleted for good (deed "sweep_lost:<crate>")
-##      and the drones leave.
+##   3. The timer ends first: every tagged crate is deleted (deed "sweep_lost:<crate>") and the
+##      drones leave. Deleted means C-0's deletion queue, in the Sweep, until the Collector falls:
+##      it can be brought back from there (YardCrates, QueuedCrate).
+## Every crate is someone's (YardCrates: Hex's spare cells, Sudo's archive, the memorial board...),
+## named over it, and losing one changes something. Each sweep is an AUDIT the Registrar announces
+## as you arrive: one named crate, and the first wave's drones all go for it.
 ## Hurting a drone, or walking close to it, turns it on you, as a saboteur does.
 ## Paid: reward_credits, plus crate_bonus for each crate left: a breach's cargo bonus in reverse.
 ## Dying calls it off and it comes again. They stop for good once the Collector falls.
@@ -33,9 +37,14 @@ const COL_MARK := Color(1.0, 0.2, 0.15)
 ## Crates are the Furniture props whose names start with this.
 @export var crate_prefix := "Cargo"
 
-var _crates: Array[Dictionary] = []      # {"prop": Node3D, "marks": 0..1, "tag": Label3D or null}
+const COL_NAME := Color(0.85, 0.9, 0.95, 0.8)
+const COL_AUDIT := Color(1.0, 0.55, 0.3)
+
+var _crates: Array[Dictionary] = []      # {"prop": Node3D, "id": String, "marks": 0..1, "tag": Label3D or null}
 var _assigned: Dictionary = {}           # drone -> its crate's prop
 var _released: Dictionary = {}           # drones that turned on the player
+var _audit := ""                         # the crate id this sweep's audit is for ("" = not announced)
+var _sent := 0                           # drones spawned this sweep: the first wave goes for the audit
 
 
 func _ready() -> void:
@@ -86,7 +95,11 @@ func _find_portal() -> Node3D:
 
 
 func _wants_to_start() -> bool:
-	if _crates.is_empty() or not is_due() or _restart_wait > 0.0:
+	if _crates.is_empty() or not is_due():
+		return false
+	if _audit == "":
+		_announce_audit()                         # as you arrive: the alarm follows arrival_delay later
+	if _restart_wait > 0.0:
 		return false
 	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
 	if dialogue != null and dialogue.is_open():
@@ -98,7 +111,8 @@ func _wants_to_start() -> bool:
 	return hp == null or hp.current_health > 0.0
 
 
-## The yard's crates, without the ones an earlier sweep deleted.
+## The yard's crates, without the ones an earlier sweep deleted (and that haven't come back from
+## C-0's queue). Each wears its name (YardCrates).
 func _find_crates() -> void:
 	_crates.clear()
 	var furniture := get_parent().get_node_or_null("Furniture")
@@ -108,16 +122,50 @@ func _find_crates() -> void:
 	for c in furniture.get_children():
 		if not (c is Node3D and String(c.name).begins_with(crate_prefix)):
 			continue
-		if qm != null and qm.deed_count(LOST_DEED, String(c.name)) > 0:
+		var id := String(c.name)
+		if YardCrates.is_deleted(qm, id):
 			c.queue_free()
 			continue
-		_crates.append({"prop": c, "marks": 0.0, "tag": null})
+		_crates.append({"prop": c, "id": id, "marks": 0.0, "tag": null})
+		if YardCrates.is_crate(id) and c.get_node_or_null("CrateName") == null:
+			var plate := Label3D.new()
+			plate.name = "CrateName"
+			plate.text = YardCrates.name_of(id)
+			plate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+			plate.pixel_size = 0.004
+			plate.font_size = 32
+			plate.outline_size = 6
+			plate.modulate = COL_NAME
+			plate.position.y = 1.55
+			(c as Node3D).add_child(plate)
+
+
+## The Registrar names the crate this sweep is auditing; the first wave's drones all go for it.
+func _announce_audit() -> void:
+	var qm := _qm()
+	var present: Array = _crates.map(func(c: Dictionary) -> String: return str(c["id"]))
+	_audit = YardCrates.audit_target(qm, qm.deed_count(DEED, DEED_TARGET) if qm != null else 0, present)
+	if _audit == "":
+		_audit = "-"                              # nothing named left: an ordinary sweep
+		return
+	QuestItems.toast(get_tree(), "REGISTRAR // AUDIT SCHEDULED\n%s, registered to %s, references the duplicate. C-0 is sending markers." % [
+		YardCrates.name_of(_audit), YardCrates.owner_of(_audit)], COL_AUDIT)
+
+
+func _crate_named(id: String) -> Dictionary:
+	for c in _crates:
+		if str(c["id"]) == id and is_instance_valid(c["prop"]):
+			return c
+	return {}
 
 
 func _start() -> void:
 	_find_crates()
 	_assigned.clear()
 	_released.clear()
+	_sent = 0
+	if _audit == "":
+		_announce_audit()
 	await super._start()
 
 
@@ -148,7 +196,14 @@ func _run(delta: float) -> void:
 func _spawned(e: Node3D, _index: int) -> void:
 	if e == null:
 		return
-	var crate := _pick_crate()
+	_sent += 1
+	var crate: Node3D = null
+	var audited := _crate_named(_audit)
+	if _sent <= int(wave_sizes[0] if not wave_sizes.is_empty() else 0) and not audited.is_empty() \
+			and float(audited["marks"]) < 1.0:
+		crate = audited["prop"]                   # the first wave: all on the audited crate
+	if crate == null:
+		crate = _pick_crate()
 	if crate == null:
 		return
 	_assigned[e] = crate
@@ -219,7 +274,9 @@ func _show_mark(c: Dictionary) -> void:
 
 ## A crate is tagged: its drones move on to the next.
 func _tagged_crate(prop: Node3D) -> void:
-	QuestItems.toast(get_tree(), "CRATE TAGGED\nKill the markers before the sweep, or it's deleted.", COL_MARK)
+	var id := String(prop.name)
+	QuestItems.toast(get_tree(), "%s TAGGED\nKill the markers before the sweep, or it's deleted: %s." % [
+		YardCrates.name_of(id), YardCrates.loss_of(id)], COL_MARK)
 	for e in _assigned.keys():
 		if _assigned[e] != prop:
 			continue
@@ -247,16 +304,19 @@ func _end_sweep(swept: bool) -> void:
 	_hud.visible = false
 	_set_alert(false)
 	var lost := 0
+	var lost_names: Array = []
 	for c in _crates.duplicate():
 		if not is_instance_valid(c["prop"]):
 			continue
 		if swept and float(c["marks"]) >= 1.0:
 			GameEvents.report(LOST_DEED, String((c["prop"] as Node).name))
+			lost_names.append(YardCrates.name_of(String((c["prop"] as Node).name)))
 			(c["prop"] as Node).queue_free()
 			_crates.erase(c)
 			lost += 1
 		else:
 			_clear_mark(c)
+	_audit = ""                                  # the next sweep announces its own
 	for e in _alive:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -271,7 +331,8 @@ func _end_sweep(swept: bool) -> void:
 	if wallet != null:
 		wallet.add(credits)
 	if lost > 0:
-		QuestItems.toast(get_tree(), "SWEEP COMPLETE\n%d CRATE%s DELETED  //  +%d CREDITS" % [lost, "S" if lost != 1 else "", credits], COL_MARK)
+		QuestItems.toast(get_tree(), "SWEEP COMPLETE  //  +%d CREDITS\nDELETED: %s\nIt waits in C-0's deletion queue, in the Sweep. Bring it back before the Collector burns the queue." % [
+			credits, ", ".join(PackedStringArray(lost_names))], COL_MARK)
 	else:
 		QuestItems.toast(get_tree(), "%s\n+%d CREDITS  //  EVERY CRATE KEPT" % [done_toast, credits], COL_GOOD)
 

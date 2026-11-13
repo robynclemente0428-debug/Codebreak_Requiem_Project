@@ -45,11 +45,6 @@ seed_value = 100
 layout_mode = 1
 seed_value = 100
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=626345794]
-layout_mode = 0
-offset_right = 40.0
-offset_bottom = 40.0
-
 [node name="Header" type="MarginContainer" parent="." unique_id=62466306]
 layout_mode = 1
 anchors_preset = 10
@@ -95,9 +90,45 @@ theme_override_constants/margin_bottom = 100
 layout_mode = 2
 theme_override_constants/separation = 0
 
-[node name="SlotsLabel" type="Label" parent="Content/VBox" unique_id=782712138]
+[node name="SlotsHeader" type="HBoxContainer" parent="Content/VBox" unique_id=782712140]
 layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="SlotsLabel" type="Label" parent="Content/VBox/SlotsHeader" unique_id=782712138]
+layout_mode = 2
+size_flags_horizontal = 3
 text = "Slots"
+
+[node name="RangeLabel" type="Label" parent="Content/VBox/SlotsHeader" unique_id=782712141]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_colors/font_color = Color(0, 0.8980392, 1, 0.7019608)
+theme_override_font_sizes/font_size = 22
+text = "01-04 / 10"
+
+[node name="PrevButton" type="Button" parent="Content/VBox/SlotsHeader" unique_id=782712142]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 44)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+tooltip_text = "Previous slots"
+text = "<"
+
+[node name="NextButton" type="Button" parent="Content/VBox/SlotsHeader" unique_id=782712143]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(56, 44)
+layout_mode = 2
+size_flags_vertical = 4
+focus_mode = 0
+tooltip_text = "Next slots"
+text = ">"
+
+[node name="HeaderGap" type="Control" parent="Content/VBox" unique_id=782712144]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+mouse_filter = 2
 
 [node name="SlotsPanel" type="PanelContainer" parent="Content/VBox" unique_id=2095179689]
 layout_mode = 2
@@ -107,22 +138,33 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_plxai")
 [node name="Scroll" type="ScrollContainer" parent="Content/VBox/SlotsPanel" unique_id=1748649954]
 unique_name_in_owner = true
 layout_mode = 2
-follow_focus = true
+horizontal_scroll_mode = 3
 vertical_scroll_mode = 0
 
 [node name="Padding" type="MarginContainer" parent="Content/VBox/SlotsPanel/Scroll" unique_id=1304192687]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/margin_left = 60
-theme_override_constants/margin_top = 40
-theme_override_constants/margin_right = 60
-theme_override_constants/margin_bottom = 40
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 36
+theme_override_constants/margin_right = 40
+theme_override_constants/margin_bottom = 36
 
 [node name="SlotsBox" type="HBoxContainer" parent="Content/VBox/SlotsPanel/Scroll/Padding" unique_id=170794350]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 35
+theme_override_constants/separation = 28
+
+[node name="TrackGap" type="Control" parent="Content/VBox" unique_id=782712145]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="ScrollTrack" type="Control" parent="Content/VBox" unique_id=782712146]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 8)
+layout_mode = 2
+mouse_default_cursor_shape = 2
 
 [node name="DeleteDialog" type="ConfirmationDialog" parent="." unique_id=1572635357]
 unique_name_in_owner = true

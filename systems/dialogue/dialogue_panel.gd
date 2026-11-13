@@ -320,6 +320,18 @@ func _check(cond: String) -> bool:
 			"exam_ungraded":                      # @ exam_ungraded:defragmenter: the rank's exam quest is
 				# done but no sandbox grade was ever recorded: passed before the exam was a sandbox one
 				result = _quests.is_completed("exam_" + arg) and _quests.exam_grade(arg) < 0
+			"kernel_leans":                       # @ kernel_leans:merge: what kernel.gd leans toward
+				result = KernelScript.lean(_quests) == arg   # (KernelScript.lean)
+			"kernel_overwrites":                  # @ kernel_overwrites:2: at least that many Null lines overwritten
+				result = KernelScript.overwrites(_quests) >= int(arg)
+			"kernel_kept":                        # @ kernel_kept:2: at least that many Null lines still running
+				result = KernelScript.null_running(_quests).size() >= int(arg)
+			"crate_news":                         # @ crate_news:CargoD: a Yard Sweep deleted it, and
+				result = YardCrates.has_news(_quests, arg)   # its owner hasn't said so yet (YardCrates)
+			"crate_deleted":                      # @ crate_deleted:CargoB: deleted, not brought back
+				result = YardCrates.is_deleted(_quests, arg)
+			"crate_restored":                     # @ crate_restored:CargoB: back from C-0's queue
+				result = YardCrates.was_restored(_quests, arg)
 			"deed":                               # @ deed:ending:merge, or @ deed:ending:any
 				var d := arg.split(":", true, 1)
 				if d.size() == 2 and d[1] == "any":
@@ -359,6 +371,11 @@ func _do(e: Dictionary) -> String:
 		"recover":                               # > recover quarantine_lifted: a QuestItems event
 			if _quests and args.size() > 0:
 				_quests.recover(args[0])
+		"census":                                # > census: the Registrar reads what Hardfault kept (YardCrates)
+			for line in YardCrates.census_lines(_quests):
+				if not _open:
+					return "end"
+				await _say("", line)
 		"exam":                                  # > exam operator: into Sudo's sandbox
 			if args.size() > 0:
 				close()

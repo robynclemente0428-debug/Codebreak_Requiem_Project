@@ -29,6 +29,22 @@ signal damage_taken(amount: float)
 signal died
 signal barrier_changed(amount: float)
 
+# ---------- CO-OP PROTOTYPE (tools/coop_proto) ----------
+## Set on this machine's copy of a body another machine owns (the host owns enemies, each player
+## owns their character). Damage is sent to the owner instead of being applied here:
+## Callable(amount: float, ignore_armour: bool). take_damage() then returns what it expects the
+## hit to deal, so the skill counts it as landed. Unset everywhere in single player.
+var remote_damage := Callable()
+
+
+## Co-op: the owner's health for this copy, as it arrives over the network.
+func apply_remote(value: float) -> void:
+	var was_alive := current_health > 0.0
+	current_health = value
+	_emit_changed()
+	if was_alive and value <= 0.0:
+		died.emit()
+
 func initialize() -> void:
 	current_health = stats.get_stat(StatTypes.Stat.MAX_HEALTH)
 	_initialized = true
@@ -58,6 +74,9 @@ func take_damage(amount: float, ignore_armour := false) -> float:
 		return 0.0
 	if current_health <= 0.0:
 		return 0.0
+	if remote_damage.is_valid():        # co-op: not ours to hurt, the owner's machine decides
+		remote_damage.call(amount, ignore_armour)
+		return amount if ignore_armour else mitigate(amount, stats.get_stat(StatTypes.Stat.ARMOUR))
 	var now := Time.get_ticks_msec()
 	if guard > 0.0 and now < _guard_until:
 		amount *= 1.0 - guard

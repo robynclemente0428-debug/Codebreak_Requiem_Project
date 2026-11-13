@@ -14,16 +14,16 @@
 [ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="n_vesper"]
 [ext_resource type="Resource" path="res://data/dialogue/vesper_field.tres" id="n_vesper_dlg"]
 [ext_resource type="Script" path="res://systems/world/stand_near_arrival.gd" id="n_stand"]
-[ext_resource type="Script" path="res://systems/world/null_law_director.gd" id="n_laws"]
+[ext_resource type="Script" path="res://systems/world/null_echo_director.gd" id="n_echoes"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 agent_height = 1.8
 agent_radius = 0.3
 
 [node name="RuleForge" type="Node3D"]
-metadata/_note = "PROTOTYPE. Act IV challenge zone, level 33, off The Deleted Quarter: where the Null tries its laws out. They change every 30 seconds instead of 80, Reflector is always on (plus one random threat), and far more rares and champions spawn, so it drops better. A champion Null Weaver holds the last room. Both portals lead back to The Deleted Quarter."
+metadata/_note = "PROTOTYPE. Act IV challenge zone, level 36, off The Deleted Quarter: The Mirror Forge, where the Null practises being you: Null Echoes two to a room and a champion Echo whose copy calls every routine you have (NullEchoes). Reflector is always on (plus one random threat), and far more rares and champions spawn, so it drops better. A champion Null Weaver holds the last room. Both portals lead back to The Deleted Quarter."
 script = ExtResource("1_dun")
-dungeon_level = 33
+dungeon_level = 36
 respawn_spawn_id = &"forge_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
@@ -72,7 +72,7 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_4_deleted_quarter.tscn"
 target_spawn = &"dq_forge"
 arrival_spawn_id = &"forge_in"
-dungeon_level = 32
+dungeon_level = 35
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
@@ -89,7 +89,7 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_4_deleted_quarter.tscn"
 target_spawn = &"dq_forge"
 arrival_spawn_id = &"forge_out"
-dungeon_level = 32
+dungeon_level = 35
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
@@ -135,9 +135,8 @@ dialogue = ExtResource("n_vesper_dlg")
 [node name="StandNearArrival" type="Node" parent="Vesper"]
 script = ExtResource("n_stand")
 
-[node name="NullLaws" type="Node" parent="."]
-script = ExtResource("n_laws")
-first_delay = 6.0
-law_time = 30.0
-warn_time = 5.0
-metadata/_note = "The Rule Forge: the Null tries its laws out, one every 30 seconds."
+[node name="NullEchoes" type="Node" parent="."]
+script = ExtResource("n_echoes")
+per_room = 2
+champion = true
+metadata/_note = "The Mirror Forge: Null Echoes two to a room, and a champion Echo at the far end whose copy calls every one of your routines (NullEcho)."

@@ -10,8 +10,11 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 # The Operator and Architect exams are sat in the sandbox (> exam operator, > exam architect, see
 # ExamChamber), and can be retaken for a better grade once passed.
 ~ start
+# A Yard Sweep deleted Sudo's exam archive (YardCrates CargoB): said once
+@ crate_news:CargoB -> loss_archive
 @ quest_ready:guild_expedition -> ready_guild
 @ quest_ready:exam_defragmenter -> pass_defragmenter
+@ quest_ready:time_slice -> ready_slice
 @ quest_ready:exam_engineer -> pass_engineer
 @ quest_ready:exam_operator -> pass_operator
 @ quest_ready:exam_architect -> pass_architect
@@ -24,6 +27,8 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 @ quest_active:exam_architect -> ready_architect
 @ quest_active:exam_strategist -> ready_strategist
 @ can_start:exam_defragmenter -> offer_defragmenter
+@ can_start:time_slice -> offer_slice
+@ quest_active:time_slice -> remind_slice
 @ can_start:exam_engineer -> offer_engineer
 @ can_start:exam_operator -> offer_operator
 @ can_start:exam_architect -> offer_architect
@@ -147,8 +152,8 @@ Sudo: Thank you. I'll grade the rest of your exams a little more kindly. No, I w
 
 ~ offer_defragmenter
 Sudo: The last exam. After this there's nothing left for me to grade.
-Sudo: You walked the Stack Trace. Everything the Core remembers, in pieces, and the pieces only take a hit in the right order.
-Sudo: The memory isn't lost. It's out of order. A Defragmenter puts it back.
+Sudo: Past here is the Stack Trace. Everything the Core remembers, in pieces, and the pieces only take a hit in the right order.
+Sudo: The memory isn't lost. It's out of order. A Defragmenter puts it back. I don't let anyone in there who can't.
 * ACCEPT -> accept_defragmenter
 * DECLINE -> end
 
@@ -158,7 +163,7 @@ Sudo: I'll lend you sorting. Your registry has always kept enemies in the order 
 Sudo: registry.sort, key equals hp: least life first. Then registry, zero, is the one at the front. Read that, and hit it hardest.
 Sudo: The samples are fragmented. Out of order they barely feel you. Kill one out of order and the rest knit back together.
 Sudo: Fifteen fragments. Put twelve back in order and I'll call it defragmented.
-Sudo: Pass it and I'll open the way down to The Kernel.
+Sudo: Pass it and the Stack Trace is yours to walk.
 -> ready_defragmenter
 
 ~ ready_defragmenter
@@ -187,14 +192,14 @@ Sudo: Order is just memory with a plan.
 > turn_in exam_defragmenter
 > report rank_up defragmenter
 Sudo: Every piece, in order, and nothing knit back. Defragmenter. I've never written that rank on anyone.
-Sudo: Sorting is yours now. The Root Process calls its adds in pieces too. You'll know what to do.
-Sudo: The Kernel is open. Whatever you decide down there, decide it efficiently.
+Sudo: Sorting is yours now. The Stack Trace is open: every pack in there is in pieces. The Root Process calls its adds in pieces too.
+Sudo: Whatever you decide at the bottom of all this, decide it efficiently.
 -> end
 
 ~ offer_engineer
-Sudo: You've seen what it does out there. The Mimic. The husks. Brack's voice in a packet. The Null copies.
-Sudo: And copies drift. Change one and the others don't know. That's how a convoy ends up deleted in one book and inbound in another.
-Sudo: The Engineer exam. Don't copy. Reference.
+Sudo: You've seen what it does. The Mimic. The husks. A convoy deleted in one book and inbound in another. The Null copies.
+Sudo: Past The Threshold it copies you. Your skills, your scripts. Copies drift: change yours and theirs don't know.
+Sudo: The Engineer exam, before I let you out there. Don't copy. Reference.
 * ACCEPT -> accept_engineer
 * DECLINE -> end
 
@@ -240,9 +245,42 @@ Sudo: Loops are yours now, outside the sandbox too. Retake it whenever you like.
 > turn_in exam_engineer
 > report rank_up engineer
 Sudo: One source, three skills, and none of them drifted. Rank up. Engineer.
-Sudo: Routines are yours now. Write a thing once, and let everything else point at it. The Gatekeeper is waiting.
+Sudo: Routines are yours now. Write a thing once, and let everything else point at it. The Fray is open.
+Sudo: One more thing. When the Null copies a script with a call in it, it copies the call. Not the routine. Think about who else is pointing at your routines.gd.
 -> end
 
+~ loss_archive
+> report crate_mourned CargoB
+Sudo: My archive went into C-0's queue. Every grade I ever wrote. Every examiner before me.
+Sudo: I remember most of them. That's the trouble with remembering. Most.
+Sudo: If you're in the Sweep anyway, it'll be in a cage with my name on it. I'd grade you kindly. I'd try.
+-> start
+
+~ offer_slice
+Sudo: The last floor before the Kernel. The Scheduler. The Null decides what runs next in there, and you can't go round it.
+Sudo: It writes into your kernel.gd while you stand in it. A new line every forty-five seconds. It's the only exam the Null ever set, and it doesn't grade on a curve.
+* ACCEPT -> accept_slice
+* DECLINE -> end
+
+~ accept_slice
+> start_quest time_slice
+Sudo: Clear it. Write your kernel for all four of its lines, not the one you're looking at.
+-> end
+
+~ remind_slice
+Sudo: The Scheduler. Every forty-five seconds, a new line that isn't yours. Plan for all of them.
+-> end
+
+~ ready_slice
+> turn_in time_slice
+Sudo: You passed an exam I didn't write. I'm not sure how I feel about that. I'll record it anyway.
+-> start
+
 ~ idle
-Sudo: Efficiency is just laziness with a plan."
+@ crate_restored:CargoB -> idle_archive
+Sudo: Efficiency is just laziness with a plan.
+-> end
+
+~ idle_archive
+Sudo: My archive's back on the yard floor. I checked every grade. You're in it now."
 metadata/_custom_type_script = "uid://dd85gxidfhqxl"

@@ -41,6 +41,18 @@ var _cursor_point := Vector3.INF
 var walking: bool = false
 
 signal walking_changed(is_walking: bool)
+
+# ---------- CO-OP PROTOTYPE (tools/coop_proto) ----------
+## True on this machine's copy of ANOTHER player's character: no input, no camera, no light. Its
+## position comes over the network, and its skills play for show (SkillBehavior.hit deals nothing).
+## Set before the node enters the tree. False everywhere in single player.
+var is_remote := false
+## A character to build instead of the save slot's (same shape as a save file). Set before the
+## node enters the tree. Empty everywhere in single player.
+var coop_data: Dictionary = {}
+## A skill was just cast from this action (the co-op arena tells the other machines).
+signal skill_cast(action: StringName)
+
 ## This character's class (null when the scene is run on its own). SkillComponent reads its trait.
 var class_data: ClassData
 
@@ -84,10 +96,15 @@ func set_light_strength(t: float) -> void:
 
 
 func _ready() -> void:
-	_add_light()
+	if not is_remote:
+		_add_light()
 	var c: ClassData = null
 	var data: Dictionary = {}
-	if not SaveManager.party.is_empty():
+	if not coop_data.is_empty():                 # co-op prototype: never touches a save slot
+		data = coop_data
+		c = load("res://data/classes/%s.tres" % data["class_id"]) as ClassData
+		class_data = c
+	elif not SaveManager.party.is_empty():
 		save_slot = SaveManager.party[0]
 		data = SaveManager.get_data(save_slot)
 		c = load("res://data/classes/%s.tres" % data["class_id"]) as ClassData
@@ -108,8 +125,9 @@ func _ready() -> void:
 		base[StatTypes.Stat.DEXTERITY] = float(c.dexterity)  # use your ClassData field names
 		base[StatTypes.Stat.INTELLIGENCE] = float(c.intelligence)
 	stats.base_stats = base          # assign the whole dict: the setter doesn't fire on mutation
-	add_child(AimLine.new())         # ground line for ranged skills (gameplay setting "aim_line")
-	add_child(RegistryMarkers.new()) # a ring under each enemy in a skill's Registry
+	if not is_remote:
+		add_child(AimLine.new())         # ground line for ranged skills (gameplay setting "aim_line")
+		add_child(RegistryMarkers.new()) # a ring under each enemy in a skill's Registry
 	if c != null:
 		apply_movement_trait(c.get_trait())        # Rogue: phases through enemies
 
@@ -126,7 +144,7 @@ func _ready() -> void:
 	stats.stats_changed.connect(mana._on_stats_changed)
 	
 	add_to_group("players")
-	if not SaveManager.party.is_empty():
+	if c != null:
 		$model.set_model(c.model_scene, c.model_scale, c.model_offset)
 		_apply_model_size(c.model_scale)
 	var hp_hud := get_tree().get_first_node_in_group("hp_hud") as HpHud
@@ -236,6 +254,11 @@ func _apply_saved_skills(data: Dictionary) -> void:
 		skills.restore_library(data['script_library'])
 	if data.get('script_routines') is Array:          # before the programs: their calls run these
 		skills.restore_routines(data['script_routines'])
+	if data.get('kernel') is Array:                   # kernel.gd: Act V's root lines (KernelScript)
+		skills.kernel.clear()
+		for id in data['kernel']:
+			if KernelScript.LINES.has(str(id)) and not (str(id) in skills.kernel):
+				skills.kernel.append(str(id))
 	for i in mini(saved.size(), skills.sockets.size()):
 		var entry: Dictionary = saved[i]
 		var gem_def := ItemDatabase.get_item(str(entry.get('gem', '')))
@@ -269,6 +292,7 @@ func write_save() -> void:
 		data.merge(loadout_save(), true)
 	data['script_library'] = skills.library.duplicate(true)
 	data['script_routines'] = skills.routines_to_list()
+	data['kernel'] = Array(skills.kernel)
 	data['currency'] = currency.to_dict()
 	data['quests'] = quests.to_dict()   
 
@@ -319,12 +343,15 @@ func _collect_inventory() -> Array:
 
 func _process(_delta: float) -> void:
 	# Dungeon walls in front of the player dither away round them (hardfault_meshes.tres)
-	if get_tree().get_first_node_in_group("players") == self:     # the first player (seat 0)
+	if is_remote:
+		return
+	# The first player (seat 0). In co-op: this machine's own player, wherever it sits in the group
+	if not coop_data.is_empty() or get_tree().get_first_node_in_group("players") == self:
 		RenderingServer.global_shader_parameter_set(&"player_world_pos", global_position)
 
 
 func _physics_process(delta: float) -> void:
-	if _dead:
+	if _dead or is_remote:                       # a remote copy is moved by the network
 		return
 	if not is_on_floor():
 		velocity += get_gravity() * delta
@@ -371,10 +398,25 @@ func _handle_attack(delta: float) -> void:
 		_attack_cooldown = skill.get_cooldown(stats)
 		skill.cast(self, stats, mana)
 		GameEvents.report("cast", String(actions[i]))
+		skill_cast.emit(actions[i])
 		return
 
+
+## Co-op: the owner of this remote copy cast a skill. Plays it here for show: the animation, the
+## projectiles and the effects, aimed where the owner aimed. Deals nothing (SkillBehavior.hit).
+func remote_cast(action: StringName, facing: float, aim_point: Vector3) -> void:
+	if not is_remote or _dead:
+		return
+	var skill := skills.get_skill(action)
+	if skill == null:
+		return
+	global_rotation.y = facing
+	_cursor_point = aim_point
+	skill.cast(self, stats)
+
+
 func _unhandled_input(event: InputEvent) -> void:
-	if input_locked:
+	if input_locked or is_remote:
 		return
 	if event.is_action_pressed("interact") and _interactable != null:
 		_interactable.interact(self)
@@ -419,7 +461,7 @@ func _on_died() -> void:
 	remove_from_group("players")
 	$model.play_death()
 	var dm := get_tree().get_first_node_in_group("death_menu") as DeathMenu
-	if dm:
+	if dm and not is_remote:
 		dm.show_death(self)
 
 func revive() -> void:

@@ -12,16 +12,16 @@
 [ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="n_vesper"]
 [ext_resource type="Resource" path="res://data/dialogue/vesper_field.tres" id="n_vesper_dlg"]
 [ext_resource type="Script" path="res://systems/world/stand_near_arrival.gd" id="n_stand"]
-[ext_resource type="Script" path="res://systems/world/null_law_director.gd" id="n_laws"]
+[ext_resource type="Script" path="res://systems/world/null_echo_director.gd" id="n_echoes"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 agent_height = 1.8
 agent_radius = 0.3
 
 [node name="DeletedQuarter" type="Node3D"]
-metadata/_note = "PROTOTYPE. Act IV, level 32, between The Fray and The Weaver's Loom: pieces of Checkpoint the Null deleted and rebuilt wrong (Act III's district tiles), walked by Null Weavers and Mirror Husks. A side portal leads to The Rule Forge."
+metadata/_note = "PROTOTYPE. Act IV, level 35, between The Fray and The Weaver's Loom: pieces of Checkpoint the Null deleted and rebuilt wrong (Act III's district tiles), walked by Null Weavers and Mirror Husks. A side portal leads to The Rule Forge."
 script = ExtResource("1_dun")
-dungeon_level = 32
+dungeon_level = 35
 respawn_spawn_id = &"dq_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
@@ -70,7 +70,7 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_4_the_fray.tscn"
 target_spawn = &"fray_out"
 arrival_spawn_id = &"dq_in"
-dungeon_level = 30
+dungeon_level = 31
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
@@ -87,7 +87,7 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_4_weavers_loom.tscn"
 target_spawn = &"loom_in"
 arrival_spawn_id = &"dq_out"
-dungeon_level = 33
+dungeon_level = 36
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
@@ -104,10 +104,10 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_4_rule_forge.tscn"
 target_spawn = &"forge_in"
 arrival_spawn_id = &"dq_forge"
-dungeon_level = 33
+dungeon_level = 36
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
-metadata/_note = "The side portal to The Rule Forge (the challenge zone)."
+metadata/_note = "The side portal to The Mirror Forge (the challenge zone)."
 
 [node name="Room1" type="Marker3D" parent="Layout"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 55, 0, 110)
@@ -136,6 +136,6 @@ dialogue = ExtResource("n_vesper_dlg")
 [node name="StandNearArrival" type="Node" parent="Vesper"]
 script = ExtResource("n_stand")
 
-[node name="NullLaws" type="Node" parent="."]
-script = ExtResource("n_laws")
-metadata/_note = "The Null rewrites one of AXIOM's rules at a time here (NullLaws): a banner names it, Vesper reads it."
+[node name="NullEchoes" type="Node" parent="."]
+script = ExtResource("n_echoes")
+metadata/_note = "The Null copies the player here: Null Echoes, placed by NullEchoDirector (NullEcho)."

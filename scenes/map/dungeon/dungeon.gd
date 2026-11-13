@@ -51,6 +51,10 @@ func _ready() -> void:
 	sleeper.enemies_root = $Enemies
 	add_child(sleeper)
 	_bind_minimap()
+	if KernelScript.is_zone(scene_file_path):     # Act V: kernel.gd runs on this zone
+		var kernel := KernelDirector.new()
+		kernel.name = "KernelDirector"
+		add_child(kernel)
 	await _bake_navigation()
 
 
@@ -71,8 +75,12 @@ func _spawn_enemies() -> void:
 			skip.append(r)
 	populator.populate(dungeon_level, skip, _is_floor, _grid_to_world)
 	populator.spawn_marked(director.layout.enemies, dungeon_level, _is_floor, _grid_to_world)
+	var echoes := get_node_or_null("NullEchoes") as NullEchoDirector   # Act IV: the Null copies you
+	if echoes != null:
+		populator.place_echoes(echoes, _is_floor, _grid_to_world)
 	populator.place_ward_beacon(_is_floor, _grid_to_world)   # before the props, so none land on it
 	populator.place_salvage(scene_file_path, _is_floor, _grid_to_world)   # convoy stops only
+	populator.place_queued_crates(scene_file_path, _is_floor, _grid_to_world)   # the Sweep only (YardCrates)
 	populator.place_props(_is_floor, _grid_to_world)    # breakable barrels and supply caches
 
 ## Null corruption stains on the floor, more of them the deeper the dungeon (see NullDecals).

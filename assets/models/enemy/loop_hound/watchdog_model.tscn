@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/enemy/enemy_model.gd" id="1_model"]
+[ext_resource type="PackedScene" path="res://assets/models/enemy/loop_hound/hound_model.tscn" id="2_mesh"]
+[ext_resource type="Script" path="res://assets/models/enemy/loop_hound/watchdog_look.gd" id="3_look"]
+
+[node name="WatchdogModel" type="Node3D"]
+script = ExtResource("1_model")
+debug_attack_timer = false
+idle_anim = &"idle"
+move_anim = &"run"
+attack_anim = &"bite"
+death_anim = &""
+skill_anims = Dictionary[String, String]({
+"slash_l": "bite",
+"slash_r": "bite",
+"slam": "bite"
+})
+metadata/_note = "The Watchdog (The Page File, Act V): the Loop Hound's mesh, bigger and lower, in gunmetal with a cyan scan overlay (WatchdogLook) instead of the hound's fire and red glitch."
+
+[node name="Mesh" parent="." instance=ExtResource("2_mesh")]
+transform = Transform3D(1.3, 0, 0, 0, 1.1, 0, 0, 0, 1.45, 0, 0, 0)
+
+[node name="Look" type="Node" parent="."]
+script = ExtResource("3_look")

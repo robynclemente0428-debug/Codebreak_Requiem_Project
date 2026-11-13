@@ -17,7 +17,6 @@ const IMPACT_GAP := 0.1         # after a Blast explosion
 ## Prints each repeat decision to Output ("[Loop] ..."), to see why a loop did or didn't run.
 const DEBUG := true
 
-const NullLawsRef := preload("res://systems/world/null_laws.gd")   # Act IV's Null Laws
 
 var support: ProgramSupport
 var root: SkillCast
@@ -198,7 +197,7 @@ func _next_rule() -> ProgramRule:
 				_log("judging FOR rule after landing: %s" % ", ".join(parts))
 			if r.all_true(root, null):
 				support.announce(root, r)
-				for i in NullLawsRef.loop_count(r.loop, root.caster):   # LOOPS RUN ONCE MORE
+				for i in r.loop.count:
 					_tickets.append(r)
 		_late_fors.clear()
 	for rule in _tickets + _whiles:
@@ -209,7 +208,7 @@ func _next_rule() -> ProgramRule:
 		if not _stopped.has(r):
 			return r
 	for r in _whiles:
-		if _stopped.has(r) or int(_while_used.get(r, 0)) >= NullLawsRef.loop_count(r.loop, root.caster):
+		if _stopped.has(r) or int(_while_used.get(r, 0)) >= r.loop.count:
 			continue
 		if r.all_true(current, null):
 			_while_used[r] = int(_while_used.get(r, 0)) + 1

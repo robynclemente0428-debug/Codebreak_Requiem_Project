@@ -4,6 +4,12 @@
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
 [ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
 
+[sub_resource type="Resource" id="Objective_exam"]
+script = ExtResource("1_obj")
+description = "Pass Sudo's Engineer exam"
+kind = "quest_done"
+target = "exam_engineer"
+
 [sub_resource type="Resource" id="Objective_0"]
 script = ExtResource("1_obj")
 description = "Defeat Null Weavers in The Fray"
@@ -15,9 +21,10 @@ required = 6
 script = ExtResource("2_quest")
 id = "q07a_learn_the_language"
 title = "LEARN THE LANGUAGE"
-description = "The Null Weavers in The Fray speak in patterns. Vesper says that breaking them is how you learn to read them.
+description = "The Fray stays shut until Sudo ranks you Engineer, so start there.
+The Null Weavers in The Fray speak in patterns. Vesper says that breaking them is how you learn to read them.
 Watch how each one fires: the gaps in its fan are the grammar."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_exam"), SubResource("Objective_0")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q06c_root_access"])
 reward_credits = 225

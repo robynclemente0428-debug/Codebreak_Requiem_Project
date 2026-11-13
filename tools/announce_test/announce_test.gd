@@ -17,7 +17,6 @@ extends Node
 ## Results go to the Output panel and to announce_test_results.txt beside this script. Your own
 ## UI size setting is put back when it finishes; nothing is saved.
 
-const NullLawBannerScript := preload("res://systems/world/null_law_banner.gd")
 const RESULTS := "res://tools/announce_test/announce_test_results.txt"
 const FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 
@@ -38,7 +37,6 @@ var _draining := false                    # the timeline is done; waiting for th
 var _events: Array = []                   # [time, label, Callable], soonest first
 var _hud: Control
 var _tracker: QuestTracker
-var _law: Control
 var _exam: ExamHud
 var _locks: LockTags
 var _strip_a: PanelContainer              # stand-in: the tutorial banner
@@ -74,8 +72,6 @@ func _ready() -> void:
 	layer.add_child(_hud)
 	_tracker = QuestTracker.new()
 	_hud.add_child(_tracker)
-	_law = NullLawBannerScript.new()
-	_hud.add_child(_law)
 	_locks = LockTags.new()
 	_hud.add_child(_locks)
 	_exam = ExamHud.new()
@@ -158,9 +154,8 @@ func _plan() -> void:
 		_strip_a.visible = true
 		_strip_b.visible = true)
 	# Everything at once
-	_at(1.0, "ALL AT ONCE: area cleared, null law, 2 new locks, 4 toasts", func() -> void:
+	_at(1.0, "ALL AT ONCE: area cleared, 2 new locks, 4 toasts", func() -> void:
 		_area_cleared("The Spillway")
-		_null_law("life_inverted")
 		_new_lock("ECHO")
 		_new_lock("REFLECT")
 		_toast("NEW QUEST: CLEAR THE SPILLWAY")
@@ -185,7 +180,6 @@ func _plan() -> void:
 		for i in 6:
 			_toast_later(i * 0.1, "COMMS AT %d%%\nThe Null are in the hold." % (90 - i * 10)))
 	_at(9.0, "strip: dock panel hides", func() -> void: _strip_b.visible = false)
-	_at(10.0, "null law changes (replaces the waiting one)", func() -> void: _null_law("near_is_far"))
 	_at(10.5, "area cleared again", func() -> void: _area_cleared("The Undercroft"))
 	_at(14.0, "strip: banner hides, dock panel back", func() -> void:
 		_strip_a.visible = false
@@ -197,7 +191,6 @@ func _plan() -> void:
 	_at(16.0, "everything at once with no strip", func() -> void:
 		_strip_b.visible = false
 		_area_cleared("The Last Mile")
-		_null_law("life_inverted")
 		_flash("EXECUTE")
 		for i in 4:
 			_toast("CRATE TAGGED\nKill the markers before the sweep, or it's deleted."))
@@ -217,12 +210,6 @@ func _at(time: float, label: String, what: Callable) -> void:
 func _area_cleared(area: String) -> void:
 	_asked.append("area_cleared")
 	AreaClearedBanner.announce(get_tree(), area, "+1 SCRIPT POINT ON EVERY SKILL")
-
-
-func _null_law(id: String) -> void:
-	_asked.append("null_law")
-	_law.call("show_law", id)
-	_law.call("announce", id)
 
 
 func _new_lock(lock_name: String) -> void:
@@ -289,10 +276,6 @@ func _on_screen() -> Array:
 			var top: float = b.call("_centre_y") - h * 0.5 - 8.0
 			rects["AREA CLEARED"] = Rect2(0.0, top, band.size.x, h)
 			heads.append("area_cleared")
-	var big := _law.get("_big") as Control
-	if big.modulate.a > 0.02:
-		rects["NULL LAW line"] = big.get_global_rect()
-		heads.append("null_law")
 	var flash := _exam.get("_flash") as Label
 	if flash.modulate.a > 0.02:
 		rects["exam line"] = _text_rect(flash)

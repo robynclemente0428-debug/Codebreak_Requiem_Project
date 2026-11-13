@@ -177,7 +177,11 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 	# Areas that care about the player arriving (towns heal and save here)
 	if area.has_method("on_player_arrived"):
 		area.on_player_arrived(player)
-	Waypoints.arrived(scene_path)         # first visit unlocks the area on the waypoint map (U)
+	# Quest event: arriving here ("enter_area", "act_5_stack_trace": THE CORE SENTINEL). Towns
+	# report it themselves in on_player_arrived, before they save.
+	if not area is TownArea:
+		GameEvents.report("enter_area", area.scene_file_path.get_file().get_basename())
+	Waypoints.arrived(scene_path)        # first visit unlocks the area on the waypoint map (U)
 	GlitchDeath.prewarm(area, spot)       # its shaders compile now, not on the first kill
 	EffectWarmup.run(area, spot)          # likewise bullets, hit rings, flashes and damage numbers
 

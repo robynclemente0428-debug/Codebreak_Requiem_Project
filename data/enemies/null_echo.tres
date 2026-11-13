@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://scenes/enemy/boss/mirror_husk_model.tscn" id="3_model"]
+[ext_resource type="Script" path="res://systems/enemies/traits/null_echo_trait.gd" id="4_echo"]
+
+[resource]
+script = ExtResource("1_def")
+id = "null_echo"
+display_name = "Null Echo"
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+allowed_modifier_tags = Array[int]([1, 3, 4])
+capsule_radius = 0.35
+capsule_height = 1.75
+max_health = 48.0
+armour = 20.0
+move_speed = 3.3
+aggro_range = 14.0
+attack_range = 1.4
+min_attack_damage = 5.0
+max_attack_damage = 11.0
+attack_speed = 0.8
+skill_cooldown = 2.5
+cooldown_jitter = 1.0
+act_boss = false
+basic_attack_enabled = true
+innate_traits = Array[Script]([ExtResource("4_echo")])
+metadata/_note = "Act IV (NullEchoDirector places them; never in a theme's random pool). Copies the first skill it sees the player cast: NullEcho."
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

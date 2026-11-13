@@ -43,7 +43,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-s
 .area header { display: flex; align-items: baseline; gap: 12px; border-bottom: 2px solid var(--hue); padding-bottom: 8px; }
 .area h2 { margin: 0; font: 700 15px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--hue); }
 .area header span { color: var(--muted); font-size: 12px; }
-.layers { display: flex; gap: 96px; align-items: flex-start; }
+.layers { display: flex; gap: 120px; align-items: flex-start; }
 .layer { display: flex; flex-direction: column; gap: 18px; }
 .card { width: 240px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
   box-shadow: 0 1px 2px rgb(0 0 0 / .06); position: relative; z-index: 1; transition: opacity .15s; }
@@ -61,17 +61,18 @@ body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-s
 .row.pkrow .n { font-weight: 600; }
 .row .t { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .row .ref { color: var(--accent); font-size: 10.5px; font-weight: 600; }
-#lines path { fill: none; stroke: var(--rel); stroke-width: 1.5; transition: opacity .15s; }
-#lines path.hi { stroke: var(--accent); stroke-width: 2.4; }
+#lines path, #lines circle { fill: none; stroke: var(--rel); stroke-width: 1.5; transition: opacity .15s; }
+#lines circle { fill: var(--panel); }           /* hides any line passing behind the ring */
+#lines .hi { stroke: var(--accent); stroke-width: 2.4; }
 .focus .card:not(.hi) { opacity: .3; }
-.focus #lines path:not(.hi) { opacity: .1; }
+.focus #lines :is(path, circle):not(.hi) { opacity: .1; }
 .card.hi { outline: 2px solid var(--accent); }
 .hint { position: absolute; right: 12px; bottom: 10px; font-size: 12px; color: var(--muted); background: var(--panel);
   border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; pointer-events: none; }
 .png #viewport { overflow: visible; cursor: default; }
 .png #stage { position: relative; }
 .png .tools, .png .hint { display: none; }
-@media (prefers-reduced-motion: reduce) { .card, #lines path { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .card, #lines path, #lines circle { transition: none; } }
 </style>
 </head>
 <body>
@@ -171,14 +172,25 @@ function box(el) {
   const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
   return { l: r.left - s.left, r: r.right - s.left, y: (r.top + r.bottom) / 2 - s.top };
 }
+// Each line leaves a card straight for END px, so the crow's-foot marks always sit on a
+// level segment; the curve only starts after them. Marks are drawn after all lines.
+const END = 30;
+const NS = "http://www.w3.org/2000/svg";
 const bar = (x, y, d, o) => `M${x + d * o} ${y - 6}V${y + 6}`;
-const ring = (x, y, d, o) => { const cx = x + d * o; return `M${cx - 4} ${y}a4 4 0 1 0 8 0a4 4 0 1 0 -8 0`; };
 const crow = (x, y, d) => `M${x} ${y - 7}L${x + d * 12} ${y}L${x} ${y + 7}`;
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  parent.appendChild(e);
+  return e;
+}
 
 function drawLines() {
   stage.style.transform = "none";
   svg.innerHTML = "";
   svg.setAttribute("width", stage.scrollWidth); svg.setAttribute("height", stage.scrollHeight);
+  const lineLayer = el("g", {}, svg), markLayer = el("g", {}, svg);
   paths.length = 0;
   for (const area of areas) {
     for (const name of Object.keys(area.cards)) {
@@ -187,26 +199,31 @@ function drawLines() {
       t.fks.forEach((fk, i) => {
         if (LOOK.has(fk.table) || !area.cards[fk.table]) return;
         const a = box(area.rows[name][fk.from]), b = box(area.rows[fk.table][fk.to]);
-        let ax, bx, da, db, d;
+        let ax, bx, da, db, k;
         if (fk.table === name) {                                   // self reference
-          ax = a.r; bx = b.r; da = db = 1;
-          const out = 34 + i * 8;
-          d = `M${ax} ${a.y}C${ax + out} ${a.y} ${bx + out} ${b.y} ${bx} ${b.y}`;
+          ax = a.r; bx = b.r; da = db = 1; k = 22 + i * 8;
         } else {
           const ca = box(area.cards[name]), cb = box(area.cards[fk.table]);
           if (cb.r <= ca.l) { ax = a.l; bx = b.r; da = -1; db = 1; }
           else if (cb.l >= ca.r) { ax = a.r; bx = b.l; da = 1; db = -1; }
           else { ax = a.r; bx = b.r; da = db = 1; }
-          const k = da === db ? 50 : Math.max(36, Math.abs(bx - ax) * 0.5);
-          d = `M${ax} ${a.y}C${ax + da * k} ${a.y} ${bx + db * k} ${b.y} ${bx} ${b.y}`;
+          k = da === db ? 40 : Math.max(24, Math.abs(bx - ax) * 0.5 - END);
         }
+        const a2 = ax + da * END, b2 = bx + db * END;          // where the curve starts / ends
+        const line = `M${ax} ${a.y}H${a2}C${a2 + da * k} ${a.y} ${b2 + db * k} ${b.y} ${b2} ${b.y}H${bx}`;
+
         const col = t.columns.find(c => c.name === fk.from);
-        d += bar(bx, b.y, db, 8) + (col && col.nn ? bar(bx, b.y, db, 13) : ring(bx, b.y, db, 17));
-        d += fk.one ? bar(ax, a.y, da, 9) + ring(ax, a.y, da, 17) : crow(ax, a.y, da) + ring(ax, a.y, da, 17);
-        const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        p.setAttribute("d", d);
-        svg.appendChild(p);
-        paths.push({ el: p, area, a: name, b: fk.table });
+        // parent end: exactly one (two bars) or zero/one (bar + ring)
+        let marks = bar(bx, b.y, db, 8);
+        const rings = [];
+        if (col && col.nn) marks += bar(bx, b.y, db, 13); else rings.push([bx + db * 17, b.y]);
+        // child end: zero/one (bar + ring) or zero/many (crow + ring)
+        marks += fk.one ? bar(ax, a.y, da, 9) : crow(ax, a.y, da);
+        rings.push([ax + da * 19, a.y]);
+
+        const els = [el("path", { d: line }, lineLayer), el("path", { d: marks }, markLayer)];
+        for (const [cx, cy] of rings) els.push(el("circle", { cx, cy, r: 4 }, markLayer));
+        paths.push({ els, area, a: name, b: fk.table });
       });
     }
   }
@@ -218,13 +235,12 @@ let pinned = null;
 function highlight(target) {
   stage.classList.toggle("focus", !!target);
   stage.querySelectorAll(".card.hi").forEach(c => c.classList.remove("hi"));
-  paths.forEach(p => p.el.classList.remove("hi"));
+  paths.forEach(p => p.els.forEach(e => e.classList.remove("hi")));
   if (!target) return;
   const { area, name } = target;
   area.cards[name].classList.add("hi");
   for (const p of paths) if (p.area === area && (p.a === name || p.b === name)) {
-    p.el.classList.add("hi"); area.cards[p.a].classList.add("hi"); area.cards[p.b].classList.add("hi");
-    svg.appendChild(p.el);
+    p.els.forEach(e => { e.classList.add("hi"); e.parentNode.appendChild(e); }); area.cards[p.a].classList.add("hi"); area.cards[p.b].classList.add("hi");
   }
 }
 for (const area of areas) for (const [name, card] of Object.entries(area.cards)) {

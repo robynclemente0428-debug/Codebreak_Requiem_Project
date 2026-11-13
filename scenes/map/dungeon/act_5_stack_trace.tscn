@@ -21,7 +21,7 @@ agent_radius = 0.3
 [node name="StackTrace" type="Node3D"]
 metadata/_note = "PROTOTYPE. Act V: the Core replays the processes of earlier acts. Three of them carry the Architects' logs (LAST WORDS)."
 script = ExtResource("1_dun")
-dungeon_level = 36
+dungeon_level = 41
 respawn_spawn_id = &"stack_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
@@ -86,7 +86,7 @@ script = ExtResource("7_portalm")
 target_area = "res://scenes/map/dungeon/act_5_sentinel_hall.tscn"
 target_spawn = &"hall_in"
 arrival_spawn_id = &"stack_out"
-dungeon_level = 37
+dungeon_level = 43
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 

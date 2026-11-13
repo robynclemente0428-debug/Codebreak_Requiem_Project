@@ -17,7 +17,7 @@ agent_radius = 0.3
 
 [node name="Registry" type="Node3D"]
 script = ExtResource("1_dun")
-dungeon_level = 22
+dungeon_level = 21
 respawn_spawn_id = &"registry_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"

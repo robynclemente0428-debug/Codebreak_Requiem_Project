@@ -631,6 +631,102 @@ func place_salvage(scene_path: String, is_floor: Callable, to_world: Callable) -
 	push_warning("No floor for the salvage cache of %s" % w.id)
 
 
+## The Sweep only: every yard crate still in C-0's deletion queue (YardCrates.queued), each in its
+## own ordinary room (picked from the crate's id, so the same room on a rejoin), at the free floor
+## cell nearest the room's middle. None once the Collector has fallen: the queue burned with it.
+func place_queued_crates(scene_path: String, is_floor: Callable, to_world: Callable) -> void:
+	if scene_path.get_file().get_basename() != "act_3_sweep":
+		return
+	var qm := YardCrates.qm_of(get_tree())
+	var ids := YardCrates.queued(qm)
+	if ids.is_empty():
+		return
+	var rooms: Array[RoomData] = []
+	for room: RoomData in director.rooms:
+		if not (room.room_type in ["start", "portal", "boss"]):   # the Sweep's own rooms count too
+			rooms.append(room)
+	if rooms.is_empty():
+		return
+	var used := {}
+	var taken := {_beacon_cell: true, _salvage_cell: true}    # cells with something on them already
+	for id in ids:
+		var pick := absi(hash(id)) % rooms.size()
+		for step in rooms.size():                    # the next free room if that one has a crate
+			if not used.has((pick + step) % rooms.size()):
+				pick = (pick + step) % rooms.size()
+				break
+		used[pick] = true
+		var c := rooms[pick].center()
+		var placed := false
+		for r in range(0, 6):                         # nearest free floor cell, rings outwards
+			for dx in range(-r, r + 1):
+				for dy in range(-r, r + 1):
+					var t := c + Vector2i(dx, dy)
+					if placed or maxi(absi(dx), absi(dy)) != r or _near_taken(t, taken):
+						continue
+					if is_floor.call(Vector3i(t.x, 0, t.y)):
+						QueuedCrate.spawn(get_parent(), to_world.call(t), id)
+						taken[t] = true
+						placed = true
+		if not placed:
+			push_warning("No floor for the queued crate %s" % id)
+
+
+## Act IV: Null Echoes (NullEchoDirector), `per_room` in every ordinary room near its middle, and
+## the Mirror Forge's champion in the room farthest from the way in. Spawned through _spawn_enemy
+## right after the layout's own enemies, so their indices stay in step and kills persist.
+func place_echoes(director_node: NullEchoDirector, is_floor: Callable, to_world: Callable) -> void:
+	var def := director_node.echo_definition()
+	if def == null:
+		return
+	var start := director.layout.spawn_cell if director.layout != null else Vector2i.ZERO
+	var rooms: Array[RoomData] = []
+	var far: RoomData = null
+	for room: RoomData in director.rooms:
+		if room.room_type in ["start", "portal", "boss"]:
+			continue
+		rooms.append(room)
+		if far == null or Vector2(room.center() - start).length() > Vector2(far.center() - start).length():
+			far = room
+	var taken := {}
+	for room in rooms:
+		var count := director_node.per_room + (1 if director_node.champion and room == far else 0)
+		for k in count:
+			var cell := _free_cell_near(room.center(), is_floor, taken)
+			if cell == Vector2i(-99999, -99999):
+				break
+			taken[cell] = true
+			var champ := director_node.champion and room == far and k == count - 1
+			var echo := _spawn_enemy(def, "champion" if champ else "normal", cell, [], false)
+			if echo == null:
+				continue                               # killed on an earlier visit
+			for t in echo.get("traits"):
+				if t is NullEcho:
+					(t as NullEcho).copies = director_node.copies
+					(t as NullEcho).calls_all = champ
+
+
+## The free floor cell nearest `c` (rings outwards), clear of `taken`; (-99999, -99999) if none.
+func _free_cell_near(c: Vector2i, is_floor: Callable, taken: Dictionary) -> Vector2i:
+	for r in range(0, 7):
+		for dx in range(-r, r + 1):
+			for dy in range(-r, r + 1):
+				var t := c + Vector2i(dx, dy)
+				if maxi(absi(dx), absi(dy)) != r or _near_taken(t, taken):
+					continue
+				if is_floor.call(Vector3i(t.x, 0, t.y)):
+					return t
+	return Vector2i(-99999, -99999)
+
+
+## True when `cell` is within two cells of one in `taken` (crates sharing a room stand apart).
+static func _near_taken(cell: Vector2i, taken: Dictionary) -> bool:
+	for t in taken:
+		if maxi(absi(cell.x - (t as Vector2i).x), absi(cell.y - (t as Vector2i).y)) < 2:
+			return true
+	return false
+
+
 ## The district's ward beacon, in the room farthest from where the player arrives (so it's
 ## worth the walk), at the free floor cell nearest that room's middle.
 func place_ward_beacon(is_floor: Callable, to_world: Callable) -> void:

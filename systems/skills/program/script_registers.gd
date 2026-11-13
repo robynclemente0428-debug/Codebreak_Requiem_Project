@@ -118,6 +118,35 @@ static func sort_text(sort_by: int) -> String:
 	return "key=%s%s" % [SORT_KEYS[s / 2], ", reverse=true" if s % 2 == 1 else ""]
 
 
+## Each sort key's two ends in words: [the front, the back] when not reversed.
+const SORT_ENDS := {"age": ["oldest", "newest"], "hp": ["lowest-hp", "highest-hp"],
+	"max_hp": ["frailest", "toughest"], "distance": ["nearest", "farthest"]}
+## Each place in POSITIONS in short words, for the palette.
+const POSITION_WORDS := {"[0]": "first", "[1]": "2nd", "[2]": "3rd", "[-1]": "last",
+	"[:2]": "first 2", "[:3]": "first 3"}
+
+
+## Which enemy a place in the order is, in words: "the nearest", "the 2nd nearest", "the
+## farthest", "the 3 nearest". For the comment on a registry[...] check.
+static func position_meaning(pos: int, sort_by: int) -> String:
+	var s := posmod(sort_by, SORT_KEYS.size() * 2)
+	var ends: Array = SORT_ENDS[SORT_KEYS[s / 2]]
+	var front: String = ends[1 if s % 2 == 1 else 0]
+	var back: String = ends[0 if s % 2 == 1 else 1]
+	match POSITIONS[posmod(pos, POSITIONS.size())]:
+		"[1]":
+			return "the 2nd " + front
+		"[2]":
+			return "the 3rd " + front
+		"[-1]":
+			return "the " + back
+		"[:2]":
+			return "the 2 " + front
+		"[:3]":
+			return "the 3 " + front
+	return "the " + front
+
+
 ## What a sort order means, for tooltips.
 static func sort_meaning(sort_by: int) -> String:
 	var s := posmod(sort_by, SORT_KEYS.size() * 2)

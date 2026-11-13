@@ -19,7 +19,7 @@ agent_radius = 0.3
 [node name="SentinelHall" type="Node3D"]
 metadata/_note = "PROTOTYPE. Act V: the Core Sentinel's arena, past the Stack Trace."
 script = ExtResource("1_dun")
-dungeon_level = 37
+dungeon_level = 43
 respawn_spawn_id = &"hall_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
@@ -81,9 +81,13 @@ metadata/_custom_type_script = "uid://drtmekm517kgm"
 [node name="PortalNext" type="Marker3D" parent="Layout"]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 190, 1, 100)
 script = ExtResource("7_portalm")
-target_area = "res://scenes/map/town/act_5_core.tscn"
-target_spawn = &"from_hall"
+target_area = "res://scenes/map/dungeon/act_5_page_file.tscn"
+target_spawn = &"pagefile_in"
 arrival_spawn_id = &"hall_out"
+dungeon_level = 46
+sealed_by_key = "kernel_road"
+open_after_quest = "q09_core_sentinel"
+metadata/_note = "Down to The Page File. Sealed until the Core Sentinel falls: it carries the way down."
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
@@ -111,4 +115,5 @@ script = ExtResource("10_enemym")
 enemy = ExtResource("e_boss")
 threat_traits = false
 rarity = "champion"
+drops_key = "kernel_road"
 metadata/_custom_type_script = "uid://bri1ph1ms875r"

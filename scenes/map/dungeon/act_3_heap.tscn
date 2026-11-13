@@ -18,7 +18,7 @@ agent_radius = 0.3
 
 [node name="Heap" type="Node3D"]
 script = ExtResource("1_dun")
-dungeon_level = 23
+dungeon_level = 22
 respawn_spawn_id = &"heap_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"

@@ -8,7 +8,8 @@ source = "# The Last Log: a recorded voice, Act V only. Gives THE CORE SENTINEL,
 # and after the Root Process falls offers the ending (> ending merge / overwrite / terminate: the
 # ending card, EndingCard, and an 'ending' deed that is saved).
 # Talking to it is THE NULL GATEKEEPER's last step (objective 'talk' last_log), reported before this
-# dialogue opens, so the quest is READY here.
+# dialogue opens, so the quest is READY here. Turning it in gives root: kernel.gd (KernelScript).
+# Before the choice it reads your kernel back, and the ending it leans toward is marked.
 ~ start
 @ quest_ready:q08_null_gatekeeper -> first_arrival
 @ quest_ready:last_words -> ready_words
@@ -30,6 +31,9 @@ The Last Log: AXIOM was never meant to run forever. It was meant to evolve, unti
 The Last Log: The Null is the process we left running, for when that day came. It is hours from finishing.
 > turn_in q08_null_gatekeeper
 The Last Log: Two things still stand between you and the Core. The first is already loading.
+The Last Log: One more thing. You have root here. Open your scripts: there is a file called kernel.gd.
+The Last Log: Its lines don't belong to a skill. They belong to the place. Down here, you can write the rules the Core runs on.
+The Last Log: So can the Null. It will write into the same file, as you go deeper. Overwrite it, or leave it running. Either way, it is a record.
 -> start
 
 ~ offer_q09_core_sentinel
@@ -59,7 +63,7 @@ The Last Log: The Sentinel falls. One guardian remains.
 
 ~ offer_q10_root_process
 The Last Log: The Root Process is the Core's last defense. It cannot be reasoned with.
-The Last Log: It runs in The Kernel, below us. Your examiner keeps the way down. Talk to her first.
+The Last Log: It runs in The Kernel, at the bottom of the Core. There is one way down: the Stack Trace, Sentinel's Hall, the Page File, the Scheduler. Your examiner keeps the first door. Talk to her first.
 * ACCEPT -> accept_q10_root_process
 * DECLINE -> end
 
@@ -84,13 +88,30 @@ The Last Log: The Kernel is quiet. Done?
 ~ choice_intro
 The Last Log: The Core is open. Nothing runs here now but the Null, and you.
 The Last Log: Let it finish, and AXIOM becomes something none of us designed. Patch it, and AXIOM lives as it is, degraded and known. Or end it.
-The Last Log: The choice is yours, Executor.
+The Last Log: The choice is yours, Executor. Before you make it, I have read your kernel.
+@ kernel_leans:overwrite -> read_overwrite
+@ kernel_leans:merge -> read_merge
+-> read_terminate
+
+~ read_overwrite
+The Last Log: You overwrote its lines. One after another, at a cost you could have spent on yourself. You have been patching AXIOM all along.
+-> choice
+
+~ read_merge
+The Last Log: You left its lines running. You fought beside what it wrote, and never took it out. You have been sharing the Core with it already.
+-> choice
+
+~ read_terminate
+The Last Log: Your kernel says very little about the Null. Perhaps that is an answer too. Some processes are simply meant to stop.
 -> choice
 
 ~ choice
-* MERGE: LET THE NULL FINISH -> merge
-* OVERWRITE: PATCH AXIOM -> overwrite
-* TERMINATE: SHUT IT DOWN -> terminate
+* [kernel_leans:merge] MERGE: LET THE NULL FINISH  (YOUR KERNEL) -> merge
+* [!kernel_leans:merge] MERGE: LET THE NULL FINISH -> merge
+* [kernel_leans:overwrite] OVERWRITE: PATCH AXIOM  (YOUR KERNEL) -> overwrite
+* [!kernel_leans:overwrite] OVERWRITE: PATCH AXIOM -> overwrite
+* [kernel_leans:terminate] TERMINATE: SHUT IT DOWN  (YOUR KERNEL) -> terminate
+* [!kernel_leans:terminate] TERMINATE: SHUT IT DOWN -> terminate
 * NOT YET -> end
 
 ~ merge

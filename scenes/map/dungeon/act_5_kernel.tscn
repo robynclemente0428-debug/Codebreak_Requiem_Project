@@ -19,7 +19,7 @@ agent_radius = 0.3
 [node name="TheKernel" type="Node3D"]
 metadata/_note = "PROTOTYPE. Act V: the Root Process's arena. Its far portal goes back to the Core, where the Last Log offers the ending."
 script = ExtResource("1_dun")
-dungeon_level = 40
+dungeon_level = 50
 respawn_spawn_id = &"kernel_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
@@ -65,8 +65,8 @@ mesh_library = ExtResource("6_mesh")
 [node name="PortalBack" type="Marker3D" parent="Layout"]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 100)
 script = ExtResource("7_portalm")
-target_area = "res://scenes/map/town/act_5_core.tscn"
-target_spawn = &"from_kernel"
+target_area = "res://scenes/map/dungeon/act_5_scheduler.tscn"
+target_spawn = &"scheduler_out"
 arrival_spawn_id = &"kernel_in"
 room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Clear The Scheduler"
+kind = "clear_area"
+target = "act_5_scheduler"
+
+[resource]
+script = ExtResource("2_quest")
+id = "time_slice"
+title = "TIME SLICE"
+description = "The last floor before the Kernel is the Scheduler, where the Null decides what runs next. Sudo calls it the only exam the Null ever set.
+CHALLENGE: the Null schedules one of its own lines into your kernel.gd every 45 seconds while you're in there, round and round, and far more rares and champions spawn.
+TIP: write kernel.gd for all four of its lines, not one. A light kernel keeps your stability high, and the Null's lines weaker."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
+ordered = true
+prerequisite_quest_ids = Array[String](["exam_defragmenter"])
+reward_credits = 400
+metadata/giver = "Sudo"
+metadata/act = "V"

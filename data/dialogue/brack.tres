@@ -7,6 +7,10 @@ script = ExtResource("1_dlg")
 source = "# Warden Brack: leader of Hardfault. Blunt, tired. Gives most boss quests (Acts I to III).
 # Lines marked NEW are not in the campaign doc yet.
 ~ start
+# Yard Sweeps (YardCrates): the memorial board, Brack's log and the med stores, each said once
+@ crate_news:CargoC -> loss_memorial
+@ crate_news:CargoD -> loss_log
+@ crate_news:CargoE -> loss_meds
 @ quest_done:q06c_root_access -> farewell_after
 @ quest_active:q06c_root_access -> farewell
 @ quest_ready:tut_basics -> ready_tut_basics
@@ -293,14 +297,14 @@ Brack: Something's nesting in that signal. Shut it up.
 
 ~ accept_q04b_hollow_choir
 > start_quest q04b_hollow_choir
-Brack: Scouts say it learns. Hit it the same way twice and the second hit just echoes off.
-Brack: So don't. Swap skills, or swap script sets so the same skill runs something new. Keep it guessing.
+Brack: Scouts say it learns. Hit it the same way twice and it sings it right back at you. A ring of it. Don't be standing there.
+Brack: So change it up inside the script. A loop that ends different, a second rule that fires now and then. Keep it guessing.
 Brack: The wisps in the Static Mire do the same trick, smaller. Practise on them on the way.
 -> end
 
 ~ remind_q04b_hollow_choir
 Brack: The Choir's still singing. Past the Static Mire, at the end of the route.
-Brack: Never the same pattern twice. Swap skills or script sets every hit that lands.
+Brack: Never the same pattern twice. If it echoes, step out of the ring.
 
 ~ ready_q04b_hollow_choir
 Brack: Quiet out there. Done?
@@ -464,6 +468,25 @@ Brack: Done with the basics?
 ~ turnin_tut_basics
 > turn_in tut_basics
 Brack: Not bad. Take a support gem from the cache, one that suits your skill. Socket it next to your skill.
+-> start
+
+~ loss_memorial
+> report crate_mourned CargoC
+Brack: They took the memorial board. The notes for the missing. Every name somebody pinned up in Hardfault.
+Brack: C-0 called it an error. It references people the Null took, so I suppose it does.
+Brack: It's in a queue in the Sweep, they say, till it burns. I'd like it back.
+-> start
+
+~ loss_log
+> report crate_mourned CargoD
+Brack: My log's gone. Every stop since Hardfault. Who held which deck, what we lost, when.
+Brack: I can tell you most of it. That's not the same as having it written.
+-> start
+
+~ loss_meds
+> report crate_mourned CargoE
+Brack: The med stores went in the sweep. Your stims'll only fill halfway here till we get them back.
+Brack: C-0 queues what it deletes, in the Sweep. If you see them caged in there, bring them home.
 -> start
 
 ~ idle

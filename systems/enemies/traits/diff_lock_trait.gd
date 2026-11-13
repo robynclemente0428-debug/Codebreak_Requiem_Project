@@ -1,18 +1,30 @@
 class_name DiffLock
 extends EnemyTrait
-## DIFF (The Mimic at Mirror Dock, and the Mirror Husks of the Dangling Quarter): it copies what
-## hits it and compares each cast with the last one it copied. A cast where the same WHEN rule
-## fired is an empty diff, and does nothing. A cast where a different rule fired lands, and is
-## copied in turn. A cast where no rule fired has nothing to compare. Swapping skills or script
-## sets doesn't help, since it copies the swap: only a script that branches inside itself gets
-## through, with one skill and two WHEN rules on different conditions.
+## DIFF (The Mimic at Mirror Dock, the Mirror Husks of the Dangling Quarter, and RECALL's last
+## third): it copies what hits it and compares each cast with the last one it copied. A cast where
+## the same WHEN rule fired is an empty diff, and does nothing. A cast where a different rule fired
+## lands, and is copied in turn. A cast where no rule fired has nothing to compare. Swapping skills
+## or script sets doesn't help, since it copies the swap: only a script that branches inside
+## itself gets through, with one skill and two WHEN rules on different conditions.
+##
+## And it uses what it copied. Every `mirror_every` seconds it charges a MIRROR for `mirror_charge`
+## seconds ("MIRRORING: ENEMIES NEARBY"), then throws it at where the player stands: a slow orb that
+## takes `mirror_damage` of their maximum life where it lands (LockBlast.orb; armour, barrier and
+## guard soak it). The orb carries the rule copied WHEN IT'S THROWN, and that rule's damage buff
+## makes it hit harder: x(1 + a quarter of the buff), at most x2 (`mirror_cap` of life). So a
+## +200% rule comes back at x1.5, and nothing comes back above a third of the player's life.
+## That makes what it copies a choice: land a cast whose rule carries no damage (a bait rule, like
+## a bare registry.add(target)) while it charges, and the mirror it throws is the plain one. Or
+## just step off the spot. Only one mirror is in the air at a time, whoever threw it.
 ##     "DIFF: ENEMIES NEARBY"     a new rule fired: this whole cast lands
 ##     "NO DIFF"                  the same rule as last time, or none
 ##     "LOADOUT COPIED"           the skill or script set changed, and it doesn't care
+##     "MIRRORING: ..."           charging a mirror of the rule it copied
+##     "MIRROR x1.5"              thrown, with the copied rule's buff
 
 ## Shown on the lock banner (LockBanner) and under the boss's quest objective.
 const LOCK_NAME := "DIFF"
-const HINT := "Swapping won't fool it. Give one skill two WHEN rules so each cast fires a different one."
+const HINT := "Give one skill two WHEN rules so each cast fires a different one. It throws back the rule it copied last, buff and all: let it copy a rule with no damage while it charges, or dodge."
 ## Its tag and body (EnemyTrait): a split double image, magenta on one side and cyan on the other.
 const LOCK_COLOR := Color(1.0, 0.45, 0.8)
 const LOCK_SHAPE := "split"
@@ -26,11 +38,34 @@ const COL_COPY := Color(1.0, 0.75, 0.3)
 const NO_DIFF_GAP := 1.2
 const COPY_GAP := 2.5
 const LAST_WORDS := "WHATEVER'S OUT THERE, WE MEET IT MOVING."
+const COL_MIRROR := Color(1.0, 0.45, 0.8)
+## How far the player can be for it to start a mirror (it doesn't throw at nobody).
+const MIRROR_RANGE := 22.0
+const MIRROR_SPEED := 9.0                        # m/s: slow enough to step out of its way
+const MIRROR_RADIUS := 1.6                       # m around where it lands
+
+## Seconds between mirrors (from one throw to the next charge).
+@export var mirror_every := 5.0
+## Seconds it charges first: the tell, and the time to feed it a bait rule.
+@export var mirror_charge := 1.2
+## Share of the player's maximum life a mirror of a rule with no damage buff takes...
+@export_range(0.0, 0.5, 0.01) var mirror_damage := 0.15
+## ...and the most any mirror takes, however big the copied buff (x2 at most).
+@export_range(0.0, 0.8, 0.01) var mirror_cap := 0.30
+## How much of the copied rule's damage buff the mirror carries (a quarter: +200% -> x1.5).
+const BUFF_SHARE := 0.25
+
+## When the mirror in the air now lands, for every DIFF lock: one at a time, whoever threw it.
+static var _mirror_until := 0.0
 
 var _copied := ""                                # the rules of the last cast it copied
+var _copied_buff := 0.0                          # that cast's damage buff (+2.0 = +200%)
 var _landing: Object = null                      # the cast landing now: all its hits count
 var _loadout := ""
 var _copy_at := -10.0
+var _next_mirror := 0.0                          # when it may start charging again
+var _charging: MeshInstance3D = null             # the orb on it while it charges
+var _charge_end := 0.0
 
 
 func setup(p_enemy: Node3D) -> void:
@@ -66,8 +101,92 @@ func modify_incoming(info: HitInfo) -> void:
 		pop("NO DIFF", COL_SAME, NO_DIFF_GAP)
 		return
 	_copied = key
+	_copied_buff = maxf((root as SkillCast).damage_mult - 1.0, 0.0) if root is SkillCast else 0.0
 	_landing = root
 	say("DIFF: %s" % key.replace("_", " ").replace(",", " + ").to_upper(), COL_DIFF, 0.95)
+
+
+# ---------- THE MIRROR ----------
+## How hard a mirror of a rule with damage buff `buff` hits, as a share of maximum life.
+func mirror_share(buff: float) -> float:
+	return minf(mirror_damage * minf(1.0 + maxf(buff, 0.0) * BUFF_SHARE, 2.0), mirror_cap)
+
+
+func _process(_delta: float) -> void:
+	if not is_instance_valid(enemy) or SkillBehavior.is_dead(enemy) or not enemy.is_inside_tree():
+		_drop_charge()
+		return
+	var now := Time.get_ticks_msec() / 1000.0
+	if _charging != null:
+		_charging.global_position = enemy.global_position + Vector3.UP * 2.0
+		if now >= _charge_end:
+			_throw()
+		return
+	if _copied == "" or now < _next_mirror or now < _mirror_until:
+		return
+	var target := _target()
+	if target == null:
+		return
+	_charging = LockBlast.make_orb(COL_MIRROR, 0.3)
+	enemy.get_parent().add_child(_charging)
+	_charging.global_position = enemy.global_position + Vector3.UP * 2.0
+	_charging.scale = Vector3.ONE * 0.3
+	_charging.create_tween().tween_property(_charging, "scale", Vector3.ONE, mirror_charge)
+	_charge_end = now + mirror_charge
+	_mirror_until = now + mirror_charge + 3.0          # held while it charges; set exactly on the throw
+	say("MIRRORING: %s" % _copied.replace("_", " ").replace(",", " + ").to_upper(), COL_MIRROR, 0.95)
+
+
+## Throws the charged orb at where the player stands now, carrying the rule copied now.
+func _throw() -> void:
+	var orb := _charging
+	_charging = null
+	var now := Time.get_ticks_msec() / 1000.0
+	_next_mirror = now + mirror_every
+	var target := _target()
+	if target == null or orb == null:
+		_drop_orb(orb)
+		_mirror_until = 0.0
+		return
+	var share := mirror_share(_copied_buff)
+	var to := target.global_position + Vector3.UP * 0.6
+	var flight := LockBlast.orb(enemy.get_parent(), orb, orb.global_position, to, MIRROR_SPEED, MIRROR_RADIUS,
+		share, func() -> void: pop("MIRROR HIT", COL_MIRROR, 0.4))
+	_mirror_until = now + flight + 0.2
+	say("MIRROR x%.2f" % (share / mirror_damage) if mirror_damage > 0.0 else "MIRROR", COL_MIRROR, 1.0)
+
+
+## The nearest living player in range, or null.
+func _target() -> Node3D:
+	var best: Node3D = null
+	var best_d := MIRROR_RANGE
+	for p in get_tree().get_nodes_in_group("players"):
+		var body := p as Node3D
+		var hp := p.get("health") as HealthComponent
+		if body == null or hp == null or hp.current_health <= 0.0:
+			continue
+		var d := body.global_position.distance_to(enemy.global_position)
+		if d <= best_d:
+			best = body
+			best_d = d
+	return best
+
+
+func _drop_charge() -> void:
+	if _charging != null:
+		_drop_orb(_charging)
+		_charging = null
+		_mirror_until = 0.0
+
+
+static func _drop_orb(orb: MeshInstance3D) -> void:
+	if orb != null and is_instance_valid(orb):
+		orb.queue_free()
+
+
+## RECALL swaps this lock out mid-fight: an orb still charging goes with it.
+func _exit_tree() -> void:
+	_drop_charge()
 
 
 ## The WHEN rules that fired for this cast, as text that's the same for the same rules.

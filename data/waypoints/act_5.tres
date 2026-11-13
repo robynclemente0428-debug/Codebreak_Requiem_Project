@@ -9,9 +9,9 @@ id = "act5_core"
 display_name = "The Core"
 scene = "res://scenes/map/town/act_5_core.tscn"
 kind = 0
-map_position = Vector2(0.12, 0.5)
-links = Array[String](["act5_stack", "act5_kernel"])
-note = "The Last Log, Vesper, Sudo, Hex"
+map_position = Vector2(0.14, 0.1)
+links = Array[String](["act5_stack"])
+note = "The Last Log, Vesper, Sudo, Hex  -  the top of the way down"
 
 [sub_resource type="Resource" id="Waypoint_act5_stack"]
 script = ExtResource("2_wp")
@@ -19,11 +19,11 @@ id = "act5_stack"
 display_name = "The Stack Trace"
 scene = "res://scenes/map/dungeon/act_5_stack_trace.tscn"
 spawn_id = &"stack_in"
-dungeon_level = 36
+dungeon_level = 41
 kind = 1
-map_position = Vector2(0.5, 0.3)
+map_position = Vector2(0.42, 0.24)
 links = Array[String](["act5_core", "act5_hall"])
-note = "Level 36  -  The Core replays every process you have fought"
+note = "Level 41  -  1st floor down: the Core replays every process you have fought"
 threats = Array[String](["fragmented"])
 random_threats = Vector2i(1, 1)
 
@@ -33,11 +33,11 @@ id = "act5_hall"
 display_name = "Sentinel's Hall"
 scene = "res://scenes/map/dungeon/act_5_sentinel_hall.tscn"
 spawn_id = &"hall_in"
-dungeon_level = 37
+dungeon_level = 43
 kind = 2
-map_position = Vector2(0.88, 0.3)
-links = Array[String](["act5_stack"])
-note = "Level 37  -  Core Sentinel (RECALL)"
+map_position = Vector2(0.8, 0.38)
+links = Array[String](["act5_stack", "act5_pagefile"])
+note = "Level 43  -  2nd floor down. Core Sentinel (RECALL): it carries the way down"
 
 [sub_resource type="Resource" id="Waypoint_act5_kernel"]
 script = ExtResource("2_wp")
@@ -45,15 +45,42 @@ id = "act5_kernel"
 display_name = "The Kernel"
 scene = "res://scenes/map/dungeon/act_5_kernel.tscn"
 spawn_id = &"kernel_in"
-dungeon_level = 40
+dungeon_level = 50
 kind = 2
-map_position = Vector2(0.5, 0.78)
-links = Array[String](["act5_core"])
-note = "Level 40  -  The Root Process"
+map_position = Vector2(0.48, 0.9)
+links = Array[String](["act5_scheduler"])
+note = "Level 50  -  The bottom of the Core. The Root Process"
+
+[sub_resource type="Resource" id="Waypoint_act5_pagefile"]
+script = ExtResource("2_wp")
+id = "act5_pagefile"
+display_name = "The Page File"
+scene = "res://scenes/map/dungeon/act_5_page_file.tscn"
+spawn_id = &"pagefile_in"
+dungeon_level = 46
+kind = 2
+map_position = Vector2(0.36, 0.54)
+links = Array[String](["act5_hall", "act5_scheduler"])
+note = "Level 46  -  3rd floor down: what the Core can't hold. Every enemy is PAGED. The Watchdog (HEARTBEAT) holds the way on"
+threats = Array[String](["paged"])
+random_threats = Vector2i(1, 1)
+
+[sub_resource type="Resource" id="Waypoint_act5_scheduler"]
+script = ExtResource("2_wp")
+id = "act5_scheduler"
+display_name = "The Scheduler"
+scene = "res://scenes/map/dungeon/act_5_scheduler.tscn"
+spawn_id = &"scheduler_in"
+dungeon_level = 48
+kind = 1
+map_position = Vector2(0.76, 0.7)
+links = Array[String](["act5_pagefile", "act5_kernel"])
+note = "Level 48  -  4th floor down: the Null schedules a kernel.gd line every 45 seconds"
+random_threats = Vector2i(1, 2)
 
 [resource]
 script = ExtResource("1_act")
 act_number = 5
 title = "ACT V"
-subtitle = "THE CORE  -  Final Execution  -  Levels 36-40"
-waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act5_core"), SubResource("Waypoint_act5_stack"), SubResource("Waypoint_act5_hall"), SubResource("Waypoint_act5_kernel")])
+subtitle = "THE CORE  -  Final Execution  -  Levels 41-50"
+waypoints = Array[ExtResource("2_wp")]([SubResource("Waypoint_act5_core"), SubResource("Waypoint_act5_stack"), SubResource("Waypoint_act5_hall"), SubResource("Waypoint_act5_pagefile"), SubResource("Waypoint_act5_scheduler"), SubResource("Waypoint_act5_kernel")])

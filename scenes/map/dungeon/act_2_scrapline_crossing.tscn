@@ -18,7 +18,7 @@ agent_radius = 0.3
 
 [node name="ScraplineCrossing" type="Node3D" unique_id=883893316]
 script = ExtResource("1_dun")
-dungeon_level = 11
+dungeon_level = 12
 respawn_spawn_id = &"scrapline_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"

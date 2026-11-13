@@ -21,6 +21,7 @@ id = "q06_the_mimic"
 title = "THE MIMIC"
 description = "One process escaped the deletion: the copy's Brack. It lives in Mirror Dock among the frozen copies, speaking in his voice.
 LOCK: DIFF. It copies what hits it. A cast where the same WHEN rule fired as last time does nothing. A cast where a different rule fired lands. Swapping skills or script sets doesn't help: it copies the swap.
+It also uses what it copied: it charges a MIRROR of the last rule it copied and throws it where you stand, harder the more damage that rule adds (up to a third of your life). Land a rule with no damage while it charges and the mirror comes back plain. Or step aside.
 TIP: good pairs of rules are enemies_nearby and every_nth_cast, or target_life_below and hit_recently. Mirror Husks in the Dangling Quarter have the same lock, for practice.
 SCRIPT TASK: give one skill two different WHEN rules."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1")])

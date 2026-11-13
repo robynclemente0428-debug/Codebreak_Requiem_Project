@@ -18,7 +18,7 @@ Each thread below is already in the game. Act III either pays it off or pushes i
 | Brack: *"Checkpoint answered. They're expecting us."* | Act II's last line | Turns sour. Checkpoint *was* expecting them, on its deletion list. |
 | Deck systems, hull breaches and PATCH puzzles | Act II convoy | One last breach on the approach, and a fourth deck system (IFF Transponder) whose patch output gives the twist away. |
 | The Handshake lock (shield up, take the slam) | Act I, Gate Guard | Checkpoint's gate asks for the same handshake. A small callback, no boss. |
-| Echo lock: never the same attack twice (switch skills or sets) | Act II, Choir and Echo Wisps | The Mimic goes one step further. Switching from outside no longer fools it; the script itself has to branch. |
+| Echo lock: never the same pattern twice (skill + the rules that fired; a repeat is sent back as a ring) | Act II, Choir and Echo Wisps | The Mimic goes one step further. It compares rules only, and throws back the rule it copied: the script has to branch, and choose what it lets the Mimic see. |
 | Script set 2 (Operator) and set swapping | Act I unlock, Act II Choir | Strategist unlocks set 3. The Collector needs all three, each built for one job. |
 | Ward beacons (hold a point while it boots) | Act I side quest | Memory Shards reuses the hold mechanic: restore a shard while the Leak's blobs come for it. |
 | Hex's power cells (The Overflow) | Act II, Hex | Hex finds her own stock in the copy's cargo. *"Somebody copied my inventory. I want royalties."* |
@@ -39,7 +39,7 @@ Each thread below is already in the game. Act III either pays it off or pushes i
 
 ## 4. Teaching Goal: Adaptation
 
-Act I taught reacting (`when`). Act II taught repeating (loops) and switching patterns from outside (Echo). Act III teaches **choosing a strategy**: scripts that branch on their own, and script sets planned for different jobs.
+Act I taught reacting (`when`). Act II taught repeating (loops) and varying a pattern (Echo). Act III teaches **choosing a strategy**: scripts that branch on their own, and script sets planned for different jobs.
 
 | Step | Where | Concept |
 |---|---|---|
@@ -48,7 +48,7 @@ Act I taught reacting (`when`). Act II taught repeating (loops) and switching pa
 | 3 | Strategist exam | **The Registry**: a set of enemies. A rule adds the enemies a cast hits (`registry.add(target)`), another checks `target in registry` per hit (or reads `registry.size`). |
 | 4 | The Collector | Three phases, three sets, each built for one phase. Swapping at the right moment, not every hit. |
 
-The difference from the Echo lock matters. Echo asks "switch anything"; Act III asks "switch to the *right* thing". The Mimic punishes outside switching and rewards branching inside one script. The Collector punishes the wrong set rather than a repeated one.
+The difference from the Echo lock matters. Echo asks "don't repeat yourself" (or pay for it with a ring you can dodge); Act III asks "switch to the *right* thing". The Mimic punishes outside switching and rewards branching inside one script. The Collector punishes the wrong set rather than a repeated one.
 
 The Registry is the game's data structure (a set of enemies). No functions are needed.
 
@@ -129,7 +129,7 @@ Built like The Road Out: a transition quest that still belongs to the act it lea
 
 - **Story:** the one process that escaped the deletion, a copy of Brack. It has been living in Mirror Dock among the frozen copies, speaking in his voice.
 - **Boss Trait:** copies the skill that hits it and casts it back at you, script and all. A `when my_life_below()` rule you wrote fires for *it* too.
-- **Boss Lock: DIFF.** It compares each cast with the last one it copied. If the same rule fired, the diff is empty and the hit does nothing (*"NO DIFF"*). If a different rule fired, the hit lands (*"DIFF: RULE 2"*). Swapping skills or script sets does not work: it copies your whole loadout as you swap (*"LOADOUT COPIED"*). Only a script that branches inside itself gets through.
+- **Boss Lock: DIFF.** It compares each cast with the last one it copied. If the same rule fired, the diff is empty and the hit does nothing (*"NO DIFF"*). If a different rule fired, the hit lands (*"DIFF: RULE 2"*). Swapping skills or script sets does not work: it copies your whole loadout as you swap (*"LOADOUT COPIED"*). Only a script that branches inside itself gets through. It also uses what it copied: every 5 seconds it charges a MIRROR of the last rule it copied (1.2 s, *"MIRRORING: ..."*) and throws a slow orb where the player stands, 15% of their life times (1 + a quarter of that rule's damage buff), never above 30%. Landing a rule with no damage buff while it charges (a bait rule) makes the mirror plain.
 - **Script Task:** give one skill two different WHEN rules (`program_branches`, existing). Good pairs: `enemies_nearby` and `every_nth_cast`, or `target_life_below` and `hit_recently`.
 - **Practice:** the Dangling Quarter has small copy processes ("Mirror Husks") with the same lock.
 - **On defeat:** it says, in Brack's voice, the line the real Brack said at the Road Out: *"Whatever's out there, we meet it moving."* Then it stops.
@@ -283,7 +283,7 @@ What the plan needs in the project, grouped by area. Everything listed as existi
 
 **Locks** (`systems/enemies/traits`)
 - `refcount_lock_trait.gd`: blobs killed by a cast that hit 3+ count as freed; others respawn.
-- `diff_lock_trait.gd`: needs the cast info to say which rule fired. EchoLock keys on `skill|set`; DIFF keys on the rule index, so the program runner has to pass it along.
+- `diff_lock_trait.gd`: needs the cast info to say which rule fired. EchoLock keys on `skill|rules that fired` (no longer the set); DIFF keys on the rule index, so the program runner has to pass it along.
 - `generations_lock_trait.gd`: phase index to required set index; a wrong-set hit heals.
 - HandshakeLock reused on the gate drone.
 
@@ -292,7 +292,11 @@ What the plan needs in the project, grouped by area. Everything listed as existi
 **Convoy and travel**
 - Route terminal: seventh stop Checkpoint Approach, then a DOCKED state that can still deploy to the old stops.
 - `DeckSystem`: fourth system `iff` (glyph `I`), forced offline during the Last Mile breach; `PatchPanel` gets the IFF puzzle and the two-record output. `DeckOutages` needs a look for it.
-- Sweep event: a `HullBreach` variant whose saboteurs target cargo.
+- Sweep event (`YardSweep`, `YardCrates`): a `HullBreach` variant whose marker drones target cargo. Built with stakes:
+  - **Every crate is someone's**, named over it: Hex's spare cells (Hex sells two fewer items), Sudo's exam archive, the memorial board (Hardfault's notes for the missing), Brack's convoy log, the med stores (Act III towns refill stims only to half) and the Vale family's things. Each owner says so once (`@ crate_news:<crate>`).
+  - **Each sweep is an audit** the Registrar announces as you arrive: one named crate, and the whole first wave goes for it.
+  - **Deleted isn't gone yet:** a deleted crate waits caged in C-0's deletion queue in the Sweep (`QueuedCrate`, one per ordinary room); walking into it sends it back to the yard. Whatever is still queued when the Collector dies burns.
+  - **The census:** turning in Root Access, the Registrar re-registers Hardfault and reads what it kept, got back and lost (`> census`), and reads it again on request.
 - `data/waypoints/act_3.tres` and the quarantine-level gating.
 
 **Exam:** `data/exams/strategist.tres` with three sample waves; lends the Registry; `required_variable` checks `SkillProgram.keeps_a_count()` (something adds, something reads).
@@ -313,6 +317,6 @@ What the plan needs in the project, grouped by area. Everything listed as existi
 ## 12. Open Questions
 
 - **Functions.** The Registry is in, as the Strategist exam's new system. Functions aren't. For The Mimic, a membership toggle (`when target not in registry: registry.add(target)` / `when target in registry: registry.remove(target)`) changes the rule that fires on every hit, which answers DIFF.
-- **Convoy losses.** Optional and cheap: the Registrar runs a census on docking, counting Act II deeds (breaches held, cargo kept, systems never lost) and Sweep losses. That count could feed the endings later (the old REQ025 and REQ026).
+- **Convoy losses.** The Sweep half is built: the Registrar's census after Root Access reads the yard crates kept, restored and burned (`YardCrates.census_lines`). Act II's deeds (breaches held, cargo kept, systems never lost) could join it, and the count could feed the endings later (the old REQ025 and REQ026).
 - **The Mimic's last fragment.** An optional silent choice when it falls, [Delete] or [Keep]. It costs nothing now and gives the Merge and Terminate endings something earned in Act III. Leave it out if Act III should stay choice-free.
 - **Hex and Sudo in Act IV.** Act IV says "no settlement". With Hex and Sudo coming along, it becomes a camp that moves with the player. Confirm that is wanted, or have them stay and reach the player remotely.

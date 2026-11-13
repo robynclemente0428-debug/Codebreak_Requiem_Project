@@ -16,12 +16,15 @@ source = "# Vesper: Null Speaker, guide to the Core (Acts IV and V). Calm, eerie
 @ can_start:q08_null_gatekeeper -> offer_q08_null_gatekeeper
 @ can_start:null_fragments -> offer_fragments
 @ quest_ready:under_new_rules -> ready_rules
+@ quest_ready:paged_out -> ready_paged
+@ can_start:paged_out -> offer_paged
 @ can_start:under_new_rules -> offer_rules
 @ quest_active:q08_null_gatekeeper -> remind_q08_null_gatekeeper
 @ quest_active:q07_null_weaver_prime -> remind_q07_null_weaver_prime
 @ quest_active:q07a_learn_the_language -> remind_language
 @ quest_active:null_fragments -> remind_fragments
 @ quest_active:under_new_rules -> remind_rules
+@ quest_active:paged_out -> remind_paged
 @ deed:ending:any -> after_ending
 @ quest_done:q10_root_process -> before_choice
 @ quest_active:q10_root_process -> during_root
@@ -37,7 +40,8 @@ Vesper: The Weavers speak in patterns. Break them and you’ll hear the grammar.
 
 ~ accept_language
 > start_quest q07a_learn_the_language
-Vesper: Out there it rewrites AXIOM's rules, one at a time. Bring a script set for each. I'll meet you at The Fray.
+Vesper: Sudo wants to rank you first. Go. Out there it copies you, and Sudo knows what that means better than I do.
+Vesper: I'll meet you at The Fray.
 Vesper: Don’t fear them. Read them.
 -> end
 
@@ -102,24 +106,24 @@ Vesper: Whatever you chose, you chose it awake. That's more than the Architects 
 -> end
 
 ~ offer_rules
-Vesper: You keep fighting its laws. Stop. Fight under them.
-Vesper: Win once under every law it writes, and you'll understand it better than the Guild ever did.
+Vesper: You keep running from the copies. Stop. Use them.
+Vesper: They copy your calls, not your routines. They're pointing at your routines.gd, same as you. Take away what they're pointing at.
 * ACCEPT -> accept_rules
 * DECLINE -> end
 
 ~ accept_rules
 > start_quest under_new_rules
-Vesper: Six under each. Out in the Null Zone, where the laws run. Bring a script set for each one.
+Vesper: Let three of them copy you. Then crash six. Write a routine you don't need, make them want it, and take it away.
 -> end
 
 ~ remind_rules
-Vesper: Six kills under each of its laws. The banner tells you which one you're under.
+Vesper: A call to nothing. That's all a crash is. Feed them a call you can afford to empty.
 -> end
 
 ~ ready_rules
 > turn_in under_new_rules
-Vesper: You did it its way. How did it feel?
-Vesper: Don't answer. I could see it. You looked like you belonged out there.
+Vesper: It copied you, and you rewrote what it copied. While it was still running.
+Vesper: That's the one thing it can't do. Remember that, at the Core.
 -> end
 
 ~ out_of_quarantine
@@ -149,7 +153,7 @@ Vesper: Done?
 ~ turnin_q07_null_weaver_prime
 > turn_in q07_null_weaver_prime
 Vesper: You see it now. The Null has logic. It isn’t just destruction.
-Vesper: One thing still stands between you and the Core. Sudo will want a word first.
+Vesper: One thing still stands between you and the Core. The road to its Gate is open now.
 -> start
 
 ~ offer_q08_null_gatekeeper
@@ -159,12 +163,12 @@ Vesper: The Gatekeeper guards the Core. It will not let you pass.
 
 ~ accept_q08_null_gatekeeper
 > start_quest q08_null_gatekeeper
-Vesper: Prove your code is worthy. Sudo will test you first. The road opens when you pass.
+Vesper: Prove your code is worthy. The road's open: the Gate is past The Threshold.
 -> end
 
 ~ remind_q08_null_gatekeeper
 # NEW line below
-Vesper: Sudo first. Then the Gate. Take its key, and go through.
+Vesper: The Gate. Take its key, and go through.
 
 ~ ready_q08_null_gatekeeper
 Vesper: Done?
@@ -174,6 +178,27 @@ Vesper: Done?
 ~ turnin_q08_null_gatekeeper
 > turn_in q08_null_gatekeeper
 Vesper: The way is open. What you do next is yours alone.
+-> start
+
+~ offer_paged
+Vesper: Under Sentinel's Hall, on the way down. The Page File. Where the Core puts what it can't hold.
+Vesper: It's paging people out in there. Not deleting. Just... letting go of them, until nothing points at them anymore.
+* ACCEPT -> accept_paged
+* DECLINE -> end
+
+~ accept_paged
+> start_quest paged_out
+Vesper: Hold on to what you're fighting. If it's in your registry, it stays real. The Null knows that too: it empties them on every kill.
+Vesper: Something guards the far end. A watchdog. Keep talking to it, one hit after another, or it decides you've stopped and starts over.
+-> end
+
+~ remind_paged
+Vesper: The Page File. Keep everything referenced, and keep the Watchdog busy. Every few seconds, or it resets.
+-> end
+
+~ ready_paged
+> turn_in paged_out
+Vesper: You held on to all of it. That's what memory is, in the end. Something still pointing at you.
 -> start
 
 ~ idle

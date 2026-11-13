@@ -21,10 +21,10 @@ target = "root_process"
 script = ExtResource("2_quest")
 id = "q10_root_process"
 title = "THE ROOT PROCESS"
-description = "The Core's last defense. It cannot be reasoned with. It waits in The Kernel, below the Core, and Sudo won't open the way down until you're ranked Defragmenter.
+description = "The Core's last defense. It cannot be reasoned with. It waits in The Kernel, at the bottom of the Core: down through the Stack Trace, Sentinel's Hall, the Page File and the Scheduler. The Core Sentinel and the Watchdog each hold a door on the way.
 BOSS TRAIT: three phases. It calls adds, then charges a loop, then swaps forms fast.
 No script task. Use your best build."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1")])
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q09_core_sentinel"])
 reward_credits = 500

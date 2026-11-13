@@ -15,7 +15,7 @@
 [ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="n_vesper"]
 [ext_resource type="Resource" path="res://data/dialogue/vesper_field.tres" id="n_vesper_dlg"]
 [ext_resource type="Script" path="res://systems/world/stand_near_arrival.gd" id="n_stand"]
-[ext_resource type="Script" path="res://systems/world/null_law_director.gd" id="n_laws"]
+[ext_resource type="Script" path="res://systems/world/null_echo_director.gd" id="n_echoes"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 agent_height = 1.8
@@ -24,7 +24,7 @@ agent_radius = 0.3
 [node name="EchoWells" type="Node3D"]
 metadata/_note = "PROTOTYPE. Act IV: shafts where signals fall in and never stop echoing. Hardfault's relay packets are in here, carried by Echo Wisps."
 script = ExtResource("1_dun")
-dungeon_level = 34
+dungeon_level = 38
 respawn_spawn_id = &"wells_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"
@@ -156,6 +156,6 @@ dialogue = ExtResource("n_vesper_dlg")
 [node name="StandNearArrival" type="Node" parent="Vesper"]
 script = ExtResource("n_stand")
 
-[node name="NullLaws" type="Node" parent="."]
-script = ExtResource("n_laws")
-metadata/_note = "The Null rewrites one of AXIOM's rules at a time here (NullLaws): a banner names it, Vesper reads it."
+[node name="NullEchoes" type="Node" parent="."]
+script = ExtResource("n_echoes")
+metadata/_note = "The Null copies the player here: Null Echoes, placed by NullEchoDirector (NullEcho)."

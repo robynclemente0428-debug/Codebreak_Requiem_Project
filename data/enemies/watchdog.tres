@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="EnemyDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="1_def"]
+[ext_resource type="PackedScene" uid="uid://b21rx6xj3gson" path="res://scenes/enemy/enemy_base.tscn" id="2_base"]
+[ext_resource type="PackedScene" path="res://assets/models/enemy/loop_hound/watchdog_model.tscn" id="3_model"]
+[ext_resource type="Script" uid="uid://bqwv6qt1eh0ic" path="res://systems/skills/skill_gem_definition.gd" id="5_gem"]
+[ext_resource type="Resource" uid="uid://dklpmq4u6k78e" path="res://data/skill_gems/strike.tres" id="6_strike"]
+[ext_resource type="Resource" path="res://data/skill_gems/slam.tres" id="7_slam"]
+[ext_resource type="Script" path="res://systems/enemies/traits/watchdog_lock_trait.gd" id="8_lock"]
+[ext_resource type="Script" path="res://systems/enemies/traits/paged_lock_trait.gd" id="9_paged"]
+
+[resource]
+script = ExtResource("1_def")
+id = "watchdog"
+display_name = "The Watchdog"
+allowed_modifier_tags = Array[int]([0, 2, 3, 5])
+scene = ExtResource("2_base")
+model_scene = ExtResource("3_model")
+capsule_radius = 0.7
+capsule_height = 1.4
+max_health = 900.0
+armour = 90.0
+move_speed = 5.0
+aggro_range = 18.0
+attack_range = 1.8
+min_attack_damage = 8.0
+max_attack_damage = 14.0
+attack_speed = 1.0
+skills = Array[ExtResource("5_gem")]([ExtResource("6_strike"), ExtResource("7_slam")])
+skill_loops = {
+"strike": 2
+}
+basic_attack_enabled = false
+skill_cooldown = 1.4
+cooldown_jitter = 0.8
+act_boss = true
+innate_traits = Array[Script]([ExtResource("8_lock"), ExtResource("9_paged")])
+metadata/_note = "Boss of The Page File (Act V side zone, level 46): HEARTBEAT (WatchdogLock) and PAGED (PagedLock). The Loop Hound's mesh in a gunmetal override and a cyan scan overlay (watchdog_model.tscn)."
+metadata/_custom_type_script = "uid://cq4kgpb23i5ty"

@@ -39,12 +39,10 @@ var _runners: Array[ProgramLoopRunner] = []
 const HIT_SPEED_WINDOW := 2.5     # seconds the bonus waits for the next attack
 var _hit_speed := 0.0
 var _hit_speed_msec := 0
-var _law_hit_msec := -1                    # REGISTRY FORGETS ON HIT: the last hit already forgotten
 ## The registry in order (registry_order), worked out at most once a physics frame.
 var _order: Array = []
 var _order_frame := -1
 
-const NullLawsRef := preload("res://systems/world/null_laws.gd")   # Act IV's Null Laws
 
 
 func _init(p_program: SkillProgram = null, p_limits: SkillProgramLimits = null) -> void:
@@ -91,7 +89,7 @@ func before_release(cast: SkillCast) -> void:
 			elif rule.is_always() or rule.all_true(cast, null):
 				if not rule.is_always():
 					announce(cast, rule)
-				for i in NullLawsRef.loop_count(rule.loop, cast.caster):   # LOOPS RUN ONCE MORE
+				for i in rule.loop.count:
 					tickets.append(rule)
 			continue
 		if rule.is_always():
@@ -301,15 +299,6 @@ func _clear_stale_registers() -> void:
 	if area != st.area_id or now - active > int(ScriptRegisters.CLEAR_AFTER * 1000.0):
 		registers.clear()
 		st.area_id = area
-	# REGISTRY FORGETS ON HIT: a hit since the last cast clears it
-	if hp != null and NullLawsRef.on("counters_forget", _caster):
-		if _law_hit_msec < 0:
-			_law_hit_msec = hp.last_damaged_msec           # hits from before the law don't count
-		elif hp.last_damaged_msec > _law_hit_msec:
-			_law_hit_msec = hp.last_damaged_msec
-			registers.clear()
-	else:
-		_law_hit_msec = -1
 
 
 ## The ProgramSupport running a skill's script (null = none).

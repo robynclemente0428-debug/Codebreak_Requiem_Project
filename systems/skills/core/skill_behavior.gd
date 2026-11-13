@@ -126,6 +126,8 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 	info.target = target
 	if not cast.is_valid() or not is_instance_valid(target):
 		return info
+	if cast.caster.get("is_remote") == true:        # co-op: a remote copy's cast is for show,
+		return info                                 # its owner's machine deals the damage
 	var target_health := target.get("health") as HealthComponent
 	if target_health == null:
 		return info

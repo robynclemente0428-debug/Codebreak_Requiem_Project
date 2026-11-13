@@ -7,6 +7,8 @@ script = ExtResource("1_dlg")
 source = "# Tinker Hex: trader. Sarcastic, fair. Gives Salvage Rights (Act I) and The Overflow (Act II).
 # Use on a ShopNPC so 'open_shop' works. Reminders and declines fall through to the shop.
 ~ start
+# A Yard Sweep deleted Hex's spare cells (YardCrates CargoA): said once; the shop sells two less
+@ crate_news:CargoA -> loss_cells
 @ quest_ready:clear_hub -> ready_clear_hub
 @ quest_active:clear_hub -> remind_clear_hub
 @ can_start:clear_hub -> offer_clear_hub
@@ -122,6 +124,13 @@ Hex: Done?
 ~ turnin_q04_the_overflow
 > turn_in q04_the_overflow
 Hex: My cells! Here’s your reward. A better weapon, as promised.
+-> start
+
+~ loss_cells
+> report crate_mourned CargoA
+Hex: My spare cells. Tagged, swept, gone. Half my stock ran off those.
+Hex: Shelf's thinner till I get them back. Word is C-0 keeps what it deletes in a queue, in the Sweep, till it gets round to burning it.
+Hex: If you're passing a cage with my scratches on it, I'm not asking. I'm hinting very loudly.
 -> start
 
 ~ idle

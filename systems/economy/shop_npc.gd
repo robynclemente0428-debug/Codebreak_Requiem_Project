@@ -135,7 +135,10 @@ func try_reroll(wallet: CurrencyComponent) -> String:
 
 
 func _add_random_stock(pool: Array[ItemDefinition]) -> void:
-	for def in _roll_defs(pool, shop.random_slots):
+	# Hex's spare cells deleted by a Yard Sweep (YardCrates): fewer items on sale, until they're back
+	var p := get_tree().get_first_node_in_group("players") if is_inside_tree() else null
+	var lost := YardCrates.shop_slots_lost(p.get("quests") as QuestManager if p != null else null, npc_id)
+	for def in _roll_defs(pool, maxi(shop.random_slots - lost, 1)):
 		var item := _make_item(def, true)
 		if item != null:
 			stock.append(item)

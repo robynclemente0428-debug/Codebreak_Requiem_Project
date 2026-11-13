@@ -109,51 +109,10 @@ func _on_closed() -> void:
 
 
 # ---------- THE SPILL ----------
-## A flat ring grows from the boss to spill_radius over spill_delay, then everyone inside is hit.
+## A flat ring grows from the boss to spill_radius over spill_delay, then everyone inside is hit
+## (LockBlast.ring; armour ignored, barrier and guard still soak it).
 func _spill() -> void:
 	if not is_instance_valid(enemy) or not enemy.is_inside_tree():
 		return
-	var at := enemy.global_position
-	var ring := MeshInstance3D.new()
-	var mesh := TorusMesh.new()
-	mesh.inner_radius = 0.92
-	mesh.outer_radius = 1.0
-	mesh.rings = 48
-	mesh.ring_segments = 4
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.albedo_color = Color(COL_SPILL.r * 1.6, COL_SPILL.g * 1.6, COL_SPILL.b * 1.6, 0.85)
-	mesh.material = mat
-	ring.mesh = mesh
-	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	ring.top_level = true
-	enemy.get_parent().add_child(ring)
-	ring.global_position = at + Vector3.UP * 0.08
-	ring.scale = Vector3(0.6, 1.0, 0.6)
-	var tw := ring.create_tween()
-	tw.tween_property(ring, "scale", Vector3(spill_radius, 1.0, spill_radius), spill_delay) \
-		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	tw.tween_callback(_spill_hit.bind(at))
-	tw.tween_property(mat, "albedo_color:a", 0.0, 0.35)
-	tw.tween_callback(ring.queue_free)
-
-
-func _spill_hit(at: Vector3) -> void:
-	if not is_inside_tree():
-		return
-	var hit_any := false
-	for p in get_tree().get_nodes_in_group("players"):
-		var body := p as Node3D
-		var hp := p.get("health") as HealthComponent
-		var stats := p.get("stats") as StatComponent
-		if body == null or hp == null or stats == null or hp.current_health <= 0.0:
-			continue
-		var flat := Vector2(body.global_position.x - at.x, body.global_position.z - at.z)
-		if flat.length() > spill_radius:
-			continue
-		hp.take_damage(stats.get_stat(StatTypes.Stat.MAX_HEALTH) * spill_damage, true)   # barrier and guard still soak it
-		hit_any = true
-	if hit_any:
-		say("SPILL", COL_SPILL, 1.1)
+	LockBlast.ring(enemy.get_parent(), enemy.global_position, spill_radius, spill_delay, spill_damage,
+		COL_SPILL, true, func() -> void: say("SPILL", COL_SPILL, 1.1))

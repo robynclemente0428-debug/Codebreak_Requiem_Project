@@ -15,10 +15,10 @@ id = "exam_engineer"
 title = "RANK EXAM: ENGINEER"
 description = "Examiner Sudo has seen what the Null does: it copies processes, and copies drift. An Engineer doesn't copy. An Engineer references.
 Sit the exam in Sudo's sandbox. Three waves of samples the Null copied out of your own fights. The sandbox lends you routines: write lines once in routines.gd (def name():), and run them from any skill with call name(). A call is one block, whatever the routine holds, and each skill still pays the points for its lines. Three of your skills must call the same routine, and it must run at least 6 times.
-Graded PASS, MERIT or DISTINCTION. You can retake it later. Passing makes routines yours, and the Null Gatekeeper will hear you out."
+Graded PASS, MERIT or DISTINCTION. You can retake it later. Passing makes routines yours, and opens the way into The Fray: Act IV starts here. Out there the Null copies you, and a copy that calls your routines calls the ones you can still change."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
 ordered = false
-prerequisite_quest_ids = Array[String](["q07_null_weaver_prime"])
+prerequisite_quest_ids = Array[String](["q06c_root_access"])
 reward_credits = 0
 metadata/_custom_type_script = "uid://ddwasls37yxoi"
 metadata/giver = "Sudo"

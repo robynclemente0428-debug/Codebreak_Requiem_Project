@@ -152,8 +152,12 @@ var _tip_shown: Dictionary = {}    # {id, text, page} on screen now, {} for none
 var _tip_hold := false             # apply() just showed one: the rebuild after it keeps it
 # Routines (rank ENGINEER): routines.gd, edited as a draft like a script (ProgramRoutine.OWNER)
 const ROUTINES_FILE := "@routines"
+## kernel.gd (Act V, KernelScript): root lines about the zone, not a skill. Edits apply at once.
+const KERNEL_FILE := "@kernel"
+const COL_KERNEL := Color(1.0, 0.85, 0.4)
 var _routine_draft: Array = []      # copies of SkillComponent.routines while editing ([] = not made yet)
 var _routine_rename := -1           # the routine whose name box is open
+var _routine_version := -1          # SkillComponent.routines_version the copy was made from
 
 
 # ---------- BUILDING ----------
@@ -438,11 +442,13 @@ func _limits() -> SkillProgramLimits:
 	return _skills().program_limits_for(_socket) if _sock() != null else null
 
 
-## The program being edited for the current socket. Starts as a copy of the applied one.
+## The program being edited for the current socket. Starts as a copy of the one in this set,
+## running or not: one that doesn't fit right now opens with its errors, never as a blank file
+## (applying a blank file would delete it).
 func _draft() -> SkillProgram:
 	if not _drafts.has(_socket):
-		var applied := _skills().get_program(_socket)
-		_drafts[_socket] = applied.duplicate_program() if applied != null else SkillProgram.new()
+		var stored := _skills().stored_program(_socket)
+		_drafts[_socket] = stored.duplicate_program() if stored != null else SkillProgram.new()
 	return _drafts[_socket]
 
 
@@ -453,19 +459,30 @@ func _support_ids(s: SkillComponent.Socket) -> Array:
 	return ids
 
 
-## True when the socket's draft differs from what is applied (an unsaved file).
+## True when the socket's draft differs from what is kept in this set (an unsaved file).
 func _is_dirty(socket: int) -> bool:
 	if not _drafts.has(socket):
 		return false
-	var applied := _skills().get_program(socket)
+	var applied := _skills().stored_program(socket)
 	var applied_json := JSON.stringify(applied.to_dict() if applied != null else {"rules": []})
 	return JSON.stringify((_drafts[socket] as SkillProgram).to_dict()) != applied_json
 
 
+## Forgets the copy of routines.gd when the character's routines were replaced since it was made
+## (Sudo's sandbox takes them away and gives them back). An old copy applied later would wipe them.
+func _drop_stale_routines() -> void:
+	var sk := _skills()
+	if not _routine_draft.is_empty() and (sk == null or sk.routines_version != _routine_version):
+		_routine_draft.clear()
+		_routine_rename = -1
+
+
 ## The routines being edited: copies of the character's, made on first use, all three slots.
 func _routines() -> Array:
+	_drop_stale_routines()
 	if _routine_draft.is_empty():
 		var sk := _skills()
+		_routine_version = sk.routines_version if sk != null else -1
 		for i in ProgramRoutine.MAX_ROUTINES:
 			var have: ProgramRoutine = sk.routines[i] if sk != null and i < sk.routines.size() else null
 			_routine_draft.append(have.duplicate_routine() if have != null else ProgramRoutine.make(i))
@@ -474,6 +491,7 @@ func _routines() -> Array:
 
 ## True when the routines were edited since they were last applied.
 func _routines_dirty() -> bool:
+	_drop_stale_routines()
 	if _routine_draft.is_empty():
 		return false
 	var sk := _skills()
@@ -488,6 +506,107 @@ func _routines_dirty() -> bool:
 func _routines_unlocked() -> bool:
 	var limits := _limits()
 	return limits != null and limits.allows("call")
+
+
+## kernel.gd shows once the Executor reaches the Core (KernelScript.unlocked).
+func _kernel_unlocked() -> bool:
+	return KernelScript.unlocked(_kernel_qm())
+
+
+func _kernel_qm() -> QuestManager:
+	var sk := _skills()
+	var player := sk.get_parent() if sk != null else null
+	return player.get("quests") as QuestManager if player != null else null
+
+
+## kernel.gd, open: your root lines and the Null's, grouped by trigger, one line each.
+##   when enemy_spotted:
+##       registry.add(target)        # 1 root point                       [del]
+##     N target.armour += 40%        # the Null wrote this, x1.3           [overwrite 3]
+func _kernel_lines() -> void:
+	var qm := _kernel_qm()
+	var lines: Array = Array(_skills().kernel)
+	var running := KernelScript.null_running(qm)
+	_comment_line("# root: these lines run on the zone, whatever you cast: every Act V zone past the Core")
+	_comment_line("# root points %d/%d used  //  CORE STABILITY %d%%  //  the Null's lines run x%.1f" % [
+		KernelScript.used(lines, qm), KernelScript.MAX_POINTS, roundi(KernelScript.stability(lines, qm) * 100.0),
+		KernelScript.null_scale(lines, qm)])
+	var any := false
+	for trigger in KernelScript.TRIGGERS:
+		var mine: Array = lines.filter(func(id: String) -> bool: return KernelScript.LINES[id]["trigger"] == trigger)
+		var theirs: Array = running.filter(func(id: String) -> bool: return KernelScript.NULL_LINES[id]["trigger"] == trigger)
+		if mine.is_empty() and theirs.is_empty():
+			continue
+		any = true
+		_blank_line(null)
+		var head := _code_line(null)
+		(head[1] as HBoxContainer).add_child(_tok("when ", COL_KEYWORD))
+		(head[1] as HBoxContainer).add_child(_tok(trigger, COL_FN))
+		(head[1] as HBoxContainer).add_child(_tok(":", COL_OP))
+		for id in mine:
+			var parts := _code_line(null)
+			var code: HBoxContainer = parts[1]
+			code.add_child(_tok("    " + str(KernelScript.LINES[id]["code"]), COL_KERNEL))
+			var cost := int(KernelScript.LINES[id]["cost"])
+			code.add_child(_comment_tok("%d root point%s" % [cost, "" if cost == 1 else "s"], str(KernelScript.LINES[id]["tip"])))
+			var del := _code_button("del", "Take this line out of kernel.gd (its root points come back).")
+			del.pressed.connect(func() -> void:
+				_skills().kernel.erase(id)
+				panel._notify("KERNEL: LINE REMOVED")
+				_queue_rebuild())
+			code.add_child(del)
+		for id in theirs:
+			var parts := _code_line(null, "N", KernelScript.COL_NULL)
+			var code: HBoxContainer = parts[1]
+			code.add_child(_tok("    " + str(KernelScript.NULL_LINES[id]["code"]), KernelScript.COL_NULL))
+			code.add_child(_comment_tok("the Null wrote this, x%.1f at your stability" % KernelScript.null_scale(lines, qm),
+				str(KernelScript.NULL_LINES[id]["tip"])))
+			var can := KernelScript.free_points(lines, qm) >= KernelScript.OVERWRITE_COST
+			var ow := _code_button("overwrite %d" % KernelScript.OVERWRITE_COST,
+				"Overwrite the Null's line for good: it stops running, and %d root points are spent on it for good.%s" % [
+					KernelScript.OVERWRITE_COST, "" if can else "\nNot enough root points free: take out one of your lines first."])
+			ow.disabled = not can
+			ow.pressed.connect(func() -> void:
+				GameEvents.report(KernelScript.OVERWRITE_DEED, id)
+				panel._notify("NULL LINE OVERWRITTEN")
+				_queue_rebuild())
+			code.add_child(ow)
+	for id in KernelScript.NULL_LINES:
+		if KernelScript.is_overwritten(qm, id):
+			if not any:
+				_blank_line(null)
+			any = true
+			_comment_line("# overwritten: %s" % KernelScript.code_of(id))
+	if not any:
+		_blank_line(null)
+		_comment_line("# empty: add root lines from SNIPPETS. The Null will write its own here as you go deeper.")
+
+
+## SNIPPETS while kernel.gd is open: every root line you can add, with its cost. Click to add.
+func _kernel_palette() -> void:
+	var qm := _kernel_qm()
+	var lines: Array = Array(_skills().kernel)
+	_pal_add(_comment_tok("root lines  (%d/%d points free)" % [KernelScript.free_points(lines, qm), KernelScript.MAX_POINTS],
+		"root lines\nThey run on the zone in every Act V zone past the Core, whatever you cast.\nEach costs root points; what's left is CORE STABILITY. The lower it is, the stronger the Null's own lines run.\nNOTE: changes apply at once"))
+	for id in KernelScript.LINES:
+		var d: Dictionary = KernelScript.LINES[id]
+		var b := _code_button("when %s: %s  (%d)" % [d["trigger"], d["code"], d["cost"]], str(d["tip"]))
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.clip_text = true
+		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		if id in lines:
+			b.disabled = true
+			b.tooltip_text += "\nAlready in kernel.gd."
+		elif not KernelScript.can_add(lines, qm, id):
+			b.disabled = true
+			b.tooltip_text += "\nNot enough root points free."
+		b.pressed.connect(func() -> void:
+			if KernelScript.can_add(Array(_skills().kernel), qm, id):
+				_skills().kernel.append(id)
+				panel._notify("KERNEL: LINE ADDED")
+				_queue_rebuild())
+		_pal_add(b)
 
 
 ## The file whose knobs a file's lines use: routines use the skill's own.
@@ -723,7 +842,7 @@ func refresh() -> void:
 				_socket = i
 				break
 		_owner = ""
-	if _sock() != null and _owner != "" and _owner != ROUTINES_FILE and not (_owner in _support_ids(_sock())):
+	if _sock() != null and _owner != "" and not (_owner in [ROUTINES_FILE, KERNEL_FILE]) and not (_owner in _support_ids(_sock())):
 		_owner = ""
 	_rebuild()
 
@@ -749,7 +868,9 @@ func _file_owners() -> Array:
 		if not def.program_knobs.is_empty() and not (def.id in out):
 			out.append(def.id)
 	if _routines_unlocked():
-		out.append(ROUTINES_FILE)                        # routines.gd: last, shared by every skill
+		out.append(ROUTINES_FILE)                        # routines.gd: shared by every skill
+	if _kernel_unlocked():
+		out.append(KERNEL_FILE)                          # kernel.gd: last, about the zone (Act V)
 	return out
 
 
@@ -1005,6 +1126,15 @@ func _build_gem_list() -> void:
 			_socket, ROUTINES_FILE, SkillPanel.COL_WARN if bad else COL_KEYWORD, 0)
 		rb.tooltip_text = "Your routines: lines written once, run from any skill with call name() (1 block). Shared by every skill."
 		_gem_list.add_child(rb)
+	if any and _kernel_unlocked():                       # kernel.gd: root lines about the zone (Act V)
+		var running := KernelScript.null_running(_kernel_qm()).size()
+		var kb := _file_button(KernelScript.FILE_NAME + (" !" if running > 0 else ""), _socket, KERNEL_FILE,
+			KernelScript.COL_NULL if running > 0 else COL_KERNEL, 0)
+		kb.tooltip_text = "kernel.gd: root lines. Their subject is the zone, not a skill, and they run in every Act V zone past the Core."
+		if running > 0:
+			kb.tooltip_text += "
+The Null has written %d line%s into it." % [running, "" if running == 1 else "s"]
+		_gem_list.add_child(kb)
 	if not any:
 		_gem_list.add_child(panel._label("// socket a skill first", _sz(12), COL_COMMENT))
 
@@ -1067,6 +1197,12 @@ func _build_rules() -> void:
 		_title.text = skill_file
 	elif _owner == ROUTINES_FILE:
 		_title.text = "routines.gd  (every skill)"
+	elif _owner == KERNEL_FILE:
+		_title.text = "kernel.gd  (root: the zone)"
+		_selected = null
+		_line_no = 0
+		_kernel_lines()
+		return
 	else:
 		var sup: SupportGemDefinition = SkillGemRegistry.get_support_gem(_owner)
 		_title.text = "%s / %s" % [skill_file.trim_suffix(".gd"), _file_name(sup.display_name) if sup else _owner]
@@ -1124,6 +1260,8 @@ func _build_file_tabs() -> void:
 func _file_tab(owner_id: String, text: String, has_error: bool) -> Button:
 	var active := owner_id == _owner
 	var col: Color = SkillPanel.COL_SKILL if owner_id == "" else (COL_KEYWORD if owner_id == ROUTINES_FILE else SkillPanel.COL_SUPPORT)
+	if owner_id == KERNEL_FILE:
+		col = COL_KERNEL
 	if has_error:
 		col = SkillPanel.COL_WARN
 	var b := Button.new()
@@ -1215,10 +1353,16 @@ func _routine_header(i: int, rt: ProgramRoutine) -> void:
 	code.add_child(_tok("():", COL_OP))
 	var problem: Array = rt.problem() if not rt.is_empty() else []
 	var note := "%d/%d blocks" % [rt.block_count(), ProgramRoutine.MAX_BLOCKS]
+	var echoes := NullEcho.callers_of(get_tree(), i) if is_inside_tree() else 0   # Act IV: copies calling it
+	var echo_text := "%d Null Echo%s" % [echoes, "" if echoes == 1 else "es"]
 	if not problem.is_empty():
 		note = problem[1]
+		if echoes > 0:
+			note += " (%s call%s it: apply, and they crash)" % [echo_text, "s" if echoes == 1 else ""]
 	else:
 		var callers := _routine_callers(i)
+		if echoes > 0:
+			callers.append(echo_text)
 		if not callers.is_empty():
 			note += ", called by " + ", ".join(callers)
 	var tok := _comment_tok(note)
@@ -1403,7 +1547,7 @@ func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
 				head = c.keyword() + " "         # except missed:
 			code.add_child(_tok(head, COL_KEYWORD))
 			_condition_tokens(code, c, last)
-			code.add_child(_comment_tok(discount if i == 0 else ""))
+			code.add_child(_comment_tok(_cond_note(c, discount if i == 0 else "")))
 			if i == 0:
 				code.add_child(_delete_rule_button(rule))
 			parts[0].tooltip_text = "%s\nCOST: buffs in this rule x%.2f\nDrag out or right-click to delete." % [c.describe(), c.cost_multiplier()]
@@ -1437,6 +1581,29 @@ func _rule_lines(rule: ProgramRule, limits: SkillProgramLimits) -> void:
 		# A loop's if blocks come after the cast: they're checked once it lands
 		for bi in rule.branches.size():
 			_branch_lines(rule, bi, limits, indent)
+
+
+## A condition line's comment: a registry[...] check says in words which enemy it means
+## ("the nearest", "the 3 lowest-hp"), ahead of the rule's discount.
+func _cond_note(c: ProgramCondition, discount: String) -> String:
+	var at := c as RegistryPositionCondition
+	if at == null:
+		return discount
+	var says := ScriptRegisters.position_meaning(at.pos, _draft_sort())
+	return says if discount == "" else "%s, %s" % [says, discount]
+
+
+## The order a registry[...] check reads: the draft's first sort line, or oldest first.
+func _draft_sort() -> int:
+	for r in _draft().rules:
+		for e in r.effects:
+			if ScriptRegisters.is_sort(e):
+				return e.sort_by
+		for b in r.branches:
+			for e in b.effects:
+				if ScriptRegisters.is_sort(e):
+					return e.sort_by
+	return 0
 
 
 ## A condition's tokens after its keyword: fn(params) for a call, or the parts of a modular block
@@ -1499,7 +1666,7 @@ func _branch_lines(rule: ProgramRule, bi: int, limits: SkillProgramLimits, inden
 		var code: HBoxContainer = parts[1]
 		code.add_child(_tok(indent + ("if " if i == 0 else " and "), COL_KEYWORD))
 		_condition_tokens(code, c, i == b.conditions.size() - 1)
-		code.add_child(_comment_tok(discount if i == 0 else ""))
+		code.add_child(_comment_tok(_cond_note(c, discount if i == 0 else "")))
 		if i == 0:
 			parts[0].tooltip_text = head_tip
 			_make_line_interactive(parts[0], rule, {"kind": "branch"}, b)
@@ -1961,6 +2128,9 @@ func _build_palette() -> void:
 	var limits := _limits()
 	if limits == null:
 		return
+	if _owner == KERNEL_FILE:
+		_kernel_palette()
+		return
 	_update_tab_buttons()
 	var defense := _palette_tab == "defense"
 	var sel: ProgramRule = _selected if _selected != null and is_instance_valid(_selected) else null
@@ -2211,7 +2381,7 @@ func _add_variable_snippets() -> void:
 	var limits := _limits()
 	if limits == null or not limits.allows("sort"):
 		return
-	_pal_add(_comment_tok("sorting", "sorting\nPuts the registry in order, so registry[0] is the first by that key.\nWithout a sort the registry is oldest first.\nNOTE: free: no points or blocks"))
+	_pal_add(_comment_tok("sorting", "sorting\nPuts the registry in order, then picks a place in it.\nPlaces count from 0: registry[0] is the first, registry[1] the second, registry[-1] the last, registry[:3] the first three.\nWithout a sort the registry is oldest first.\nNOTE: free: no points or blocks"))
 	var sort_pieces: Array = []
 	for k in ScriptRegisters.SORT_KEYS.size():
 		var order := k * 2
@@ -2225,11 +2395,14 @@ Drop on a sort line to change its key. Free: no points or blocks." % [
 	for p in ScriptRegisters.POSITIONS.size():
 		var sample := RegistryPositionCondition.new()
 		sample.pos = p
-		pos_pieces.append([sample.pos_text(), {"src": "palette", "kind": "position", "pos": p},
+		var place: String = ScriptRegisters.POSITIONS[p]
+		pos_pieces.append(["%s %s" % [place, ScriptRegisters.POSITION_WORDS[place]], {"src": "palette", "kind": "position", "pos": p},
 			"%s
+Places count from 0, so [0] is the first. With registry.sort(key=hp), this is %s.
 Checked per hit, against the enemy being hit, in the registry's order (registry.sort, or oldest first). %s Buffs in this rule cost x%.2f.
 Drop on a registry[...] check to change it." % [
 				sample.describe().trim_prefix("WHEN "),
+				ScriptRegisters.position_meaning(p, 2),
 				"One of the first few." if ScriptRegisters.is_slice(p) else "Only that one place.",
 				sample.cost_multiplier()]])
 	_add_piece_row(pos_pieces)
@@ -2978,6 +3151,8 @@ func _where(issue: Dictionary, index: int) -> String:
 func _owner_file(owner_id: String) -> String:
 	if owner_id == ROUTINES_FILE:
 		return "routines.gd"
+	if owner_id == KERNEL_FILE:
+		return KernelScript.FILE_NAME
 	if owner_id == "":
 		return _file_name(_sock().gem.get_display_name()) if _sock() != null else "skill"
 	var def: SupportGemDefinition = SkillGemRegistry.get_support_gem(owner_id)
@@ -2991,7 +3166,7 @@ func _error_owners(socket: int) -> Dictionary:
 	if socket == _socket and _validation != null:
 		v = _validation
 	else:
-		var program: SkillProgram = _drafts[socket] if _drafts.has(socket) else _skills().get_program(socket)
+		var program: SkillProgram = _drafts[socket] if _drafts.has(socket) else _skills().stored_program(socket)
 		if program == null or _skills().program_limits_for(socket) == null:
 			return {}
 		v = _skills().preview_program(socket, program, _routines())

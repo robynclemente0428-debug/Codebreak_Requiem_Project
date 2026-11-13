@@ -15,8 +15,8 @@ script = ExtResource("2_quest")
 id = "q04b_hollow_choir"
 title = "THE HOLLOW CHOIR"
 description = "The Hollow Relay is the only way to call ahead to Checkpoint, and something in it keeps sending our own evacuation call back at us. Past the Static Mire, at the end of the route.
-LOCK: ECHO. It learns the pattern that hits it, the skill and the script set, and shrugs that pattern off. No single attack works twice in a row.
-TIP: alternate. Switch skills, or switch script sets so the same skill runs a different program. The Echo Wisps in the Static Mire work the same way: practise on them.
+LOCK: ECHO. It learns the pattern that hits it, the skill and the WHEN rules that fired, and sends it back: hit it the same way twice and a ring of sound rolls out from it, taking 15% of your life if you're still inside.
+TIP: vary the script, not the set. A loop whose if changes a repeat, or a second rule like every_nth_cast, makes each cast a new pattern. Or keep it simple and step out of each ring, or script barrier for when you can't. The Echo Wisps in the Static Mire work the same way: practise on them.
 SCRIPT TASK: none. This one tests everything Act II taught you."
 objectives = Array[ExtResource("1_obj")]([SubResource("Objective_2")])
 prerequisite_quest_ids = Array[String](["q03_loop_hound_alpha", "q04_the_overflow"])

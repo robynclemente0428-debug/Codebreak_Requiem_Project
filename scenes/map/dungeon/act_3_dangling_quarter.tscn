@@ -17,7 +17,7 @@ agent_radius = 0.3
 
 [node name="DanglingQuarter" type="Node3D"]
 script = ExtResource("1_dun")
-dungeon_level = 25
+dungeon_level = 24
 respawn_spawn_id = &"dangling_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"

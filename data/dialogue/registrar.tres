@@ -8,9 +8,12 @@ source = "# The Registrar: Checkpoint's records process, a loyal Custodian Remna
 # Act III's quest point at the Quarantine Yard gate. Talking to it is THE LAST MILE's last step
 # (objective 'talk' registrar), reported before this dialogue opens, so the quest is READY here.
 # Gives ROOT ACCESS and MEMORY SHARDS, and reads the Guild shard once The Leak is turned in.
+# Yard Sweeps (YardCrates): it registered the Vales' crate (CargoF), and reads Hardfault's census
+# (> census) when Root Access is turned in, and again on request after.
 
 ~ start
 @ quest_ready:q04c_the_last_mile -> first_meeting
+@ crate_news:CargoF -> loss_vales
 @ quest_ready:q06c_root_access -> ready_root
 @ quest_active:q06c_root_access -> restoring
 @ can_start:q06c_root_access -> offer_root
@@ -93,10 +96,23 @@ Registrar: Hardfault: restored. Executor: root.
 > turn_in q06c_root_access
 > recover quarantine_lifted
 Registrar: The quarantine is lifted. The yard is Checkpoint's newest district. The Inward Gate, at the far end of the Sweep, answers to you now.
+Registrar: One more record. C-0 kept its own. I have re-registered what it took.
+> census
 -> end
 
 ~ restored
 Registrar: Population: Hardfault, one. Correct.
+* HEAR THE CENSUS AGAIN -> census_again
+* GOODBYE -> end
+
+~ census_again
+> census
 -> end
+
+~ loss_vales
+> report crate_mourned CargoF
+Registrar: Record update. Item: personal effects, family Vale. Status: deleted by C-0, pending in its queue.
+Registrar: The Vales asked me where it went. I told them. I do not have a procedure for what they asked next.
+-> start
 "
 metadata/_custom_type_script = "uid://dd85gxidfhqxl"

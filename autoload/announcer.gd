@@ -5,7 +5,7 @@ extends Node
 ##
 ##   STRIP     messages that stay up while they apply (the tutorial banner, the dock defense
 ##             panel), stacked in `order`, each under the one before. add_to_strip().
-##   HEADLINE  one big moment at a time (AREA CLEARED, a Null Law taking hold, an exam wave, a
+##   HEADLINE  one big moment at a time (AREA CLEARED, an exam wave, a
 ##             NEW LOCK card), under the strip. headline() queues it by priority: a more
 ##             important one takes the slot at once, otherwise it waits its turn.
 ##   FEED      the quest tracker's short lines (QUEST READY, a beacon online, convoy damage),

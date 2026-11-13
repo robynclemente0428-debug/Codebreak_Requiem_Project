@@ -2,42 +2,27 @@
 
 [ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
 [ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
-[ext_resource type="Script" path="res://systems/quest/recover_objective.gd" id="3_rec"]
 
 [sub_resource type="Resource" id="Objective_0"]
 script = ExtResource("1_obj")
-description = "Kill under LIFE READS INVERTED"
-kind = "null_law_kill"
-target = "life_inverted"
-required = 6
+description = "Let Null Echoes copy you"
+kind = "echo_copied"
+required = 3
 
 [sub_resource type="Resource" id="Objective_1"]
 script = ExtResource("1_obj")
-description = "Kill under NEAR MEANS FAR"
-kind = "null_law_kill"
-target = "near_is_far"
-required = 6
-
-[sub_resource type="Resource" id="Objective_2"]
-script = ExtResource("1_obj")
-description = "Kill under LOOPS RUN ONCE MORE"
-kind = "null_law_kill"
-target = "loops_plus_one"
-required = 6
-
-[sub_resource type="Resource" id="Objective_3"]
-script = ExtResource("1_obj")
-description = "Kill under REGISTRY FORGETS ON HIT"
-kind = "null_law_kill"
-target = "counters_forget"
+description = "Crash Null Echoes with a NULL REFERENCE"
+kind = "echo_crashed"
 required = 6
 
 [resource]
 script = ExtResource("2_quest")
 id = "under_new_rules"
-title = "UNDER NEW RULES"
-description = "Vesper wants you to stop fighting the Null's laws and start fighting under them. Win under each of its laws, out in the Null Zone. The Rule Forge, off The Deleted Quarter, changes them every 30 seconds."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3")])
+title = "NULL REFERENCE"
+description = "Vesper wants you to stop running from the copies and use them. A Null Echo copies the first skill it sees you cast. Its own lines are a copy, but a  call name()  line is copied as the call: it points at YOUR routines.gd.
+Empty a routine an Echo still calls and its call points at nothing: it crashes, and takes a quarter of its life with it.
+TIP: a decoy. Give a skill a call to a routine you don't need, cast it first so the Echoes copy it, then empty that routine. The Mirror Forge, off The Deleted Quarter, is full of them."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1")])
 ordered = false
 prerequisite_quest_ids = Array[String](["q07a_learn_the_language"])
 reward_credits = 300

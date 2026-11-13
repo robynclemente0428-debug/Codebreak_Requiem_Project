@@ -50,6 +50,14 @@ var library: Array = []
 ## every script set calls the same ones. At most ProgramRoutine.MAX_ROUTINES. Saved.
 var routines: Array[ProgramRoutine] = []
 var _held_routines: Array = []          # the real routines, set aside in Sudo's sandbox
+## Goes up whenever the routines are replaced as a whole (set_routines, a save loading, the
+## sandbox taking them away or giving them back). The script editor's copy of routines.gd is only
+## good for the version it was made from: an older copy is dropped, never applied over these.
+var routines_version := 0
+
+## kernel.gd (Act V, KernelScript): your root lines, by id. They run on the zone, not on a skill
+## (KernelDirector), so they live here beside the routines, and are saved.
+var kernel: Array[String] = []
 
 ## Sudo's sandbox (ExamChamber): the exam's skills are fixed, so no gem or support can be
 ## socketed or taken out while this is on. See snapshot() / restore() / strip_for_exam().
@@ -433,6 +441,7 @@ func snapshot() -> Dictionary:
 func restore(snap: Dictionary) -> void:
 	routines.assign(snap.get("routines", routines))
 	_held_routines.clear()
+	routines_version += 1
 	var socks: Array = snap.get("sockets", [])
 	for i in mini(socks.size(), sockets.size()):
 		var s := sockets[i]
@@ -458,6 +467,7 @@ func restore(snap: Dictionary) -> void:
 func strip_for_exam() -> void:
 	_held_routines = routines.duplicate()
 	routines.clear()
+	routines_version += 1
 	for s in sockets:
 		if s.gem == null:
 			continue
@@ -480,6 +490,7 @@ func has_routines() -> bool:
 ## longer fits, like a script after a rank change).
 func set_routines(list: Array) -> void:
 	routines.clear()
+	routines_version += 1
 	for r in list.slice(0, ProgramRoutine.MAX_ROUTINES):
 		if r is ProgramRoutine:
 			routines.append((r as ProgramRoutine).duplicate_routine())
@@ -509,6 +520,7 @@ func routines_to_list() -> Array:
 ## From the save (before the skills' programs, so their calls are checked against them).
 func restore_routines(saved: Array) -> void:
 	routines.clear()
+	routines_version += 1
 	for d in saved.slice(0, ProgramRoutine.MAX_ROUTINES):
 		if d is Dictionary:
 			routines.append(ProgramRoutine.from_dict(d))
@@ -616,6 +628,15 @@ func get_program(index: int) -> SkillProgram:
 	if index < 0 or index >= sockets.size():
 		return null
 	return sockets[index].program
+
+
+## The program kept in the current set for a socket, running or not. One that doesn't fit right
+## now (a routine it calls changed, a lower rank's limits) is kept but not run: get_program() is
+## null for it, this isn't. The script editor opens this one, so the player sees it with its errors.
+func stored_program(index: int) -> SkillProgram:
+	if index < 0 or index >= sockets.size() or sockets[index].gem == null:
+		return null
+	return sockets[index].sets[script_set]
 
 
 # ---------- INTERNAL ----------

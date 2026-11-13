@@ -179,7 +179,13 @@ func on_player_arrived(player: Node3D) -> void:
 	if heal_on_arrival:
 		_player.health.heal(_player.stats.get_stat(StatTypes.Stat.MAX_HEALTH))
 		_player.mana.initialize()                 # refill mana too
-		get_tree().call_group("stim_hud", "refill_all")   # and every stim's charges
+		# and every stim's charges: in Act III only to half once a Yard Sweep took the med stores
+		var refill := YardCrates.stim_refill(_player.quests) if act == "III" else 1.0
+		get_tree().call_group("stim_hud", "refill_all", refill)
+		if refill < 1.0:
+			QuestItems.toast(get_tree(), "THE MED STORES ARE GONE\nStims refill to half here.%s" % (
+				" C-0's deletion queue in the Sweep still holds them." if YardCrates.is_queued(_player.quests, "CargoE") else ""),
+				YardCrates.COL)
 	_connect_once(_player.inventory.changed)
 	_connect_once(_player.equipment.equipment_changed)
 	_connect_once(_player.skills.changed)

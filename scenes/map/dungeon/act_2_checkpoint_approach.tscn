@@ -18,7 +18,7 @@ agent_radius = 0.3
 
 [node name="CheckpointApproach" type="Node3D"]
 script = ExtResource("1_dun")
-dungeon_level = 21
+dungeon_level = 20
 respawn_spawn_id = &"approach_in"
 portal_scene = ExtResource("2_portal")
 metadata/_custom_type_script = "uid://bcsya5wc4u6ie"

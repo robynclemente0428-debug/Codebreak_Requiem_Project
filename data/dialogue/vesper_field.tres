@@ -7,8 +7,8 @@ script = ExtResource("1_dlg")
 source = "# Vesper in the Null Zone (Act IV): she goes ahead of you and waits at each zone's entrance.
 # She changes as you go deeper: in The Fray she translates; in The Weaver's Loom she finishes the
 # Null's sentences before it does; at The Core's Gate she asks you not to kill the Gatekeeper.
-# Her lines also follow DECODE THE NULL (the fragments) and the Null Laws (NullLaws). In The
-# Deleted Quarter she reads Checkpoint's rebuilt streets; in The Rule Forge she warns of the fast laws.
+# Her lines also follow DECODE THE NULL (the fragments) and the Null Echoes (NullEcho). In The
+# Deleted Quarter she reads Checkpoint's rebuilt streets; in The Mirror Forge she warns of the champion.
 ~ start
 @ here:act_4_the_fray -> fray
 @ here:act_4_weavers_loom -> loom
@@ -23,8 +23,8 @@ source = "# Vesper in the Null Zone (Act IV): she goes ahead of you and waits at
 @ quest_done:null_fragments -> fray_fluent
 @ recovered:null_fragment_c -> fray_halfway
 Vesper: Look at the floor. Those marks aren't damage. They're words.
-Vesper: Out here the Null rewrites one of AXIOM's rules at a time. When it does, I'll tell you what I hear.
-Vesper: Keep a script set for each rule it breaks. You'll want to swap fast.
+Vesper: Out here the Null copies you. Each Echo takes the first thing it sees you do. When one does, I'll tell you what I hear.
+Vesper: Show them something you don't mind losing first. A copy keeps what it saw.
 * WHAT IS IT SAYING? -> fray_saying
 * LET'S GO -> end
 
@@ -39,7 +39,7 @@ Vesper: Two more. Then I'll be able to read whole sentences, not just words.
 
 ~ fray_fluent
 Vesper: I can read all of it now. I wish I couldn't.
-Vesper: It isn't attacking AXIOM. It's correcting it. Every law it rewrites is one we got wrong.
+Vesper: It isn't attacking AXIOM. It's learning it. Every copy it makes is a question about what we are.
 -> end
 
 ~ loom
@@ -118,13 +118,13 @@ Vesper: The Weaver's quiet now, but the drafts keep coming. It's still learning 
 
 ~ forge
 @ quest_done:under_new_rules -> forge_after
-Vesper: This is where it tries its laws out before it uses them. Hear that? It changes its mind every half a minute here.
-Vesper: Have a script set ready for every law, and swap the moment the banner turns. There's no waiting one out in here.
+Vesper: This is where it practises being you. Two in every room, and something at the far end that calls every routine you've written.
+Vesper: Every one. If one of them is empty when it calls, it'll find out the hard way.
 Vesper: It keeps its best work here, too. Whatever you find will be worth the trouble.
 -> end
 
 ~ forge_after
-Vesper: You've fought under every law it has. It's started trying new ones on you. I think that's a compliment.
+Vesper: You crashed its copies with your own code. It's started copying more carefully. I think that's a compliment.
 -> end
 
 ~ idle

@@ -40,8 +40,8 @@ id = "q08_null_gatekeeper"
 title = "THE NULL GATEKEEPER"
 description = "The Gatekeeper guards the Core. Past it is the first place in AXIOM nobody has come back from.
 BOSS TRAIT: shifts between a fast form that is easy to hurt and a slow, heavy form that hits hard and shrugs off damage.
-SCRIPT TASK: pass Examiner Sudo's advanced rank exam."
-objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0"), SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3"), SubResource("Objective_4")])
+No script task. The road to the Core opens once Null Weaver Prime falls."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_1"), SubResource("Objective_2"), SubResource("Objective_3"), SubResource("Objective_4")])
 ordered = true
 prerequisite_quest_ids = Array[String](["q07_null_weaver_prime"])
 reward_credits = 400
