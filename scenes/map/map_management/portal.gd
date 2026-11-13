@@ -175,6 +175,8 @@ func _build_barrier() -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if not body is Player or not visible:
 		return
+	if (body as Player).is_remote:                 # co-op: another player's copy; their machine asks
+		return
 	if is_sealed():
 		if _turned_back <= 0.0:
 			_turned_back = 2.5

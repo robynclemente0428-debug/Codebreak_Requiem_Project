@@ -68,7 +68,9 @@ func _on_attack_requested(target: Node3D) -> void:
 	var dmg := randf_range(
 		stats.get_stat(StatTypes.Stat.MIN_ATTACK_DAMAGE),
 		stats.get_stat(StatTypes.Stat.MAX_ATTACK_DAMAGE))
+	Coop.hit_source = Coop.Hit.ENEMY            # co-op: a real hit, sent on to the player's own machine
 	target.health.take_damage(dmg)
+	Coop.hit_source = Coop.Hit.NONE
 
 ## Longest a corpse may stay, even if the death clip never reports finishing.
 const CORPSE_MAX_TIME := 3.0
@@ -97,6 +99,7 @@ func play_skill_animation(key: String, fit_duration: float) -> float:
 	if model == null:
 		return 0.0
 	var hit_in := model.play_skill(key, fit_duration)
+	Coop.enemy_skill_animation(self, key, fit_duration)   # co-op: the clients play the clip too
 	if hit_in > 0.0:
 		SoundManager.play_skill(key, self, hit_in)
 	return hit_in

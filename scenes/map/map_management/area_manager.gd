@@ -42,7 +42,8 @@ func _ready() -> void:
 	add_to_group("area_manager")
 	_add_waypoint_panel()
 	await get_tree().process_frame  # let the rest of main.tscn finish _ready
-	var town := SaveManager.last_town()
+	Coop.game_ready(self)           # co-op: the other players' characters join ours (no-op in single player)
+	var town := Coop.start_town if Coop.in_game else SaveManager.last_town()   # co-op: the host's town
 	if town.is_empty():
 		await _change_area(start_area, start_spawn, false)
 	else:
@@ -119,8 +120,20 @@ func go_to(scene_path: String, spawn_id: StringName = &"default",
 		return
 	if Time.get_ticks_msec() < _ignore_until_ms:
 		return
+	if Coop.in_game:
+		# Co-op: the party travels together. The host decides, and sends everyone (us too) there
+		# through travel_now() with the dungeon instance's seed.
+		Coop.request_travel(scene_path, spawn_id, dungeon_level, instance_id)
+		return
 	if dungeon_level > 0:
 		WorldState.prepare_dungeon(scene_path, dungeon_level, instance_id)   # only once the trip is certain
+	await _change_area(scene_path, spawn_id, true)
+
+
+## Co-op: the trip the host sent (Coop._travel). The dungeon instance is already prepared.
+func travel_now(scene_path: String, spawn_id: StringName) -> void:
+	if _busy or scene_path.is_empty():
+		return
 	await _change_area(scene_path, spawn_id, true)
 
 
@@ -139,6 +152,7 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 		leaving.has_return_spot = _remember_spot and not revive
 		if leaving.has_return_spot:
 			leaving.return_spot = player.global_position
+	Coop.area_changing()            # co-op: the old area's enemies are gone
 	# Remove the old area completely before building the new one.
 	if current_area:
 		current_area.queue_free()
@@ -184,6 +198,7 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 	Waypoints.arrived(scene_path)        # first visit unlocks the area on the waypoint map (U)
 	GlitchDeath.prewarm(area, spot)       # its shaders compile now, not on the first kill
 	EffectWarmup.run(area, spot)          # likewise bullets, hit rings, flashes and damage numbers
+	Coop.area_loaded(scene_path)          # co-op: a client asks the host for this area's enemies
 
 	await _wait_for_navigation(area, use_fade)
 	await _finish(use_fade)
@@ -261,6 +276,8 @@ func _fade_to(alpha: float) -> void:
 func respawn(reload_area := false) -> void:
 	if _busy or current_area == null:
 		return
+	if Coop.in_game:
+		reload_area = false               # co-op: the others are still in this dungeon, so it stays as it is
 	var id: StringName = &"default"
 	var v = current_area.get("respawn_spawn_id")      # null if the area has no such property
 	if v != null and v != &"":

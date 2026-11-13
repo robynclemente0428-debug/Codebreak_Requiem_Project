@@ -5,6 +5,7 @@ const SlotButtonScene := preload("res://scenes/ui/character_slots/slot_button.ts
 # Adjust these two paths to wherever your scenes actually are
 const CLASS_SELECT_SCENE := "res://scenes/ui/class_select/class_select.tscn"
 const MAIN_MENU_SCENE := "res://scenes/ui/main_menu.tscn"
+const LOBBY_SCENE := "res://scenes/ui/lobby/lobby.tscn"
 
 @onready var slots_box: HBoxContainer = %SlotsBox
 @onready var scroll: ScrollContainer = %Scroll
@@ -85,7 +86,10 @@ func _on_slot_chosen(index: int) -> void:
 		return
 	if SaveManager.slot_exists(index):
 		if SaveManager.add_to_party(index) and SaveManager.party_full():
-			SaveManager.start_game()                    # existing character: play
+			if Coop.picking:                            # came from the main menu's LOBBY
+				get_tree().change_scene_to_file(LOBBY_SCENE)
+			else:
+				SaveManager.start_game()                # existing character: play
 	else:
 		SaveManager.creating_slot = index                   #empty slot
 		var packed := ResourceLoader.load_threaded_get(CLASS_SELECT_SCENE) as PackedScene

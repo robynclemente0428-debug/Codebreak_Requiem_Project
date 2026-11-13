@@ -163,7 +163,10 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 		if is_instance_valid(t):
 			t.on_outgoing(info)
 
+	# Co-op: a real hit (a player's or an enemy's skill), sent on to whoever owns the target
+	Coop.hit_source = Coop.Hit.PLAYER if cast.caster is Player else Coop.Hit.ENEMY
 	info.dealt = target_health.take_damage(info.damage)
+	Coop.hit_source = Coop.Hit.NONE
 	if info.dealt <= 0.0:
 		return info                 # the hit didn't land (target already dead)
 	info.landed = true

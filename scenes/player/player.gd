@@ -138,7 +138,8 @@ func _ready() -> void:
 	health.died.connect(_on_died)
 	health.health_changed.connect(_on_health_changed)
 	stats.stats_changed.connect(health._on_stats_changed)
-	_track_damage_numbers.call_deferred()   # the HUD may not be ready yet
+	if not is_remote:
+		_track_damage_numbers.call_deferred()   # the HUD may not be ready yet
 	mana.stats = stats
 	mana.initialize()
 	stats.stats_changed.connect(mana._on_stats_changed)
@@ -147,38 +148,11 @@ func _ready() -> void:
 	if c != null:
 		$model.set_model(c.model_scene, c.model_scale, c.model_offset)
 		_apply_model_size(c.model_scale)
-	var hp_hud := get_tree().get_first_node_in_group("hp_hud") as HpHud
-	if hp_hud:
-		hp_hud.bind($HealthComponent)
-	
-	var stat_panel := get_tree().get_first_node_in_group("character_panel") as CharacterPanel
-	if stat_panel:
-		stat_panel.bind($StatComponent)
-		
-	var mana_hud := get_tree().get_first_node_in_group("mana_hud") as ManaHud
-	if mana_hud:
-		mana_hud.bind($ManaComponent)
-
-	
 	equipment.stat_component = stats
 	equipment.equipment_changed.connect(_refresh_held_items)
-	var inv_panel := get_tree().get_first_node_in_group("inventory_panel") as InventoryPanel
-	if inv_panel:
-		inv_panel.bind(inventory, equipment)
-		inv_panel.bind_currency(currency)
+	if not is_remote:                    # the HUD shows this machine's own character only
+		_bind_hud()
 
-	var skill_panel := get_tree().get_first_node_in_group("skill_panel") as SkillPanel
-	if skill_panel:
-		skill_panel.bind(skills, inventory, equipment)
-	
-	var skill_bar := get_tree().get_first_node_in_group("skill_bar") as SkillBar
-	if skill_bar:
-		skill_bar.bind(skills, mana, equipment)
-	
-	var shop_panel := get_tree().get_first_node_in_group("shop_panel") as ShopPanel
-	if shop_panel:
-		shop_panel.bind(inventory, equipment, currency)
-	
 	if not data.is_empty():
 		GameEvents.muted = true 
 		if data.has('quests'):
@@ -193,16 +167,48 @@ func _ready() -> void:
 		# Saved gear raised max health / mana after they were filled, so start full
 		health.initialize()
 		mana.initialize()
-	
-	var quest_log := get_tree().get_first_node_in_group("quest_log") as QuestLogPanel
-	if quest_log:
-		quest_log.bind(quests)
-	
-	var quest_tracker := get_tree().get_first_node_in_group("quest_tracker") as QuestTracker
-	if quest_tracker:
-		quest_tracker.bind(quests)
-	
-		
+
+	if not is_remote:
+		var quest_log := get_tree().get_first_node_in_group("quest_log") as QuestLogPanel
+		if quest_log:
+			quest_log.bind(quests)
+
+		var quest_tracker := get_tree().get_first_node_in_group("quest_tracker") as QuestTracker
+		if quest_tracker:
+			quest_tracker.bind(quests)
+
+
+## The health and mana bars, and the character, inventory, skill and shop panels, onto this player.
+func _bind_hud() -> void:
+	var hp_hud := get_tree().get_first_node_in_group("hp_hud") as HpHud
+	if hp_hud:
+		hp_hud.bind($HealthComponent)
+
+	var stat_panel := get_tree().get_first_node_in_group("character_panel") as CharacterPanel
+	if stat_panel:
+		stat_panel.bind($StatComponent)
+
+	var mana_hud := get_tree().get_first_node_in_group("mana_hud") as ManaHud
+	if mana_hud:
+		mana_hud.bind($ManaComponent)
+
+	var inv_panel := get_tree().get_first_node_in_group("inventory_panel") as InventoryPanel
+	if inv_panel:
+		inv_panel.bind(inventory, equipment)
+		inv_panel.bind_currency(currency)
+
+	var skill_panel := get_tree().get_first_node_in_group("skill_panel") as SkillPanel
+	if skill_panel:
+		skill_panel.bind(skills, inventory, equipment)
+
+	var skill_bar := get_tree().get_first_node_in_group("skill_bar") as SkillBar
+	if skill_bar:
+		skill_bar.bind(skills, mana, equipment)
+
+	var shop_panel := get_tree().get_first_node_in_group("shop_panel") as ShopPanel
+	if shop_panel:
+		shop_panel.bind(inventory, equipment, currency)
+
 
 ## Shows the damage you take as floating numbers (Settings > Gameplay > "damage numbers on you").
 func _track_damage_numbers() -> void:

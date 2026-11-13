@@ -67,7 +67,10 @@ func pause() -> void:
 		_prev_mouse_mode = mode
 		_changed_mouse_mode = true
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	get_tree().paused = true
+	if Coop.in_game:
+		Coop.lock_input(true)                          # co-op: the world keeps running for the others
+	else:
+		get_tree().paused = true
 	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.visible = true
 	_fade(1.0)
@@ -81,6 +84,7 @@ func resume() -> void:
 	if _settings != null and _settings.is_open():
 		_settings.close()
 	get_tree().paused = false
+	Coop.lock_input(false)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE     # stop blocking clicks while it fades out
 	if _changed_mouse_mode:
 		Input.mouse_mode = _prev_mouse_mode

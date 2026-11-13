@@ -92,7 +92,8 @@ func _ready() -> void:
 	add_to_group(GROUP)
 	if is_challenge():
 		process_mode = Node.PROCESS_MODE_ALWAYS          # runs while the fight is paused
-		get_tree().paused = true
+		if not Coop.in_game:                             # co-op: the fight goes on for the others
+			get_tree().paused = true
 		_time_left = time_limit
 	_font = load(FONT_PATH) if ResourceLoader.exists(FONT_PATH) else null
 	_build()

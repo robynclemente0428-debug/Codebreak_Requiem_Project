@@ -53,6 +53,28 @@ func prepare_dungeon(scene_path: String, level: int, instance_id: int = REJOIN_O
 	return inst
 
 
+## Co-op, on a client: the host's instance for the trip that's about to happen. Same id and seed
+## here, so this machine builds the same dungeon, minus the enemies the host has seen die.
+func adopt(id: int, scene_path: String, level: int, rng_seed: int, killed: Array) -> DungeonInstance:
+	scene_path = Waypoints.normalize(scene_path)
+	var inst: DungeonInstance = instances.get(id)
+	if inst == null or inst.scene_path != scene_path or inst.rng_seed != rng_seed:
+		inst = DungeonInstance.new()
+		inst.id = id
+		inst.scene_path = scene_path
+		inst.level = level
+		inst.rng_seed = rng_seed
+		inst.threats = DungeonThreats.roll_for(scene_path, rng_seed)
+		inst.created_msec = Time.get_ticks_msec()
+		inst.empty_since_msec = inst.created_msec
+		instances[id] = inst
+		_next_id = maxi(_next_id, id + 1)
+	for index in killed:
+		inst.killed[int(index)] = true
+	_pending = inst
+	return inst
+
+
 ## Re-enter an instance you already have (used when respawning after death).
 func prepare_rejoin(inst: DungeonInstance) -> void:
 	if inst != null and instances.has(inst.id):

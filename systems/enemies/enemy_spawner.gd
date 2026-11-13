@@ -143,6 +143,7 @@ static func spawn_enemy(def: EnemyDefinition, rarity: String, parent: Node,
 		caster.cast_lock_fraction = def.cast_lock_fraction
 
 	enemy.setup()                               # LAST step
+	Coop.enemy_spawned(enemy, def, rarity, level, mods)   # co-op: the host owns it (no-op in single player)
 	return enemy
 
 
