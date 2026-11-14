@@ -163,6 +163,20 @@ func _damage(amount: float) -> void:
 		_go_offline()
 
 
+## Co-op: what the host's copy of this system is at during a breach (HullBreach._apply_extra).
+## If it fell there it falls here too, and is then this player's to patch like any other. Not
+## for a player who is only visiting the convoy (Coop.visiting): nothing is saved for them.
+func show_remote(value: float, down: bool, hit: bool) -> void:
+	if _offline or not contested:
+		return
+	integrity = clampf(value, 0.0, max_integrity)
+	if hit:
+		_attack_memory = 0.6
+	if down and not Coop.visiting:
+		integrity = 0.0
+		_go_offline()
+
+
 ## Takes it straight offline, whatever its integrity (Checkpoint's guns hitting the IFF).
 func knock_out() -> void:
 	if not _offline:

@@ -5,6 +5,9 @@ extends RefCounted
 
 var cast: SkillCast
 var target: Node
+## What the target's traits may know about this hit (set when the target has traits). Traits
+## read this, never `cast`, so a guest's hit can later be judged on the host (HitFacts).
+var facts: HitFacts
 ## Where the target stood when it was hit (kept even after it dies and is freed).
 var position := Vector3.ZERO
 ## Damage before the target's armour. Supports may change this in modify_hit().

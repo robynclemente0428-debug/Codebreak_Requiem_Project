@@ -54,16 +54,30 @@ var calls_all := false
 var _copied: Array = []              # [{"gem": id, "skill": SkillInstance, "broken": bool}]
 var _version := -1                   # the player's SkillComponent.routines_version last built against
 var _skills_node: EnemySkills
+## The player it copied from (Coop peer id: in co-op it may be a guest's; 1 in single player).
+## Its routines are the ones the copied scripts call.
+var _from_peer := 1
 
 
 func setup(p_enemy: Node3D) -> void:
 	super(p_enemy)
 	GameEvents.happened.connect(_on_event)
+	Coop.player_cast.connect(_on_player_cast)     # co-op: guests' casts, seen on the host
 
 
 func _exit_tree() -> void:
 	if GameEvents.happened.is_connected(_on_event):
 		GameEvents.happened.disconnect(_on_event)
+	if Coop.player_cast.is_connected(_on_player_cast):
+		Coop.player_cast.disconnect(_on_player_cast)
+
+
+## The SkillComponent of the player it copied from (ours if that player is gone).
+func _from_skills() -> SkillComponent:
+	var p: Node3D = Coop.player_node(_from_peer) if Coop.in_game else null
+	if p == null:
+		p = Coop.own_player(get_tree()) as Node3D if is_inside_tree() else null
+	return p.get("skills") as SkillComponent if p != null else null
 
 
 ## On its tag: what it copied, and the routines it calls ("STRIKE + cash_in()").
@@ -112,23 +126,49 @@ static func callers_of(tree: SceneTree, index: int) -> int:
 
 
 # ---------- COPYING ----------
+## Our own player cast (GameEvents "cast": the action, "skill_1"...).
 func _on_event(kind: String, target: String, _amount: int) -> void:
-	if kind != "cast" or _copied.size() >= copies or not is_instance_valid(enemy) or SkillBehavior.is_dead(enemy):
-		return
-	var player := get_tree().get_first_node_in_group("players") as Node3D
+	if kind == "cast":
+		_saw_cast(Coop.own_player(get_tree()) as Node3D if is_inside_tree() else null, StringName(target))
+
+
+## Co-op, on the host: a guest's character cast a skill (Coop.player_cast).
+func _on_player_cast(player: Node3D, action: StringName) -> void:
+	_saw_cast(player, action)
+
+
+## `player` cast `action`: copied if it is close enough and this Echo has room for it.
+func _saw_cast(player: Node3D, action: StringName) -> void:
+	if is_copy() or _copied.size() >= copies or not is_instance_valid(enemy) or SkillBehavior.is_dead(enemy):
+		return                                       # (a guest's copy only shows what the host's does)
 	if player == null or player.global_position.distance_to(enemy.global_position) > SEE_RANGE:
 		return
 	var sk := player.get("skills") as SkillComponent
 	if sk == null:
 		return
-	var index: int = sk.bindings.get(StringName(target), -1)
-	if index < 0 or index >= sk.sockets.size() or sk.sockets[index].gem == null:
+	var index: int = sk.bindings.get(action, -1)
+	var entry := _copy_from(player, index)
+	if entry.is_empty():
 		return
+	_tell_copies("echo_copied", [Coop.player_peer(player), index])   # co-op: the copies copy it too
+	say("COPIED: %s" % str(entry["gem"]).replace("_", " ").to_upper(), COL_COPY, 1.0)
+	GameEvents.report(COPIED_EVENT, entry["gem"])
+	if _is_broken(entry):                            # it copied a call to a routine already empty
+		entry["broken"] = true
+		_crash(entry)
+
+
+## Copies the skill in `player`'s socket `index` (its gem, supports and script) and fights with
+## it from now on. Returns its entry in _copied ({} = nothing copied: no such skill, or one it has).
+func _copy_from(player: Node3D, index: int) -> Dictionary:
+	var sk := player.get("skills") as SkillComponent if player != null else null
+	if sk == null or index < 0 or index >= sk.sockets.size() or sk.sockets[index].gem == null:
+		return {}
 	var sock: SkillComponent.Socket = sk.sockets[index]
 	var gem: SkillGemDefinition = sock.gem.definition.skill_gem
 	for c in _copied:
 		if c["gem"] == gem.id:
-			return                                   # it has this one: it waits for another
+			return {}                                # it has this one: it waits for another
 	var skill := SkillInstance.new()
 	skill.gem = gem
 	for item in sock.supports:
@@ -144,13 +184,19 @@ func _on_event(kind: String, target: String, _amount: int) -> void:
 	skill.rebuild()
 	var entry := {"gem": gem.id, "skill": skill, "broken": false}
 	_copied.append(entry)
+	_from_peer = Coop.player_peer(player)
 	_version = sk.routines_version
 	_runner().add_copied(skill)
-	say("COPIED: %s" % gem.id.replace("_", " ").to_upper(), COL_COPY, 1.0)
-	GameEvents.report(COPIED_EVENT, gem.id)
-	if _is_broken(entry):                            # it copied a call to a routine already empty
-		entry["broken"] = true
-		_crash(entry)
+	return entry
+
+
+## On a guest's copy: the host's Echo copied player `args[0]`'s socket `args[1]`. The copy copies
+## the same skill from its own copy of that player, so the Echo's casts look right here
+## (EnemySkills.remote_cast finds it by gem). Only that: the host's says it, and crashes.
+func _copy_message(what: String, args: Array) -> void:
+	if what != "echo_copied" or args.size() < 2:
+		return
+	_copy_from(Coop.player_node(int(args[0])), int(args[1]))
 
 
 ## The Mirror Forge's champion: an always rule that calls each of your routines.
@@ -184,8 +230,7 @@ func _runner() -> EnemySkills:
 func _process(_delta: float) -> void:
 	if _copied.is_empty() or not is_instance_valid(enemy) or SkillBehavior.is_dead(enemy):
 		return
-	var player := get_tree().get_first_node_in_group("players")
-	var sk := player.get("skills") as SkillComponent if player != null else null
+	var sk := _from_skills()                         # the routines of the player it copied
 	if sk == null or sk.routines_version == _version:
 		return
 	_version = sk.routines_version
@@ -234,8 +279,7 @@ func _crash(c: Dictionary) -> void:
 
 
 func _routines() -> Array:
-	var player := get_tree().get_first_node_in_group("players") if is_inside_tree() else null
-	var sk := player.get("skills") as SkillComponent if player != null else null
+	var sk := _from_skills()
 	return sk.routines if sk != null else []
 
 

@@ -57,33 +57,26 @@ func modify_incoming(info: HitInfo) -> void:
 	if sentence < 0:
 		pop("SILENCE // IT HASN'T SPOKEN", Color(COL_GRAMMAR, 0.7), WRONG_GAP)
 		return
-	if info.cast == null or not info.cast.is_valid():
+	if info.facts == null:
 		return
-	if answers(info.cast, wanted()):
+	if answers(info.facts, wanted()):
 		info.absorbed = false                     # the answer itself lands
 		open_port("GRAMMAR ACCEPTED // PORT OPEN")
 		return
 	var heard: Array = []
-	for id in ProgramSupport.fired_conditions(info.cast):
+	for id in info.facts.fired:
 		heard.append(WORDS.get(id, str(id).replace("_", " ").to_upper()))
 	fail("WRONG GRAMMAR // HEARD: %s" % (" + ".join(PackedStringArray(heard)) if not heard.is_empty() else "NOTHING"),
 		Color(COL_REJECT, 0.9))
 
 
-## True when one of the cast's WHEN rules holds exactly `ids` and both of them fired.
-static func answers(cast: SkillCast, ids: Array) -> bool:
+## True when one of the hit's WHEN rules holds exactly `ids` and both of them fired.
+static func answers(f: HitFacts, ids: Array) -> bool:
 	if ids.size() != 2:
 		return false
-	var fired: Array = ProgramSupport.fired_conditions(cast)
-	if not (ids[0] in fired and ids[1] in fired):
+	if not (ids[0] in f.fired and ids[1] in f.fired):
 		return false
-	var support := ProgramSupport.of(cast.skill)
-	if support == null or support.program == null:
-		return false
-	for rule in support.program.flat_rules():
-		if rule.conditions.size() != 2:
-			continue
-		var have := [rule.conditions[0].type_id(), rule.conditions[1].type_id()]
+	for have: Array in f.rule_pairs:              # the script's two-condition rules (HitFacts)
 		if ids[0] in have and ids[1] in have:
 			return true
 	return false

@@ -130,7 +130,43 @@ func _cast(skill: SkillInstance, target: Node3D, now: int) -> void:
 	var ai = _caster.get("ai")
 	if ai != null and "busy_time" in ai:
 		ai.busy_time = recovery * cast_lock_fraction                   # the AI stands still for the cast
+	Coop.enemy_cast(_caster, _skills.find(skill), String(skill.gem.id))   # co-op: the guests' copies replay it
 	skill.cast(_caster, _stats, null)                      # enemies have no mana
+
+
+## Co-op, on a guest's copy: the host's enemy cast skill `index` (gem `gem_id`) facing `facing`.
+## Played here for show: the clip, the projectiles, the effects. It deals nothing (SkillBehavior.hit
+## skips a remote caster). A skill this copy doesn't have (one a Null Echo or the Mimic copied on
+## the host) is built from its gem, without the copied supports or script.
+func remote_cast(index: int, gem_id: String, facing: float) -> void:
+	if not is_instance_valid(_caster) or _is_dead():
+		return
+	var skill := _remote_skill(index, gem_id)
+	if skill == null:
+		return
+	_caster.global_rotation.y = facing
+	skill.cast(_caster, _stats, null)
+
+
+var _borrowed: Dictionary = {}         # gem id -> SkillInstance: skills only the host's copy has
+
+
+func _remote_skill(index: int, gem_id: String) -> SkillInstance:
+	if index >= 0 and index < _skills.size() and String(_skills[index].gem.id) == gem_id:
+		return _skills[index]
+	for s in _skills:
+		if String(s.gem.id) == gem_id:
+			return s
+	if _borrowed.has(gem_id):
+		return _borrowed[gem_id]
+	var gem := SkillGemRegistry.get_skill_gem(gem_id)
+	if gem == null:
+		return null
+	var skill := SkillInstance.new()
+	skill.gem = gem
+	skill.rebuild()
+	_borrowed[gem_id] = skill
+	return skill
 
 
 ## Same convention as the player: the behaviors fire along the body's +Z.

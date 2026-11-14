@@ -35,11 +35,23 @@ signal barrier_changed(amount: float)
 ## Callable(amount: float, ignore_armour: bool). take_damage() then returns what it expects the
 ## hit to deal, so the skill counts it as landed. Unset everywhere in single player.
 var remote_damage := Callable()
+## Co-op, on a copy of another player's character: their barrier or guard is up on their machine
+## (Coop._p_state), which is where those live. is_shielded() answers with this on a copy.
+var remote_shielded := false
 
 
-## Co-op: the owner's health for this copy, as it arrives over the network.
-func apply_remote(value: float) -> void:
+## Co-op: a hit on this copy that the owner's machine applied, for the feedback only (damage
+## numbers, the hurt sound). Not damage_taken: that one drives game logic (waking, releasing a
+## held wave enemy...), which on a copy is left to the owner's machine.
+signal damage_shown(amount: float)
+
+
+## Co-op: the owner's health for this copy, as it arrives over the network. A drop shows as a hit
+## (damage_shown) unless `show_hit` is false: catching up on arrival, or a rebuilt copy.
+func apply_remote(value: float, show_hit := true) -> void:
 	var was_alive := current_health > 0.0
+	if show_hit and was_alive and value < current_health:
+		damage_shown.emit(current_health - maxf(value, 0.0))
 	current_health = value
 	_emit_changed()
 	if was_alive and value <= 0.0:
@@ -157,5 +169,7 @@ func _emit_changed() -> void:
 
 ## True while a scripted barrier or guard is up (HandshakeLock opens to a shielded player).
 func is_shielded() -> bool:
+	if remote_damage.is_valid():
+		return remote_shielded          # co-op: another machine's character, as its owner reports it
 	var now := Time.get_ticks_msec()
 	return (barrier > 0.0 and now < _barrier_until) or (guard > 0.0 and now < _guard_until)

@@ -88,14 +88,25 @@ func _on_quest_completed(_state: QuestState) -> void:
 	refresh_rank()
 
 
+## Co-op: on another player's copy, the OWNER's rank and script budget ({"rank", "points",
+## "steps"}, from Coop's loadout). A copy has no quests of its own, so without these it would be
+## rank 0 and the owner's scripts wouldn't fit: their skills would play as the plain gem.
+## Empty everywhere in single player.
+var remote_limits: Dictionary = {}
+
+
 ## The owner's rank (Ranks.LADDER index).
 func rank() -> int:
+	if not remote_limits.is_empty():
+		return int(remote_limits.get("rank", 0))
 	return Ranks.of(get_parent())
 
 
 ## Extra script points every skill gets (ScriptBudget: rank, exam grades, cleared areas).
 ## None in Sudo's sandbox: every exam is sat on the gem's own budget, so grades stay comparable.
 func bonus_points() -> float:
+	if not remote_limits.is_empty():
+		return float(remote_limits.get("points", 0.0))
 	if sandbox_locked:
 		return 0.0
 	return ScriptBudget.points(get_parent().get("quests") as QuestManager)
@@ -103,6 +114,8 @@ func bonus_points() -> float:
 
 ## Extra steps on every knob (ScriptBudget: one per exam DISTINCTION). None in the sandbox either.
 func bonus_steps() -> int:
+	if not remote_limits.is_empty():
+		return int(remote_limits.get("steps", 0))
 	if sandbox_locked:
 		return 0
 	return ScriptBudget.steps(get_parent().get("quests") as QuestManager)

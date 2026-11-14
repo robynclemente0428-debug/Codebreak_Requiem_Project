@@ -5,6 +5,10 @@ extends RefCounted
 ## Everything here is telegraphed (a ring that grows, an orb that charges and flies slowly) and
 ## only references its own nodes, so it finishes cleanly even if the lock that threw it is gone
 ## (RECALL swaps its borrowed locks out mid-fight).
+##
+## Co-op: the host's throws are drawn on the other machines too (Coop.show_ring / show_orb), with
+## share 0 there: only the host's deal the hits, and those reach a guest's own machine
+## (hit_players marks them as enemy hits).
 
 
 ## A flat ring grows from `at` to `radius` over `seconds`, then every player inside it takes
@@ -13,6 +17,8 @@ static func ring(parent: Node, at: Vector3, radius: float, seconds: float, share
 		ignore_armour := false, on_hit := Callable()) -> void:
 	if parent == null or not parent.is_inside_tree():
 		return
+	if share > 0.0:
+		Coop.show_ring(at, radius, seconds, col)        # co-op: the guests see it coming (no-op otherwise)
 	var node := MeshInstance3D.new()
 	var mesh := TorusMesh.new()
 	mesh.inner_radius = 0.92
@@ -31,7 +37,7 @@ static func ring(parent: Node, at: Vector3, radius: float, seconds: float, share
 	tw.tween_property(node, "scale", Vector3(radius, 1.0, radius), seconds) \
 		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	tw.tween_callback(func() -> void:
-		if hit_players(node.get_tree(), at, radius, share, ignore_armour) and on_hit.is_valid():
+		if share > 0.0 and hit_players(node.get_tree(), at, radius, share, ignore_armour) and on_hit.is_valid():
 			on_hit.call())
 	tw.tween_property(mat, "albedo_color:a", 0.0, 0.35)
 	tw.tween_callback(node.queue_free)
@@ -50,11 +56,16 @@ static func orb(parent: Node, node: MeshInstance3D, from: Vector3, to: Vector3, 
 		parent.add_child(node)
 	node.top_level = true
 	node.global_position = from
+	if share > 0.0:
+		var prim0 := node.mesh as PrimitiveMesh
+		var col: Color = (prim0.material as StandardMaterial3D).albedo_color / 1.6 \
+				if prim0 != null and prim0.material is StandardMaterial3D else Color(1, 1, 1)
+		Coop.show_orb(from, to, speed, Color(col, 1.0))   # co-op: the guests see it fly (no-op otherwise)
 	var flight := maxf(from.distance_to(to) / maxf(speed, 0.1), 0.15)
 	var tw := node.create_tween()
 	tw.tween_property(node, "global_position", to, flight)
 	tw.tween_callback(func() -> void:
-		if hit_players(node.get_tree(), to, radius, share, false) and on_hit.is_valid():
+		if share > 0.0 and hit_players(node.get_tree(), to, radius, share, false) and on_hit.is_valid():
 			on_hit.call())
 	tw.tween_property(node, "scale", Vector3.ONE * 2.2, 0.18)
 	var prim := node.mesh as PrimitiveMesh
@@ -95,7 +106,9 @@ static func hit_players(tree: SceneTree, at: Vector3, radius: float, share: floa
 		var flat := Vector2(body.global_position.x - at.x, body.global_position.z - at.z)
 		if flat.length() > radius:
 			continue
+		Coop.hit_source = Coop.Hit.ENEMY           # co-op: a real hit, sent on to a guest's own machine
 		hp.take_damage(stats.get_stat(StatTypes.Stat.MAX_HEALTH) * share, ignore_armour)
+		Coop.hit_source = Coop.Hit.NONE
 		hit_any = true
 	return hit_any
 

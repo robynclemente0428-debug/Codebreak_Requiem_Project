@@ -55,10 +55,26 @@ func _start() -> void:
 
 
 func _held() -> void:
+	var mine := not Coop.in_game or is_due()           # co-op: only if our own quest asked for it
 	super._held()
 	var qm := _qm()
-	if qm != null:
+	if qm != null and mine:
 		qm.recover(held_key)                           # the quest's first step
+
+
+## Co-op, on a guest's machine: the host's breach began. The IFF falls with the host's
+## (HullBreach._apply_extra); the guns and the message are shown here.
+func _copy_started() -> void:
+	super._copy_started()
+	QuestItems.toast(get_tree(), knocked_text, COL_WARN)
+	_salvo_wait = 0.6
+
+
+func _copy_done(args: Array) -> void:
+	var mine := is_due()
+	super._copy_done(args)
+	if mine:
+		_qm().recover(held_key)
 
 
 func _process(delta: float) -> void:

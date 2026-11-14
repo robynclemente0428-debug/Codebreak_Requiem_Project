@@ -34,9 +34,9 @@ SoundManager="*res://autoload/sound_manager.gd"
 NpcNameplates="*res://autoload/npc_nameplates.gd"
 TutorialHints="*res://autoload/tutorial_hints.gd"
 RewardChoice="*res://autoload/reward_choice.gd"
-_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 Announcer="*res://autoload/announcer.gd"
 Coop="*res://autoload/coop.gd"
+_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 [display]
 

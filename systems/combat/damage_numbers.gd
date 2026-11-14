@@ -20,6 +20,11 @@ const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 @export var outline_size: int = 6
 @export var enemy_color := Color(1.0, 0.92, 0.55)
 @export var player_color := Color(1.0, 0.30, 0.37)
+## Co-op: another player's hits on enemies (ours keep enemy_color): a cool colour, a bit smaller
+## and fainter, so your own numbers stay the ones that stand out.
+@export var ally_color := Color(0.55, 0.78, 1.0)
+@export_range(0.3, 1.0, 0.05) var ally_scale: float = 0.8
+@export_range(0.0, 1.0, 0.05) var ally_opacity: float = 0.8
 @export_range(0.0, 1.0, 0.05) var opacity: float = 1.0
 ## Big hits (a large share of the target's max life) are drawn up to this many times larger.
 @export var big_hit_scale: float = 1.7
@@ -73,6 +78,7 @@ func track(health: HealthComponent, is_player: bool = false) -> void:
 	if health == null:
 		return
 	health.damage_taken.connect(_on_damage.bind(health, is_player))
+	health.damage_shown.connect(_on_damage.bind(health, is_player))   # co-op: a hit another machine applied
 
 
 func _on_damage(amount: float, health: HealthComponent, is_player: bool) -> void:
@@ -91,8 +97,14 @@ func _on_damage(amount: float, health: HealthComponent, is_player: bool) -> void
 		max_hp = maxf(health.stats.get_stat(StatTypes.Stat.MAX_HEALTH), 1.0)
 	var weight := clampf(amount / max_hp * 4.0, 0.0, 1.0)        # 0 = tiny hit, 1 = big hit
 
-	var label := _take_label(_format(amount), _size_px(lerpf(1.0, big_hit_scale, weight)),
-			player_color if is_player else enemy_color)
+	# Co-op: another player's hit on an enemy looks like an ally's (Coop.damage_by is set around it)
+	var ally := not is_player and Coop.damage_by_other()
+	var colour := player_color if is_player else enemy_color
+	var size_mult := lerpf(1.0, big_hit_scale, weight)
+	if ally:
+		colour = Color(ally_color, ally_color.a * ally_opacity)
+		size_mult *= ally_scale
+	var label := _take_label(_format(amount), _size_px(size_mult), colour)
 	_entries.append({
 		"label": label,
 		"world": target.global_position + Vector3.UP * head_height,   # fixed point in the world

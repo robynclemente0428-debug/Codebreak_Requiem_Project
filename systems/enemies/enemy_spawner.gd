@@ -155,6 +155,10 @@ static func empower(enemy: Node3D, health: float, armour: float, damage: float, 
 		flat_health := 0.0, flat_armour := 0.0) -> void:
 	if enemy == null or not "stats" in enemy:
 		return
+	# Co-op: the host's enemy remembers this, so the other machines' copies get it too
+	var given: Array = enemy.get_meta(Coop.NET_BOOST, [])
+	given.append([health, armour, damage, source, flat_health, flat_armour])
+	enemy.set_meta(Coop.NET_BOOST, given)
 	var bonus := {
 		StatTypes.Stat.MAX_HEALTH: health,
 		StatTypes.Stat.ARMOUR: armour,

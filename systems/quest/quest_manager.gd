@@ -36,7 +36,7 @@ var exam_grades: Dictionary = {}
 var deeds: Dictionary = {}
 ## Which events go in deeds. Objectives of these kinds with a target count deeds from before.
 const DEED_KINDS: Array[String] = ["kill", "kill_at", "enter_area", "clear_area", "act_boss",
-		"hull_breach", "salvage", "stop_finished", "blobs_freed", "yard_sweep", "sweep_lost", "crate_restored", "crate_mourned", "kernel_null", "kernel_overwrite", "ending"]
+		"hull_breach", "salvage", "stop_finished", "blobs_freed", "yard_sweep", "sweep_lost", "crate_restored", "crate_mourned", "kernel_null", "kernel_overwrite", "ending", "said"]
 
 var _player: Node
 

@@ -1148,8 +1148,10 @@ class GemSlot extends Control:
 		draw_polyline(outline, Color(edge, alpha), 3.0 if highlight else 2.0, true)
 
 		if item != null:
-			draw_string(font, Vector2(0, h * 0.5 + 7.0), item.definition.display_name.left(3).to_upper(),
-				HORIZONTAL_ALIGNMENT_CENTER, w, 20, col)
+			var glyph := ItemGlyph.kind_for(item.definition)     # the gem's symbol
+			if glyph == "" or not ItemGlyph.draw(self, glyph, Rect2(9, 9, w - 18, h - 18), col):
+				draw_string(font, Vector2(0, h * 0.5 + 7.0), item.definition.display_name.left(3).to_upper(),
+					HORIZONTAL_ALIGNMENT_CENTER, w, 20, col)
 		elif hint != "":
 			draw_string(font, Vector2(0, h * 0.5 + 9.0), hint, HORIZONTAL_ALIGNMENT_CENTER, w, 26,
 				Color(accent, 0.4))

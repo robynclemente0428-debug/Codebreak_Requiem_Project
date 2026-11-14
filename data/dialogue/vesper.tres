@@ -85,7 +85,29 @@ Vesper: It isn’t addressed to the Null. It’s addressed to whoever gets there
 -> start
 
 ~ at_the_core
-Vesper: The way is open. What you do next is yours alone.
+@ quest_done:static_from_home -> packet_check
+-> core_idle
+
+~ packet_check
+@ !deed:said:vesper_packet -> packet
+-> core_idle
+
+~ packet
+> report said vesper_packet
+Vesper: Hex played me the packet from the wells. The one in Brack's voice.
+Vesper: I can read it now. It's his evacuation call, the one the Choir sang back at you. The Null rewrote it in its own grammar.
+Vesper: It says: keep moving until someone answers. Then it answers itself. Over and over.
+Vesper: It isn't mocking him. It's practising. It's been learning how to call people home.
+* DOES HEX KNOW? -> packet_hex
+* LET'S GO -> end
+
+~ packet_hex
+Vesper: She knows it's his voice. She doesn't know it's a lullaby. I'm not going to be the one who tells her.
+-> end
+
+~ core_idle
+Vesper: The way down is open. What you do next is yours alone.
+Vesper: I'll go ahead. I always do. I'll be at the door of each floor.
 -> end
 
 ~ during_sentinel
@@ -99,9 +121,28 @@ Vesper: The Root Process isn't evil. It's the last thing in AXIOM that still bel
 
 ~ before_choice
 Vesper: It's quiet. I've never heard the Null this quiet. It's waiting for you.
+* AND YOU? -> before_choice_self
+* NOTHING -> end
+
+~ before_choice_self
+Vesper: I've been half in its grammar since the Loom. If you let it finish, I think I go with it.
+Vesper: If you patch it, it goes quiet, and so does a part of me. If you end it, everyone ends. That's not a reason to choose anything.
+Vesper: Don't choose for me. I chose when I walked out of that cell. Choose for all of it.
 -> end
 
 ~ after_ending
+@ deed:ending:merge -> after_merge
+@ deed:ending:overwrite -> after_overwrite
+Vesper: Whatever you chose, you chose it awake. That's more than the Architects did.
+-> end
+
+~ after_merge
+Vesper: I can hear it everywhere now. In the floor, in the walls. In me. It isn't loud. It's just... everything, talking.
+Vesper: Whatever you chose, you chose it awake. That's more than the Architects did.
+-> end
+
+~ after_overwrite
+Vesper: It's gone quiet. Properly quiet. I'll miss it. Don't tell anyone that.
 Vesper: Whatever you chose, you chose it awake. That's more than the Architects did.
 -> end
 

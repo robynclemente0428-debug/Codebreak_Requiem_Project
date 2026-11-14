@@ -22,12 +22,10 @@ const GAP := 1.2
 
 
 func modify_incoming(info: HitInfo) -> void:
-	if info.cast == null or not info.cast.is_valid():
+	var f := info.facts
+	if f == null or not f.by_player:
 		return
-	var caster: Node = info.cast.caster
-	if caster == null or not caster.is_in_group("players"):
-		return
-	match tier_of(info.cast):
+	match f.tier:                                 # "elegant", "lean", or "": ungraded (HitFacts.tier)
 		"elegant":
 			info.damage *= elegant_mult
 			pop("GRADE: ELEGANT", COL_ELEGANT, GAP)
@@ -35,23 +33,12 @@ func modify_incoming(info: HitInfo) -> void:
 			pop("GRADE: LEAN", COL_LEAN, GAP)
 		_:
 			info.absorbed = true
-			pop(_why(info.cast), COL_REJECT, GAP)
+			pop(_why(f), COL_REJECT, GAP)
 
 
-## "elegant", "lean", or "" (no tier: no script, an invalid one, or one too heavy).
-static func tier_of(cast: SkillCast) -> String:
-	var skill := cast.skill
-	if skill == null or skill.program_validation == null or not skill.program_validation.valid:
-		return ""
-	var t := skill.program_validation.tier
-	return t.display_name.to_lower() if t != null else ""
-
-
-func _why(cast: SkillCast) -> String:
-	var skill := cast.skill
-	var v := skill.program_validation if skill != null else null
-	if v == null or not v.valid or skill.program == null or not skill.program.has_rules():
+func _why(f: HitFacts) -> String:
+	if not f.has_script:
 		return "UNGRADED // NO SCRIPT"
-	if v.next_tier != null and v.actions_to_next_tier > 0:
-		return "UNGRADED // %d BLOCK%s TOO MANY" % [v.actions_to_next_tier, "" if v.actions_to_next_tier == 1 else "S"]
+	if f.blocks_to_next > 0:
+		return "UNGRADED // %d BLOCK%s TOO MANY" % [f.blocks_to_next, "" if f.blocks_to_next == 1 else "S"]
 	return "UNGRADED // TRIM THE SCRIPT"

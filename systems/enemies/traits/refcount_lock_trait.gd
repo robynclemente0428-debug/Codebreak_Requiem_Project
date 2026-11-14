@@ -106,8 +106,7 @@ func _closed_process(delta: float) -> void:
 	if _dead:
 		return
 	if _splits == 0:
-		var p := get_tree().get_first_node_in_group("players") as Node3D
-		if p != null and p.global_position.distance_to(enemy.global_position) <= notice_range:
+		if player_within(notice_range) != null:      # any player in range (co-op: a guest's too)
 			_split()
 		return
 	var alive := _alive().size()

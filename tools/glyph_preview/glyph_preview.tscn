@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://tools/glyph_preview/glyph_preview.gd" id="1"]
+
+[sub_resource type="ViewportTexture" id="vt"]
+viewport_path = NodePath("Sheet")
+
+[node name="GlyphPreview" type="Node3D"]
+
+[node name="Sheet" type="SubViewport" parent="."]
+size = Vector2i(660, 456)
+render_target_update_mode = 4
+
+[node name="Glyphs" type="Control" parent="Sheet"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 660.0
+offset_bottom = 456.0
+script = ExtResource("1")
+
+[node name="Card" type="Sprite3D" parent="."]
+pixel_size = 0.01
+texture = SubResource("vt")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 6)
+projection = 1
+current = true
+size = 4.7

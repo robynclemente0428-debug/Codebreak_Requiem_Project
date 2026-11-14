@@ -154,7 +154,9 @@ func _ready() -> void:
 		_bind_hud()
 
 	if not data.is_empty():
-		GameEvents.muted = true 
+		GameEvents.muted = true
+		if is_remote and data.get('limits') is Dictionary:
+			skills.remote_limits = data['limits']    # co-op: the owner's rank, so their scripts fit here too
 		if data.has('quests'):
 			quests.from_dict(data['quests'])     # first: the rank (Ranks) sets how big scripts may be
 		_apply_saved_equipment(data)

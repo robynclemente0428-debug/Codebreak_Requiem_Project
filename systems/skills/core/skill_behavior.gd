@@ -143,6 +143,12 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 	if info.cancelled:
 		return info
 	var traits: Array = target.get("traits") if "traits" in target else []   # Firewalled, Reflector...
+	var on_copy: bool = target.get("is_remote") == true and target is EnemyBase    # co-op: the host's enemy
+	if not traits.is_empty() or on_copy:
+		info.facts = HitFacts.from_cast(cast)       # what the traits may know about the hit (they never read cast)
+	if on_copy:
+		Coop.hit_facts = info.facts                 # sent with the hit: the host's traits judge it,
+		traits = []                                 # not this copy's (see Coop._e_hit)
 	for t: EnemyTrait in traits:
 		t.modify_incoming(info)
 	if info.cancelled:
@@ -165,34 +171,48 @@ func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
 
 	# Co-op: a real hit (a player's or an enemy's skill), sent on to whoever owns the target
 	Coop.hit_source = Coop.Hit.PLAYER if cast.caster is Player else Coop.Hit.ENEMY
+	Coop.damage_by = Coop.my_id() if cast.caster is Player and Coop.in_game else 0   # our own hit (DamageNumbers)
 	info.dealt = target_health.take_damage(info.damage)
+	Coop.damage_by = 0
 	Coop.hit_source = Coop.Hit.NONE
+	Coop.hit_facts = null
 	if info.dealt <= 0.0:
 		return info                 # the hit didn't land (target already dead)
 	info.landed = true
 	info.killed = target_health.current_health <= 0.0
+	Coop.my_hit(target, cast, info)     # co-op client: the host says later how it landed (Coop._e_landed)
 	cast.already_hit.append(target)
 	for t: EnemyTrait in traits:
 		if is_instance_valid(t):
 			t.after_hit(info)
 
-	if not target.is_in_group(&"breakables"):      # barrels don't feed life / mana on hit
-		_apply_on_hit_stats(cast)
-		var leech := cast.flag("leech") + info.leech_bonus      # + a per-hit rule's leech
-		var caster_hp := cast.caster.get("health") as HealthComponent
-		if leech > 0.0 and caster_hp != null:
-			caster_hp.heal(info.dealt * leech)
-		if caster_hp != null:                       # barrier / guard from a per-hit rule, on landing
-			if info.barrier_bonus > 0.0 and caster_hp.stats != null:
-				caster_hp.add_barrier(info.barrier_bonus * caster_hp.stats.get_stat(StatTypes.Stat.MAX_HEALTH), BARRIER_SECONDS)
-			if info.guard_bonus > 0.0:
-				caster_hp.add_guard(info.guard_bonus, clampf(recovery_time(cast), GUARD_MIN_SECONDS, GUARD_MAX_SECONDS))
+	# Co-op, a hit on the host's enemy: its lock may yet absorb it, so what a landed hit gives
+	# waits for the host's word (Coop._e_landed calls landing_rewards then, with the host's damage)
+	if not target.is_in_group(&"breakables") and not on_copy:   # barrels don't feed life / mana on hit
+		landing_rewards(cast, info)
 
 	for s in cast.skill.support_behaviors:
 		s.on_hit(cast, target, info)
 		if info.killed:
 			s.on_kill(cast, target, info)
 	return info
+
+
+## What a hit that really landed gives its caster: life and mana on hit, leech (of info.dealt),
+## and a per-hit rule's barrier and guard. An absorbed hit gives none of it. (Co-op: Coop._e_landed.)
+func landing_rewards(cast: SkillCast, info: HitInfo) -> void:
+	if not cast.is_valid():
+		return
+	_apply_on_hit_stats(cast)
+	var leech := cast.flag("leech") + info.leech_bonus      # + a per-hit rule's leech
+	var caster_hp := cast.caster.get("health") as HealthComponent
+	if leech > 0.0 and caster_hp != null:
+		caster_hp.heal(info.dealt * leech)
+	if caster_hp != null:                       # barrier / guard from a per-hit rule, on landing
+		if info.barrier_bonus > 0.0 and caster_hp.stats != null:
+			caster_hp.add_barrier(info.barrier_bonus * caster_hp.stats.get_stat(StatTypes.Stat.MAX_HEALTH), BARRIER_SECONDS)
+		if info.guard_bonus > 0.0:
+			caster_hp.add_guard(info.guard_bonus, clampf(recovery_time(cast), GUARD_MIN_SECONDS, GUARD_MAX_SECONDS))
 
 
 func _apply_on_hit_stats(cast: SkillCast) -> void:

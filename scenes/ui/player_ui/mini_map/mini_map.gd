@@ -629,6 +629,7 @@ func _paint(c: Control, full := false) -> void:
 	_paint_npcs(c, rot, full)
 	_paint_terminals(c, rot, full)
 	_paint_systems(c, rot, full)
+	_paint_others(c, rot, full)
 	_paint_player(c)
 	_paint_rim_arrows(c, rot)
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -1091,6 +1092,35 @@ func _paint_rim_arrows(c: Control, rot: float) -> void:
 		tri.append(tri[0])
 		c.draw_polyline(tri, Color(COL_BG, 0.9 * _map_alpha), 1.5, true)
 	c.draw_set_transform(c.size * 0.5, rot, Vector2.ONE)
+
+
+## Co-op: the other players, each an arrow in their own colour (Coop.player_colour) pointing the
+## way they face. Shown anywhere, fog or not; off the map edge they become an arrow on the rim.
+## Their names show on the full-screen map.
+func _paint_others(c: Control, rot: float, full: bool) -> void:
+	var half := c.size * 0.5 - Vector2(16.0, 16.0)
+	for o in Coop.others_here():
+		var other := o[0] as Node3D
+		var col: Color = o[2]
+		var pos := (_to_cell_f(other.global_position) - _center) * _px
+		var screen := pos.rotated(rot)
+		if absf(screen.x) > half.x or absf(screen.y) > half.y:
+			_rim.append([screen, col])
+			continue
+		var f := other.global_transform.basis.z
+		if not forward_is_plus_z:
+			f = -f
+		f = _grid_map.global_transform.basis.inverse() * f
+		var facing := Vector2(f.x, f.z).normalized() if Vector2(f.x, f.z).length() > 0.01 else Vector2.UP
+		var side := Vector2(-facing.y, facing.x)
+		var shape := PackedVector2Array([pos + facing * 8.0, pos - facing * 4.5 + side * 5.0,
+				pos, pos - facing * 4.5 - side * 5.0])
+		c.draw_circle(pos, 10.0, Color(col, 0.20 * _map_alpha))
+		c.draw_colored_polygon(shape, Color(col, _map_alpha))
+		shape.append(shape[0])
+		c.draw_polyline(shape, Color(COL_BG, 0.9 * _map_alpha), 1.0, true)
+		if full:
+			_upright_tag(c, screen + Vector2(0.0, -13.0), str(o[1]).to_upper(), col, rot)
 
 
 func _paint_player(c: Control) -> void:

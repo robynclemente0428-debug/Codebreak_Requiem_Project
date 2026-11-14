@@ -83,6 +83,8 @@ static func arrived(scene_path: String) -> bool:
 	var w := for_scene(scene_path)
 	if w == null or _visited.has(w.id):
 		return false
+	if Coop.visiting:
+		return false                              # co-op: carried here by another player, not earned
 	_visited[w.id] = true
 	_write_to_saves()
 	print("[Waypoints] discovered %s" % w.display_name)
@@ -159,7 +161,7 @@ static func route_key_ok(w: Waypoint) -> bool:
 static func clear_stop(id: String) -> Array[Waypoint]:
 	_ensure_loaded()
 	var opened: Array[Waypoint] = []
-	if id == "" or _cleared.has(id):
+	if id == "" or _cleared.has(id) or Coop.visiting:   # co-op: a visitor's route doesn't open
 		return opened
 	_cleared[id] = true
 	_write_to_saves()

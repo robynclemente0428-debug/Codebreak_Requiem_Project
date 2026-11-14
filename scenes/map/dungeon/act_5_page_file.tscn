@@ -11,6 +11,9 @@
 [ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
 [ext_resource type="Script" uid="uid://bri1ph1ms875r" path="res://dungeon_generation/layout/enemy_marker.gd" id="10_enemym"]
 [ext_resource type="Resource" path="res://data/enemies/watchdog.tres" id="e_boss"]
+[ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="n_vesper"]
+[ext_resource type="Resource" path="res://data/dialogue/vesper_field.tres" id="n_vesper_dlg"]
+[ext_resource type="Script" path="res://systems/world/stand_near_arrival.gd" id="n_stand"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 agent_height = 1.8
@@ -130,3 +133,12 @@ rarity = "champion"
 drops_key = "swap_road"
 metadata/_note = "The Watchdog: HEARTBEAT and PAGED are its own (innate) traits, so no dungeon threats on top."
 metadata/_custom_type_script = "uid://bri1ph1ms875r"
+
+[node name="Vesper" parent="." instance=ExtResource("n_vesper")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 12, 1.1, 97.6)
+npc_id = "vesper_field"
+info_description = "She has one hand on a faded process, as if keeping it from drifting off."
+dialogue = ExtResource("n_vesper_dlg")
+
+[node name="StandNearArrival" type="Node" parent="Vesper"]
+script = ExtResource("n_stand")

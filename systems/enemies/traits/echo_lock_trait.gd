@@ -110,9 +110,9 @@ func _send_back() -> void:
 ## "strike|enemies_nearby": the skill gem and the WHEN rules that fired for the cast (none: "").
 ## "" for hits that aren't from a skill.
 func pattern_of(info: HitInfo) -> String:
-	if info.cast == null or info.cast.skill == null or info.cast.skill.gem == null:
+	if info.facts == null or info.facts.gem_id == "":   # not from a skill gem
 		return ""
-	return "%s|%s" % [info.cast.skill.gem.id, DiffLock.rules_of(info.cast)]
+	return "%s|%s" % [info.facts.gem_id, DiffLock.rules_of(info.facts)]
 
 
 ## "STRIKE / ENEMIES NEARBY", "STRIKE / NO RULE"

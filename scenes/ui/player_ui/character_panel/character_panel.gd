@@ -65,6 +65,11 @@ var _health: HealthComponent
 
 var _built := false
 var _open := false
+## Co-op: another player's sheet shown instead of ours (PartyMenu INFO -> inspect), as their own
+## machine sent it (Coop.my_sheet): {name, class_id, level, rank, grade, life, stats {id: value}}.
+## Cleared when the panel closes; C then opens our own again.
+var _inspect: Dictionary = {}
+var _inspect_peer := 0
 var _tab := 0
 var _tween: Tween
 var _prev_mouse_mode := Input.MOUSE_MODE_VISIBLE
@@ -136,6 +141,25 @@ func toggle() -> void:
 		open()
 
 
+## Co-op: shows another player's sheet (`info`, from Coop.my_sheet on their machine). Called
+## again with fresh numbers while it stays open.
+func inspect(peer: int, info: Dictionary) -> void:
+	if not info.get("stats") is Dictionary:
+		return
+	_inspect = info
+	_inspect_peer = peer
+	if _open:
+		_refresh_header()
+		_update_values()
+	else:
+		open()
+
+
+## The other player whose sheet is showing (0 = our own, or closed).
+func inspected_peer() -> int:
+	return _inspect_peer if _open and not _inspect.is_empty() else 0
+
+
 func open() -> void:
 	if _open or not _built:
 		return
@@ -147,7 +171,7 @@ func open() -> void:
 		_prev_mouse_mode = mode
 		_changed_mouse_mode = true
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	if _stats == null:
+	if _stats == null and _inspect.is_empty():
 		push_warning("CharacterPanel: no StatComponent bound. Is bind() being called from the player?")
 	elif debug_stats:
 		print("[CharacterPanel] bound to ", _stats, " | base_stats: ", _stats.base_stats)
@@ -164,6 +188,8 @@ func close() -> void:
 	if not _open:
 		return
 	_open = false
+	_inspect = {}                       # next time: our own sheet
+	_inspect_peer = 0
 	if _changed_mouse_mode:
 		Input.mouse_mode = _prev_mouse_mode
 		_changed_mouse_mode = false
@@ -394,6 +420,9 @@ func _build_rows() -> void:
 
 # ---------- FILLING IN THE DATA ----------
 func _refresh_header() -> void:
+	if not _inspect.is_empty():
+		_refresh_inspect_header()
+		return
 	var data: Dictionary = {}
 	if not SaveManager.party.is_empty():
 		data = SaveManager.get_data(SaveManager.party[0])
@@ -450,6 +479,34 @@ func _refresh_header() -> void:
 		_passive_desc.text = t.description
 
 
+## Co-op: the header for another player's sheet (_inspect): their name, class, level and rank.
+func _refresh_inspect_header() -> void:
+	var char_name := str(_inspect.get("name", "Player")).to_upper()
+	_name_label.text = char_name
+	_fit_name(char_name)
+	_name_label.add_theme_color_override("font_color", COL_TEXT)
+	var class_id := str(_inspect.get("class_id", ""))
+	var class_text := class_id.capitalize()
+	_portrait.texture = null
+	var path := "res://data/classes/%s.tres" % class_id
+	if class_id != "" and ResourceLoader.exists(path):
+		var c := load(path) as ClassData
+		if c:
+			class_text = c.display_name
+			_portrait.texture = c.icon
+			_name_label.add_theme_color_override("font_color", c.accent_color)
+	_sub_label.text = "%s  ·  LV %d  ·  ANOTHER PLAYER" % [class_text.to_upper(), int(_inspect.get("level", 1))]
+	_rank_label.text = "RANK  %s" % str(_inspect.get("rank", "?"))
+	if str(_inspect.get("grade", "")) != "":
+		_rank_label.text += " (%s)" % str(_inspect.get("grade", ""))
+	_rank_label.tooltip_text = ""
+	var t := ClassTrait.for_class(class_id)
+	_passive_box.visible = t != null
+	if t != null:
+		_passive_title.text = "PASSIVE  //  %s" % t.display_name.to_upper()
+		_passive_desc.text = t.description
+
+
 ## Shrinks the name's font until it fits next to the portrait.
 func _fit_name(text: String) -> void:
 	# panel width minus margins (56), portrait (110) and the gap between them (18), with a little spare
@@ -464,12 +521,14 @@ func _fit_name(text: String) -> void:
 
 func _update_values() -> void:
 	# Life and mana under the name
-	if _stats == null:
+	if _stats == null and _inspect.is_empty():
 		_life_label.text = "LIFE   --"
 		_mana_label.text = "MANA   --"
 	else:
 		var max_hp := _stat(StatTypes.Stat.MAX_HEALTH)
 		var cur_hp := _health.current_health if _health else max_hp
+		if not _inspect.is_empty():
+			cur_hp = float(_inspect.get("life", max_hp))   # another player's, as they sent it
 		var max_shown := roundi(max_hp)
 		_life_label.text = "LIFE   %d / %d" % [mini(ceili(cur_hp), max_shown), max_shown]
 		_mana_label.text = "MANA   %d" % roundi(_stat(StatTypes.Stat.MANA))
@@ -494,13 +553,15 @@ func _update_values() -> void:
 
 
 func _stat(stat: int) -> float:
+	if not _inspect.is_empty():
+		return float((_inspect["stats"] as Dictionary).get(stat, 0.0))   # another player's sheet
 	if _stats == null:
 		return 0.0
 	return _stats.get_stat(stat as StatTypes.Stat)
 
 
 func _format(row: Dictionary) -> String:
-	if _stats == null:
+	if _stats == null and _inspect.is_empty():
 		return "--"                 # not bound to a StatComponent yet
 	var ids: Array = row["stats"]
 	var v := _stat(ids[0]) * float(row.get("mul", 1.0))

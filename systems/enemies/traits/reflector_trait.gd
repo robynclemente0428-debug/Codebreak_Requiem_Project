@@ -35,11 +35,9 @@ func tag_state() -> String:
 
 
 func after_hit(info: HitInfo) -> void:
-	if info.cast == null or not info.cast.is_valid():
-		return
-	var caster := info.cast.caster
-	if caster == null or not caster.is_in_group(&"players"):
-		return                                    # enemies' own skills never trip it
+	if info.facts == null or not info.facts.by_player or not is_instance_valid(info.facts.caster):
+		return                                    # enemies' own skills (and holograms) never trip it
+	var caster := info.facts.caster
 	var now := Time.get_ticks_msec() / 1000.0
 	if now - _zapped_at < zap_gap:
 		return
@@ -47,5 +45,7 @@ func after_hit(info: HitInfo) -> void:
 	var hp := caster.get("health") as HealthComponent
 	if hp == null:
 		return
+	Coop.hit_source = Coop.Hit.ENEMY             # co-op: a guest's zap reaches the guest's own machine
 	hp.take_damage(zap_damage(), true)
+	Coop.hit_source = Coop.Hit.NONE
 	pop("REFLECT", COL, 0.8)

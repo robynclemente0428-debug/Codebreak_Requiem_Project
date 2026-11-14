@@ -15,6 +15,9 @@ var traits: Array[EnemyTrait] = []
 
 var rarity: String = "normal"
 var level := 1                          # the dungeon level it spawned at (EnemySpawner)
+## Co-op: a guest's copy of the host's enemy. Its casts are replayed for show (Coop._e_cast) and
+## deal nothing here (SkillBehavior.hit): the host's own enemy does the damage.
+var is_remote := false
 
 @export var hit_delay: float = 0.5     # seconds from swing start until the damage lands
 
@@ -99,7 +102,6 @@ func play_skill_animation(key: String, fit_duration: float) -> float:
 	if model == null:
 		return 0.0
 	var hit_in := model.play_skill(key, fit_duration)
-	Coop.enemy_skill_animation(self, key, fit_duration)   # co-op: the clients play the clip too
 	if hit_in > 0.0:
 		SoundManager.play_skill(key, self, hit_in)
 	return hit_in

@@ -68,8 +68,7 @@ func _process(delta: float) -> void:
 		return
 	_beat = maxf(_beat - delta * 3.0, 0.0)
 	if not _engaged:
-		var player := get_tree().get_first_node_in_group("players") as Node3D
-		_engaged = player != null and player.global_position.distance_to(enemy.global_position) <= ENGAGE_RANGE
+		_engaged = player_within(ENGAGE_RANGE) != null   # any player in range (co-op: a guest's too)
 	if _reboot_left > 0.0:
 		_reboot_left -= delta
 		if _reboot_left <= 0.0:

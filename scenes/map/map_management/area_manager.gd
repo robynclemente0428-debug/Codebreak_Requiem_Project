@@ -77,6 +77,9 @@ func _add_waypoint_panel() -> void:
 	var info := NPC_INFO_PANEL.new()
 	info.name = "NpcInfoPanel"
 	layer.add_child(info)
+	var party: Control = preload("res://scenes/ui/player_ui/coop/party_menu.gd").new()   # co-op: click another player
+	party.name = "PartyMenu"
+	layer.add_child(party)
 	var panel := WAYPOINT_PANEL.new()
 	panel.name = "WaypointPanel"
 	layer.add_child(panel)                # added last, so the map draws over an open info card
@@ -163,6 +166,8 @@ func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revi
 	var area := packed.instantiate() as GameArea if packed else null
 	if area == null:
 		push_error("AreaManager: '%s' is missing or its root doesn't extend GameArea" % scene_path)
+		if Coop.in_game:
+			Coop.note("AREA FAILED TO LOAD: %s (exists %s)" % [scene_path, ResourceLoader.exists(scene_path)])
 		await _finish(use_fade)
 		return
 

@@ -57,6 +57,7 @@ func _process(_delta: float) -> void:
 
 
 func _enter(i: int, announce: bool) -> void:
+	_tell_copies("recall_enter", [i])            # co-op: first, so the copies have the new lock before it speaks
 	if _current != null and is_instance_valid(_current):
 		if _current.has_method("_set_glow"):
 			_current.call("_set_glow", 0.0)        # a port open as it's swapped out stops glowing
@@ -75,3 +76,12 @@ func _enter(i: int, announce: bool) -> void:
 	if announce:
 		var info := LockBannerUI.lock_info(PHASES[i])
 		say("RECALL // %s" % info.get("name", "?"), COL_RECALL, 1.3)
+
+
+## A guest's copy: the host's Recall loaded its next lock. The copy loads the same one (switched
+## off, like every trait on a copy) so the host's lock has a copy to speak through.
+func _copy_message(what: String, args: Array) -> void:
+	if what == "recall_enter" and not args.is_empty():
+		var i := int(args[0])
+		if i >= 0 and i < PHASES.size() and i != phase:
+			_enter(i, false)

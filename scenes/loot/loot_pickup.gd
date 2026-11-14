@@ -26,6 +26,7 @@ static var taken := 0
 
 var _label: Label             # lives in the HUD overlay (LootLabels), not in the 3D world
 var _color := Color.WHITE
+var _asked := false           # co-op: we already asked the host for this drop
 
 func _ready() -> void:
 	add_to_group(GROUP)
@@ -80,6 +81,20 @@ func set_hovered(on: bool) -> void:
 func try_pickup(inventory: InventoryComponent) -> bool:
 	if item == null or inventory == null:
 		return false
+	if Coop.in_game and has_meta(Coop.LOOT_ID):
+		# Co-op: the drop is everyone's. Ask the host; the first to ask has it (Coop._l_taken)
+		if inventory.is_full():
+			print("Inventory full")
+			return false
+		if not _asked:
+			_asked = true
+			Coop.loot_take(self)
+		return true
+	return give_to(inventory)
+
+
+## Puts the item in the backpack and removes the drop. False if there was no room.
+func give_to(inventory: InventoryComponent) -> bool:
 	if not inventory.add_item(item):
 		print("Inventory full")
 		return false

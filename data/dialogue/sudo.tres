@@ -12,6 +12,7 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 ~ start
 # A Yard Sweep deleted Sudo's exam archive (YardCrates CargoB): said once
 @ crate_news:CargoB -> loss_archive
+@ quest_active:q06c_root_access -> coming_along
 @ quest_ready:guild_expedition -> ready_guild
 @ quest_ready:exam_defragmenter -> pass_defragmenter
 @ quest_ready:time_slice -> ready_slice
@@ -41,6 +42,12 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 @ quest_done:exam_architect -> retake_architect
 @ quest_done:exam_operator -> retake_operator
 -> idle
+
+~ coming_along
+Sudo: Hex is going through that gate. So am I.
+Sudo: Exams don't grade themselves. Unfortunately.
+* OTHER EXAMS -> retake_strategist
+* GOODBYE -> end
 
 ~ offer_operator
 Sudo: Show me your script. I grade logic, not luck.

@@ -194,6 +194,7 @@ func _on_body_entered(body: Node3D) -> void:
 		for w in Waypoints.clear_stop(clears_stop):
 			QuestItems.toast(get_tree(), "ROUTE UNLOCKED: %s" % w.display_name.to_upper(),
 					Color(0.25, 1.0, 0.55))
+		Coop.stop_cleared(clears_stop)             # co-op: for the others who walked it with us too
 	# Deferred: we are inside a physics callback, and the manager is about to
 	# free the area that contains this very Area3D.
 	manager.go_to.call_deferred(target_area, target_spawn, dungeon_level, instance_id)

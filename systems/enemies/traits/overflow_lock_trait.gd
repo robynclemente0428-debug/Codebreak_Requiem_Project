@@ -39,7 +39,8 @@ const SHORT_GAP := 1.8                           # seconds between "1 HIT A CAST
 const MAX_WRITE := 6.0                           # seconds: a loop never reporting its end can't hold one open
 const COL_SPILL := Color(1.0, 0.35, 0.3)
 
-## The writes under way: key (the loop runner, or the cast without one) -> {hits, held, last, started}
+## The writes under way: key (HitFacts.loop_id, or the cast_id of a cast without a loop) ->
+## {hits, held, last, started, loop (true when the key is a loop)}
 var _writes := {}
 var _best := 0                                   # the fullest write right now, for the tag
 
@@ -55,10 +56,12 @@ func modify_incoming(info: HitInfo) -> void:
 	super(info)
 	if not info.absorbed:
 		return                                       # the port is open: hits land as usual
-	var key: Variant = _write_of(info.cast)
-	if key == null:
+	var f := info.facts
+	if f == null:
 		return
-	var w: Dictionary = _writes.get(key, {"hits": 0, "held": 0.0, "last": _now(), "started": _now()})
+	var key := f.loop_id if f.loop_id != "" else f.cast_id   # every repeat of a loop is the same write
+	var w: Dictionary = _writes.get(key, {"hits": 0, "held": 0.0, "last": _now(), "started": _now(),
+			"loop": f.loop_id != ""})
 	w["hits"] = int(w["hits"]) + 1
 	w["held"] = float(w["held"]) + info.damage
 	w["last"] = _now()
@@ -71,19 +74,11 @@ func modify_incoming(info: HitInfo) -> void:
 		pop("WRITE %d/%d" % [w["hits"], buffer_size], COL_SHORT, FILL_GAP)
 
 
-## The write a hit belongs to: its cast's loop (every repeat is the same write), or the cast.
-func _write_of(cast: SkillCast) -> Variant:
-	if cast == null:
-		return null
-	var runner := cast.extra.get(ProgramSupport.LOOP_KEY) as ProgramLoopRunner
-	return runner if runner != null else cast
-
-
 func _closed_process(_delta: float) -> void:
 	_best = 0
-	for key in _writes.keys():
+	for key: String in _writes.keys():
 		var w: Dictionary = _writes[key]
-		var looping: bool = key is ProgramLoopRunner and is_instance_valid(key) and not (key as ProgramLoopRunner).finished
+		var looping: bool = w["loop"] and HitFacts.loop_running(key)   # its loop still repeating
 		if looping and _now() - float(w["started"]) < MAX_WRITE:
 			w["last"] = _now()                         # still repeating: the write isn't done
 		if _now() - float(w["last"]) > tail_time:

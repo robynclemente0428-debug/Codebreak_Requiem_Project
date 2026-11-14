@@ -14,6 +14,10 @@ extends Node
 ##
 ## Breaking the loop: hit it for break_damage (a fraction of its maximum health) while it
 ## charges and it stumbles out of the loop, dazed for longer.
+##
+## Co-op: only the host's runs (a guest's copy has it switched off, Coop "A COPY RUNS NO LOGIC").
+## Its charge hurts every player's character there, and it tells the copies its loop and each
+## phase ("loop_*" messages, coop_message) so they draw the same marks.
 
 @export var interval: float = 7.0              # seconds of normal fighting between charges
 @export var first_delay: float = 2.5           # after the boss first notices a player
@@ -95,6 +99,7 @@ func _lay_out_loop() -> void:
 		var a := start + TAU * float(i) / float(points)
 		_loop.append(_on_navmesh(center + Vector3(cos(a), 0.0, sin(a)) * loop_radius))
 	_build_marks()
+	_tell("loop_path", [PackedVector3Array(_loop)])
 
 
 ## The loop on the floor: a thin red strip per side, faint until it's about to charge.
@@ -140,15 +145,23 @@ func _start_telegraph() -> void:
 			best = i
 	_next = best
 	_pop("LOOP", COL)
+	_tell("loop_path", [PackedVector3Array(_loop)])   # again: a player who just arrived has no marks
+	_tell("loop_phase", [Phase.TELEGRAPH])
 
 
 func _start_charge() -> void:
-	_phase = Phase.CHARGE
 	_corners_left = _loop.size() * laps + 1          # to the first corner, then round
 	_hit_this_charge.clear()
 	_taken = 0.0
 	_last_hp = _enemy.health.current_health
 	_stalled = 0.0
+	_show_charge()
+	_tell("loop_phase", [Phase.CHARGE])
+
+
+## The charge's look: the loop bright, running through players, the run clip sped up.
+func _show_charge() -> void:
+	_phase = Phase.CHARGE
 	_set_marks(0.7)
 	_pass_through_players(true)                      # it runs through you, not round you
 	if _enemy.model and _enemy.model.animation_player:
@@ -163,6 +176,7 @@ func _charge(delta: float) -> void:
 	_last_hp = hp
 	if _taken >= _enemy.stats.get_stat(StatTypes.Stat.MAX_HEALTH) * break_damage:
 		_pop("LOOP BROKEN", Color(0.3, 1.0, 0.6))
+		_tell("loop_broken", [])
 		_start_daze(broken_dazed)
 		return
 
@@ -205,10 +219,13 @@ func _hit_players() -> void:
 			_hit_this_charge[player] = true
 			var h = player.get("health")
 			if h != null:
+				Coop.hit_source = Coop.Hit.ENEMY     # co-op: a real hit, sent on to a guest's own machine
 				h.take_damage(dmg)
+				Coop.hit_source = Coop.Hit.NONE
 
 
 func _start_daze(time: float) -> void:
+	_tell("loop_phase", [Phase.DAZED, time])
 	_phase = Phase.DAZED
 	_timer = time
 	_set_marks(0.12)
@@ -224,6 +241,48 @@ func _end_daze() -> void:
 	_phase = Phase.WAIT
 	_timer = interval
 	_pause_ai(false)
+	_tell("loop_phase", [Phase.WAIT])
+
+
+# ---------- CO-OP ----------
+## The host's: tell the copies (does nothing in single player or on a guest).
+func _tell(what: String, args: Array) -> void:
+	if Coop.in_game and Coop.is_host():
+		Coop.enemy_send(_enemy, what, args)
+
+
+## A guest's copy: the host's charger says what it is doing. Only the look: the host's moves the
+## body (Coop._e_state) and deals the hits.
+func coop_message(what: String, args: Array, from: int) -> void:
+	if from != 1 or _enemy == null or not _enemy.is_remote or _enemy.health.current_health <= 0.0:
+		return
+	match what:
+		"loop_path":
+			var pts = args[0] if args.size() > 0 else null
+			if not (pts is PackedVector3Array) or pts.size() < 2 or pts.size() > 16:
+				return
+			for p: Vector3 in pts:
+				if not p.is_finite():
+					return
+			if _marks.is_empty() or Array(pts) != Array(_loop):
+				_on_died()                                   # clears the old marks
+				_loop.assign(Array(pts))
+				_build_marks()
+		"loop_phase":
+			var phase := int(args[0]) if args.size() > 0 else -1
+			match phase:
+				Phase.TELEGRAPH:
+					_phase = Phase.TELEGRAPH
+					_set_marks(0.65)
+					_pop("LOOP", COL)
+				Phase.CHARGE:
+					_show_charge()
+				Phase.DAZED:
+					_start_daze(clampf(float(args[1]) if args.size() > 1 else dazed, 0.0, 30.0))
+				Phase.WAIT:
+					_phase = Phase.WAIT
+		"loop_broken":
+			_pop("LOOP BROKEN", Color(0.3, 1.0, 0.6))
 
 
 ## The AI stops steering while the loop runs (this moves the body instead), and picks up again

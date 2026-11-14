@@ -62,6 +62,103 @@ var _next_wave := 0.0
 var _alive: Array[Node3D] = []
 var _spawn_points: Array[Vector3] = []
 
+# ---------- CO-OP ----------
+## The host's beacon is the real one: it runs the reboot and the waves, for whoever touches it.
+## It stays dark while ANY player in the party still needs it (a guest's copy says so: "hello"),
+## and lighting it counts for everyone there ("done"). The other machines' copies only show what
+## the host's is doing ("state"). Messages go through Coop.event_send.
+var _needed_by: Dictionary = {}            # host: peer id -> true, the guests who still need it
+var _credited: Dictionary = {}             # host: peer id -> true, lit while they were here
+var _hello_in := 0.5                       # guest: seconds until it next tells the host
+var _state_in := 0.0                       # host: seconds until the next "state"
+var _alive_shown := 0                      # guest: the host's count of the Null left
+var _holding_shown := true                 # guest: someone is in the ring
+
+
+func _key() -> String:
+	return "beacon:%s" % beacon_id
+
+
+## True on a guest's machine in co-op: this beacon only shows the host's.
+func _is_copy() -> bool:
+	return Coop.in_game and not Coop.is_host()
+
+
+func _coop_tick(delta: float) -> void:
+	if _is_copy():
+		_hello_in -= delta
+		if _hello_in <= 0.0:
+			_hello_in = 2.0
+			var need := not QuestItems.owned(get_tree(), beacon_id)
+			if need or state == State.DARK:        # until we know what the host's is doing
+				Coop.event_send(_key(), "hello", [need])
+		return
+	if is_rebooting():
+		_state_in -= delta
+		if _state_in <= 0.0:
+			_state_in = 0.2
+			_send_state()
+
+
+func _send_state(peer: int = 0) -> void:
+	if Coop.in_game and Coop.is_host():
+		Coop.event_send(_key(), "state", [int(state), progress, _wave, _alive.size(), _anyone_holding()], peer)
+
+
+func coop_message(what: String, args: Array, from: int) -> void:
+	if Coop.is_host():
+		if what == "hello" and args.size() == 1:
+			if args[0] == true and not _credited.has(from):
+				_needed_by[from] = true
+				if state == State.LIT:               # lit for us, not for them: it goes dark again
+					state = State.DARK
+					progress = 0.0
+					_set_lit(false, false)
+			_send_state(from)
+		return
+	if what == "state" and args.size() == 5:
+		var to := clampi(int(args[0]), 0, State.size() - 1) as State
+		progress = clampf(float(args[1]), 0.0, 1.0)
+		_wave = int(args[2])
+		_alive_shown = int(args[3])
+		_holding_shown = bool(args[4])
+		if to == state:
+			return
+		var was_rebooting := is_rebooting()
+		state = to
+		if is_rebooting() != was_rebooting:
+			_show_readout(is_rebooting())
+			if is_rebooting():
+				QuestItems.toast(get_tree(), "REBOOTING THE %s\nStay in the ring while it boots. The Null will come for it."
+						% QuestItems.name_of(beacon_id), COL_WARN)
+		if (state == State.LIT) != _lit:
+			_set_lit(state == State.LIT, false)
+	elif what == "done":
+		state = State.LIT
+		_show_readout(false)
+		_credit_own_player()
+		_set_lit(true, true)
+		QuestItems.toast(get_tree(), "%s ONLINE\nThe ward holds here again." % QuestItems.name_of(beacon_id), COL_GOOD)
+		wave_event_finished.emit()
+
+
+## This machine's player has the beacon now (once: QuestManager.recover ignores a second time).
+func _credit_own_player() -> void:
+	var player := _player()
+	var qm = player.get("quests") if player != null else null
+	if qm != null:
+		qm.recover(beacon_id)
+
+
+## True while any living player stands in the ring (in co-op: any of the party).
+func _anyone_holding() -> bool:
+	for p in get_tree().get_nodes_in_group("players"):
+		var flat: Vector3 = (p as Node3D).global_position - global_position
+		flat.y = 0.0
+		if flat.length() <= hold_radius:
+			return true
+	return false
+
 
 static func spawn(parent: Node, pos: Vector3, id: String) -> WardBeacon:
 	var b := WardBeacon.new()
@@ -106,6 +203,7 @@ func _ready() -> void:
 	_set_lit(QuestItems.owned(get_tree(), beacon_id), false)
 	if _lit:
 		state = State.LIT
+	Coop.event_register(_key(), self)          # co-op: the host's beacon runs it for everyone
 
 
 func _build() -> void:
@@ -252,8 +350,13 @@ func _set_lit(on: bool, announce: bool) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if Coop.in_game:
+		_coop_tick(delta)
 	if is_rebooting():
-		_run(delta)
+		if _is_copy():
+			_update_status(_holding_shown)       # the host's beacon runs it; we show its numbers
+		else:
+			_run(delta)
 	_core.rotation.y = _t * (1.5 if _lit else 0.4 + progress * 2.0)
 	if _lit:
 		_core.position.y = 1.9 + sin(_t * 2.0) * 0.06
@@ -272,6 +375,8 @@ func _process(delta: float) -> void:
 func _on_body_entered(body: Node3D) -> void:
 	if state != State.DARK or not body.is_in_group("players") or body.get("quests") == null:
 		return
+	if _is_copy():
+		return                                   # co-op: the host's beacon sees us touch it
 	_start(body)
 
 
@@ -285,15 +390,17 @@ func _player() -> Node3D:
 	return get_tree().get_first_node_in_group("players") as Node3D
 
 
-func _start(player: Node3D) -> void:
+func _start(_player_who_touched: Node3D) -> void:
 	state = State.BOOTING
 	progress = 0.0
 	_wave = 0
 	_next_wave = 1.5                         # a breath before the first wave
 	_collect_spawn_points()
-	var hp := player.get("health") as HealthComponent
-	if hp != null and not hp.died.is_connected(_on_player_died):
-		hp.died.connect(_on_player_died)
+	for p in get_tree().get_nodes_in_group("players"):      # in co-op: the whole party
+		var hp := p.get("health") as HealthComponent
+		if hp != null and not hp.died.is_connected(_on_player_died):
+			hp.died.connect(_on_player_died)
+	_send_state()
 	_show_readout(true)
 	QuestItems.toast(get_tree(), "REBOOTING THE %s\nStay in the ring while it boots. The Null will come for it."
 			% QuestItems.name_of(beacon_id), COL_WARN)
@@ -317,12 +424,9 @@ func _collect_spawn_points() -> void:
 
 func _run(delta: float) -> void:
 	_alive.assign(_alive.filter(func(e) -> bool: return is_instance_valid(e) and e.is_in_group("enemies")))
-	var player := _player()
-	if player == null:
+	if _player() == null:
 		return
-	var flat := player.global_position - global_position
-	flat.y = 0.0
-	var holding := flat.length() <= hold_radius
+	var holding := _anyone_holding()
 	if state == State.BOOTING:
 		if holding:
 			progress = minf(progress + delta / boot_time, 1.0)
@@ -371,10 +475,12 @@ func _spawn_wave() -> void:
 func _finish() -> void:
 	state = State.LIT
 	_show_readout(false)
-	var player := _player()
-	var qm = player.get("quests") if player != null else null
-	if qm != null:
-		qm.recover(beacon_id)
+	_credit_own_player()
+	if Coop.in_game:                         # and everyone who is here with us
+		_needed_by.clear()
+		for id: int in Coop.roster:
+			_credited[id] = true
+		Coop.event_send(_key(), "done", [])
 	_set_lit(true, true)
 	QuestItems.toast(get_tree(), "%s ONLINE\nThe ward holds here again." % QuestItems.name_of(beacon_id), COL_GOOD)
 	wave_event_finished.emit()
@@ -384,6 +490,10 @@ func _finish() -> void:
 func _on_player_died() -> void:
 	if not is_rebooting():
 		return
+	for p in get_tree().get_nodes_in_group("players"):      # co-op: not while one of us still stands
+		var hp := p.get("health") as HealthComponent
+		if hp != null and hp.current_health > 0.0:
+			return
 	for e in _alive:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -391,6 +501,7 @@ func _on_player_died() -> void:
 	state = State.DARK
 	progress = 0.0
 	_show_readout(false)
+	_send_state()
 
 
 func _update_status(holding: bool) -> void:
@@ -402,7 +513,7 @@ func _update_status(holding: bool) -> void:
 		box.position = (pr.pos - Vector2(box.size.x * 0.5, box.size.y)).round()
 		box.visible = not pr.behind
 	if state == State.CLEARING:
-		_status.text = "BOOTED. CLEAR THE NULL: %d" % _alive.size()
+		_status.text = "BOOTED. CLEAR THE NULL: %d" % (_alive_shown if _is_copy() else _alive.size())
 		_status.add_theme_color_override("font_color", COL_GOOD)
 	elif not holding:
 		_status.text = "RETURN TO THE RING  %d%%" % pct

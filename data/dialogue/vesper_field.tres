@@ -17,6 +17,11 @@ source = "# Vesper in the Null Zone (Act IV): she goes ahead of you and waits at
 @ here:act_4_echo_wells -> wells
 @ here:act_4_deleted_quarter -> deleted
 @ here:act_4_rule_forge -> forge
+@ here:act_5_stack_trace -> stack
+@ here:act_5_sentinel_hall -> hall
+@ here:act_5_page_file -> pagefile
+@ here:act_5_scheduler -> scheduler
+@ here:act_5_kernel -> kernel
 -> idle
 
 ~ fray
@@ -125,6 +130,70 @@ Vesper: It keeps its best work here, too. Whatever you find will be worth the tr
 
 ~ forge_after
 Vesper: You crashed its copies with your own code. It's started copying more carefully. I think that's a compliment.
+-> end
+
+# ---- Act V: she waits at the top of each floor on the way down. She is closer to the Null with
+# every floor, and by the Kernel she can't tell its voice from hers.
+~ stack
+@ quest_done:q09_core_sentinel -> stack_after
+Vesper: These are yours. Everything you've killed, kept. The Core doesn't forget anything. It just loses the order.
+Vesper: Out of order, they barely feel you. Least life first. Put them back the way they go.
+* WHY KEEP THEM AT ALL? -> stack_why
+* LET'S GO -> end
+
+~ stack_why
+Vesper: Because nobody told it to let go. That's all a memory is, down here. Something nobody let go of.
+-> end
+
+~ stack_after
+Vesper: Still replaying. It'll run this forever, I think. Someone should, after all of it.
+-> end
+
+~ hall
+@ quest_done:q09_core_sentinel -> hall_after
+Vesper: It's going to show you your own past. The Queen, the Hound, the Mimic. Answer each one the way you did then.
+Vesper: It isn't testing your strength. It's checking whether you remember.
+-> end
+
+~ hall_after
+Vesper: It let you remember. The way down is open. I'll be on the next floor.
+-> end
+
+~ pagefile
+@ quest_done:paged_out -> pagefile_after
+Vesper: Can you hear them? Processes nobody points at anymore. They aren't deleted. They're just... let go.
+Vesper: Hold on to what you're fighting. If it's in your registry, it stays. And keep the Watchdog busy: it only believes in things that keep talking.
+Vesper: I used to think that was the Null's cruelty. It isn't. It's the Core's.
+-> end
+
+~ pagefile_after
+Vesper: You held on to all of it. Something still points at them now. That's enough, down here.
+-> end
+
+~ scheduler
+@ quest_done:time_slice -> scheduler_after
+Vesper: It's writing into your kernel. A new line, then another. Not against you, exactly. It's taking turns.
+Vesper: I can hear which line it'll pick before it picks it. I'm not going to pretend that doesn't frighten me.
+* TELL ME WHICH -> scheduler_tell
+* LET'S GO -> end
+
+~ scheduler_tell
+Vesper: All of them. Round and round. Write for every one, not the one you're looking at.
+-> end
+
+~ scheduler_after
+Vesper: It stopped taking turns. It's waiting to see what you write next.
+-> end
+
+~ kernel
+@ quest_done:q10_root_process -> kernel_after
+Vesper: I can hear all of it now. The Null, the Root Process, you. It's one conversation, and I'm in it.
+Vesper: The Root Process isn't evil. It's the last thing down here that still believes the old rules. Be kind, if you can. Be quick, if you can't.
+Vesper: Executor. Whatever happens after this, I asked to come. Remember that.
+-> end
+
+~ kernel_after
+Vesper: It's over. Go up. The Last Log is waiting, and so is the rest of it.
 -> end
 
 ~ idle

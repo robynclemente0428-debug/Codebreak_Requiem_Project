@@ -1183,6 +1183,13 @@ class ItemSlot extends Control:
 		set(value):
 			selected = value
 			queue_redraw()
+	## Greyed out: the item is drawn faded in grey, with no hover glow. Tooltips still show. `disabled_label`,
+	## if set, replaces the type tag (the trade window's backpack uses "OFFERED").
+	var disabled := false:
+		set(value):
+			disabled = value
+			queue_redraw()
+	var disabled_label := ""
 	var kind := "bag"               # "bag" or "equip"
 	var slot_id := -1               # equipment slots only
 	var placeholder := ""           # text shown inside an empty equipment slot
@@ -1219,21 +1226,27 @@ class ItemSlot extends Control:
 		var col := accent
 		if item != null:
 			col = rarity_colors.get(item.rarity, accent)
+		var off := disabled and item != null
+		if off:
+			col = Color(0.42, 0.43, 0.46)
 		draw_colored_polygon(poly, Color(col, 0.16 if item != null else 0.05))
 
 		var outline := PackedVector2Array(poly)
 		outline.append(poly[0])
 		var line_alpha := 0.9 if item != null else 0.25
-		if _hover or selected:
+		if off:
+			line_alpha = 0.5
+		elif _hover or selected:
 			draw_polyline(outline, Color(col, 0.25), 7.0, true)    # glow
 			line_alpha = 1.0
-		draw_polyline(outline, Color(col, line_alpha), 3.0 if selected else 2.0, true)
+		draw_polyline(outline, Color(col, line_alpha), 3.0 if selected and not off else 2.0, true)
 
 		if item != null:
 			var def := item.definition
 			var icon: Texture2D = def.icon
 			if icon != null:
-				draw_texture_rect(icon, Rect2(8, 8, w - 16, h - 16), false)
+				draw_texture_rect(icon, Rect2(8, 8, w - 16, h - 16), false,
+					Color(0.55, 0.55, 0.55, 0.35) if off else Color.WHITE)
 			else:
 				var drawn := false
 				var kind := ItemGlyph.kind_for(def)
@@ -1244,6 +1257,8 @@ class ItemSlot extends Control:
 					draw_string(font, Vector2(0, h * 0.5 + 9.0), initials,
 						HORIZONTAL_ALIGNMENT_CENTER, w, 22 if def.is_gem() else 26, col)
 			var tag := ItemGlyph.type_tag(def)
+			if off and disabled_label != "":
+				tag = disabled_label
 			if tag != "":
 				draw_string(font, Vector2(0, h - 7.0), tag, HORIZONTAL_ALIGNMENT_CENTER, w, 11, Color(col, 0.8))
 		elif placeholder_kind != "":

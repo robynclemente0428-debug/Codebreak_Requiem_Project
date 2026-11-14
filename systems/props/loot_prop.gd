@@ -113,6 +113,11 @@ func _on_hit(_amount: float) -> void:
 	_shake.tween_property(_model, "position", Vector3.ZERO, 0.05)
 
 
+## Co-op: another player broke it on their machine. It pays out and breaks here too.
+func open_remote() -> void:
+	_on_broken()
+
+
 func _on_broken() -> void:
 	if is_open:
 		return

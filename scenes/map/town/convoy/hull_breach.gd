@@ -72,7 +72,59 @@ func blocks_route() -> bool:
 		return true
 	if state != State.WAITING:
 		return false
+	return _anyone_needs()                       # co-op, on the host: or a guest's run is owed one
+
+
+## Co-op: this player needs the breach while a run of theirs is still owed one.
+func _own_need() -> bool:
 	return is_due()
+
+
+## Co-op: the deck systems go with the host's "state", so every machine shows the same bars.
+func _state_extra() -> Array:
+	var out: Array = []
+	for sys in _systems:
+		if is_instance_valid(sys):
+			out.append([sys.system_id, sys.integrity, sys.is_offline(), sys.under_attack])
+	return out
+
+
+func _apply_extra(extra: Array) -> void:
+	if not _is_on():
+		return
+	for entry in extra:
+		if not entry is Array or entry.size() != 4:
+			continue
+		var sys = _system(str(entry[0]))
+		if sys != null:
+			sys.show_remote(float(entry[1]), bool(entry[2]), bool(entry[3]))
+
+
+func _copy_started() -> void:
+	_warned.clear()
+	_lost.clear()
+	for sys in _systems:
+		if is_instance_valid(sys):
+			sys.set_contested(true)
+	var map := get_tree().get_first_node_in_group("waypoint_panel")
+	if map != null and map.has_method("is_route_open") and map.is_route_open():
+		map.close()
+	super._copy_started()
+
+
+func _copy_stopped() -> void:
+	_end_contest()
+	super._copy_stopped()
+
+
+func _copy_run(delta: float) -> void:
+	super._copy_run(delta)
+	_update_systems_hud()
+
+
+## Won on the host: [the cargo lock held, the systems lost].
+func _copy_done(args: Array) -> void:
+	_pay_out(args.size() == 2 and args[0] == true, args[1] if args.size() == 2 and args[1] is Array else [])
 
 
 ## True while a run through `after_stop` hasn't been answered by a breach yet: every time the
@@ -96,7 +148,7 @@ func _find_portal() -> Node3D:
 
 
 func _wants_to_start() -> bool:
-	if not is_due():
+	if not _anyone_needs():
 		return false
 	for b in get_tree().get_nodes_in_group("hull_breach"):
 		if b != self and b.is_running():
@@ -321,7 +373,7 @@ func _end_contest() -> void:
 
 
 func _on_player_died() -> void:
-	if state == State.RUNNING or state == State.CLEARING:
+	if (state == State.RUNNING or state == State.CLEARING) and not _someone_stands():
 		_end_contest()
 	super._on_player_died()
 
@@ -331,24 +383,35 @@ func _held() -> void:
 	_hud.visible = false
 	_set_alert(false)
 	_end_contest()
-	GameEvents.report(DEED, after_stop)                          # this run's breach is paid off
-	GameEvents.report(ScriptBudget.CLEAR_DEED, "breach_" + after_stop)   # +script points, like a cleared area
 	var cargo = _system("cargo")
 	var kept_cargo: bool = cargo != null and cargo.is_online()
+	if Coop.in_game:                                 # the guests' copies pay out too
+		_needed_by.clear()
+		Coop.event_send(_key(), "done", [kept_cargo, _lost])
+	_pay_out(kept_cargo, _lost)
+
+
+## The breach is won, here or (co-op) on the host. The credits are every player's who fought;
+## the run paid off and the script point only for a player whose own run was owed a breach.
+func _pay_out(kept_cargo: bool, lost: Array) -> void:
+	var owed := not Coop.in_game or is_due()
+	if owed:
+		GameEvents.report(DEED, after_stop)                          # this run's breach is paid off
+		GameEvents.report(ScriptBudget.CLEAR_DEED, "breach_" + after_stop)   # +script points, like a cleared area
 	var credits := reward_credits + (cargo_bonus if kept_cargo else 0)
-	var player := _player()
-	var wallet := player.get("currency") as CurrencyComponent if player != null else null
+	var wallet := Coop.own_player(get_tree()).get("currency") as CurrencyComponent \
+			if Coop.own_player(get_tree()) != null else null
 	if wallet != null and credits > 0:
 		wallet.add(credits)
-	var text := "%s\n+%d CREDITS%s  //  +1 SCRIPT POINT ON EVERY SKILL" % [
-		done_toast, credits, " (CARGO SAVED)" if kept_cargo else ""]
+	var text := "%s\n+%d CREDITS%s%s" % [done_toast, credits, " (CARGO SAVED)" if kept_cargo else "",
+			"  //  +1 SCRIPT POINT ON EVERY SKILL" if owed else ""]
 	if _systems.is_empty():
 		pass
-	elif _lost.is_empty():
+	elif lost.is_empty():
 		text += "\nEVERY SYSTEM HELD."
 	else:
-		text += "\nLOST: %s. Patch their code on deck." % ", ".join(_lost)
-	QuestItems.toast(get_tree(), text, COL_GOOD if _lost.is_empty() else COL_HIT)
+		text += "\nLOST: %s. Patch their code on deck." % ", ".join(PackedStringArray(lost))
+	QuestItems.toast(get_tree(), text, COL_GOOD if lost.is_empty() else COL_HIT)
 
 
 func _system(id: String):

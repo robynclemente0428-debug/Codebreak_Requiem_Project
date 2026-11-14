@@ -43,10 +43,13 @@ var solved_count := 0                            # for the test, and a HUD reado
 ##   host -> the solver   "ask"   [puzzle id, seconds]     open the panel
 ##   host -> everyone     "say"   [text, colour]           the same pop over the Warden
 ##   host -> everyone     "port"  [seconds]                the port is open: hits land
+##   host -> a hitter     "locked"                         their hit was absorbed (shown now and then)
 ##   solver -> host       "solved" / "failed" / "abandoned" / "dead" / "busy"
 ## The solver's machine runs the tests and takes the punishment for a wrong answer; while the
 ## panel is up their character stands still and takes SOLVER_GUARD less damage. A solve opens the
 ## port for everyone. A guest's copy never asks on its own, and its port only follows the host's.
+## It runs its own co-op (above): Coop leaves its copies running and EnemyTrait doesn't relay it.
+const COOP_AWARE := true
 const COOP_ANSWER_MULT := 1.5                    # longer to answer: the fight is still going on
 const COOP_OPEN_BONUS := 2.0                     # seconds more of open port: the others must react
 const SOLVER_GUARD := 0.5                        # share of damage the answering player doesn't take
@@ -67,8 +70,20 @@ func setup(p_enemy: Node3D) -> void:
 
 func modify_incoming(info: HitInfo) -> void:
 	super(info)
-	if info.absorbed:
-		pop("LOCKED // ANSWER THE CHALLENGE", Color(COL_REJECT, 0.85), LOCKED_GAP)
+	if not info.absorbed:
+		return
+	pop(LOCKED_TEXT, Color(COL_REJECT, 0.85), LOCKED_GAP)
+	# Co-op: a guest's hit is judged here, on the host; that guest sees why it did nothing too
+	if Coop.in_game and Coop.is_host() and info.facts != null:
+		var peer := Coop.player_peer(info.facts.caster)
+		var now := Time.get_ticks_msec() / 1000.0
+		if peer != Coop.my_id() and now - float(_locked_told.get(peer, -10.0)) >= LOCKED_GAP:
+			_locked_told[peer] = now
+			Coop.lock_send(enemy, "locked", [], peer)
+
+
+const LOCKED_TEXT := "LOCKED // ANSWER THE CHALLENGE"
+var _locked_told: Dictionary = {}                # host: peer -> when it was last told "locked"
 
 
 func _closed_process(delta: float) -> void:
@@ -240,6 +255,8 @@ func coop_message(what: String, args: Array, from: int) -> void:
 		"say":
 			if args.size() >= 2 and args[1] is Color:
 				say(str(args[0]).left(80), args[1], 1.1)
+		"locked":                                # our hit was absorbed by the host's lock
+			pop(LOCKED_TEXT, Color(COL_REJECT, 0.85), LOCKED_GAP)
 		"port":
 			var seconds := clampf(float(args[0]) if args.size() > 0 else open_time, 0.5, 30.0)
 			challenge = ""
@@ -309,5 +326,6 @@ func _punish() -> bool:
 	return hp.current_health <= 0.0
 
 
+## This machine's own player (in co-op the first in "players" may be another's, if ours is down).
 func _player() -> Node3D:
-	return get_tree().get_first_node_in_group("players") as Node3D
+	return Coop.own_player(get_tree()) as Node3D

@@ -311,7 +311,7 @@ class Plate extends PanelContainer:
 		var any_hint := false
 		for t in locks:
 			var lock := t as EnemyTrait
-			var line := "%s  %s" % [lock.lock_name(), lock.tag_state()]
+			var line := "%s  %s" % [lock.lock_name(), lock.shown_tag_state()]
 			widest = maxf(widest, 22.0 + f.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1,
 				roundi(15 * font_scale)).x)
 			any_hint = any_hint or (hints and lock.lock_hint() != "")
@@ -356,7 +356,7 @@ class Plate extends PanelContainer:
 			icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			row.add_child(icon)
 			row.add_child(_label(lock.lock_name(), 15, col))
-			var state := _label(lock.tag_state(), 15, COL_STATE)
+			var state := _label(lock.shown_tag_state(), 15, COL_STATE)
 			row.add_child(state)
 			_state_labels.append(state)
 			_locks_box.add_child(row)
@@ -373,7 +373,7 @@ class Plate extends PanelContainer:
 		for i in mini(locks.size(), _state_labels.size()):
 			if not is_instance_valid(locks[i]):
 				continue
-			var s: String = (locks[i] as EnemyTrait).tag_state()
+			var s: String = (locks[i] as EnemyTrait).shown_tag_state()   # (co-op: the host's on a copy)
 			if _state_labels[i].text != s:
 				_state_labels[i].text = s
 				changed = true

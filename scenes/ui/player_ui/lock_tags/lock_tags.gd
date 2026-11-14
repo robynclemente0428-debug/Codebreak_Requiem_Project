@@ -135,7 +135,7 @@ func _add_row(locks: Array, at: Vector2, alpha: float) -> void:
 			flash = maxf(flash, 0.35 + 0.35 * sin(Time.get_ticks_msec() / 1000.0 * 7.0))
 		var tag := {
 			"name": lock.lock_name(),
-			"state": lock.tag_state(),
+			"state": lock.shown_tag_state(),          # (a co-op guest's copy: the host's)
 			"color": lock.lock_color(),
 			"shape": lock.lock_shape(),
 			"flash": flash,

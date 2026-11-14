@@ -109,7 +109,7 @@ func modify_incoming(info: HitInfo) -> void:
 func after_hit(info: HitInfo) -> void:
 	if info.absorbed:
 		return
-	var by_player := info.cast != null and is_instance_valid(info.cast.caster) and info.cast.caster.is_in_group(&"players")
+	var by_player := info.facts != null and info.facts.by_player   # not an enemy's own skill
 	var how := "out_of_order" if _out_of_order else "in_order"
 	if by_player:
 		GameEvents.report(HIT_EVENT, how)

@@ -137,6 +137,13 @@ var _count: Label
 
 func _ready() -> void:
 	_build_hud()
+	if Coop.in_game:
+		# Co-op: the Null's node exists on every machine from the start, so the host's enemies
+		# land under it here too (Coop._spawn_from looks their parent up by path)
+		_enemies = Node3D.new()
+		_enemies.name = "DockNull"
+		get_parent().add_child.call_deferred(_enemies)
+		Coop.event_register(_key(), self)
 
 
 func _exit_tree() -> void:
@@ -146,7 +153,171 @@ func _exit_tree() -> void:
 		_set_alert(false)                        # leaving mid-fight
 
 
+# ---------- CO-OP ----------
+## The host's fight is the real one, like a WardBeacon: it starts while ANY player in the party
+## still needs it (a guest's copy says so: "hello"), any living player at the portal keeps it
+## loading, it is only called off once the whole party is down, and winning it counts for every
+## player who needed it ("done"). The other machines' copies only show what the host's is doing
+## ("state"): the HUD, the alert, the townsfolk running. Messages go through Coop.event_send.
+var _needed_by: Dictionary = {}          # host: peer id -> true, the guests who still need it
+var _hello_in := 0.5                     # guest: seconds until it next tells the host
+var _told_need := false                  # guest: what it last told the host
+var _state_in := 0.0                     # host: seconds until the next "state"
+var _alive_shown := 0                    # guest: the host's count of the Null left
+var _holding_shown := true               # guest: someone is at the portal
+
+
+func _key() -> String:
+	return "defense:%s" % get_parent().get_path_to(self)
+
+
+## True on a guest's machine in co-op: this fight only shows the host's.
+func _is_copy() -> bool:
+	return Coop.in_game and not Coop.is_host()
+
+
+func _is_on() -> bool:
+	return state == State.RUNNING or state == State.CLEARING
+
+
+## True while this machine's own player still needs the fight won (their quest asks for it).
+func _own_need() -> bool:
+	var qm := _qm()
+	if qm == null or not qm.is_active(quest_id) or qm.has_recovered(held_key):
+		return false
+	return after_key == "" or qm.has_recovered(after_key)
+
+
+## This player, or in co-op (on the host) any guest still in the session.
+func _anyone_needs() -> bool:
+	if _own_need():
+		return true
+	for id: int in _needed_by:
+		if Coop.roster.has(id):
+			return true
+	return false
+
+
+## True while any living player is within `metres` of the portal (in co-op: any of the party).
+func _anyone_within(metres: float) -> bool:
+	if not is_instance_valid(_portal):
+		return false
+	for p in get_tree().get_nodes_in_group("players"):
+		if (p as Node3D).global_position.distance_to(_portal.global_position) <= metres:
+			return true
+	return false
+
+
+func _alive_count() -> int:
+	return _alive_shown if _is_copy() else _alive.size()
+
+
+func _coop_tick(delta: float) -> void:
+	if _is_copy():
+		_hello_in -= delta
+		if _hello_in <= 0.0:
+			_hello_in = 2.0
+			var need := _own_need()
+			if need or _told_need:                 # while we need it, and once more when we stop
+				_told_need = need
+				Coop.event_send(_key(), "hello", [need])
+		return
+	if _is_on():
+		_state_in -= delta
+		if _state_in <= 0.0:
+			_state_in = 0.2
+			_send_state()
+
+
+func _send_state(peer: int = 0) -> void:
+	if Coop.in_game and Coop.is_host():
+		Coop.event_send(_key(), "state", [int(state), progress, _wave, _alive.size(),
+				_anyone_within(hold_radius), _state_extra()], peer)
+
+
+## More for the "state" message, and what a copy does with it (HullBreach: the deck systems).
+func _state_extra() -> Array:
+	return []
+
+
+func _apply_extra(_extra: Array) -> void:
+	pass
+
+
+func coop_message(what: String, args: Array, from: int) -> void:
+	if Coop.is_host():
+		if what == "hello" and args.size() == 1:
+			if args[0] == true:
+				_needed_by[from] = true
+			else:
+				_needed_by.erase(from)
+			_send_state(from)
+		return
+	if what == "state" and args.size() == 6:
+		progress = clampf(float(args[1]), 0.0, 1.0)
+		_wave = int(args[2])
+		_alive_shown = int(args[3])
+		_holding_shown = bool(args[4])
+		var was_on := _is_on()
+		state = clampi(int(args[0]), 0, State.size() - 1) as State
+		if _is_on() and not was_on:
+			_copy_started()
+		elif was_on and not _is_on():
+			_copy_stopped()
+		if args[5] is Array:
+			_apply_extra(args[5])
+	elif what == "done":
+		var was_on := _is_on()
+		state = State.DONE
+		if was_on:
+			_copy_stopped()
+		_copy_done(args)
+
+
+## The host's fight began: this machine shows it (no waves of its own: the host's arrive).
+func _copy_started() -> void:
+	if _find_portal() == null:
+		return
+	_title.text = title_text
+	_hud.visible = true
+	_set_alert(true)
+	QuestItems.toast(get_tree(), start_toast, COL_WARN)
+	if evacuate_npcs:
+		_evacuate()
+	if not _baked:
+		await _bake()                              # the townsfolk run along the navmesh
+
+
+## The host's fight ended (won, or called off): the HUD and the alert go; called off, the
+## townsfolk are back at their posts.
+func _copy_stopped() -> void:
+	_hud.visible = false
+	_set_alert(false)
+	if state == State.WAITING:
+		_restore_runners()
+
+
+## Won on the host. It counts for this player only if their own quest asked for it.
+func _copy_done(_args: Array) -> void:
+	if _own_need():
+		_qm().recover(held_key)
+	QuestItems.toast(get_tree(), done_toast, COL_GOOD)
+
+
+func _copy_run(delta: float) -> void:
+	if _baked:
+		for r in _runners:
+			_move_runner(r, delta)
+	_update_hud(_holding_shown)
+
+
 func _process(delta: float) -> void:
+	if Coop.in_game:
+		_coop_tick(delta)
+		if _is_copy():
+			if _is_on():
+				_copy_run(delta)
+			return
 	match state:
 		State.WAITING:
 			_restart_wait = maxf(_restart_wait - delta, 0.0)
@@ -161,7 +332,7 @@ func _process(delta: float) -> void:
 
 # ---------- STARTING ----------
 func _qm() -> QuestManager:
-	var p := _player()
+	var p := Coop.own_player(get_tree())         # this machine's own player, even while it's down
 	return p.get("quests") as QuestManager if p != null else null
 
 
@@ -179,10 +350,7 @@ func _find_portal() -> Node3D:
 
 
 func _wants_to_start() -> bool:
-	var qm := _qm()
-	if qm == null or not qm.is_active(quest_id) or qm.has_recovered(held_key):
-		return false
-	if after_key != "" and not qm.has_recovered(after_key):
+	if not _anyone_needs():
 		return false
 	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
 	if dialogue != null and dialogue.is_open():
@@ -196,7 +364,7 @@ func _wants_to_start() -> bool:
 		return false
 	if start_anywhere:
 		return _restart_wait <= 0.0
-	return player.global_position.distance_to(portal.global_position) <= trigger_radius
+	return _anyone_within(trigger_radius)
 
 
 func _start() -> void:
@@ -205,10 +373,11 @@ func _start() -> void:
 	_wave = 0
 	_next_wave = 1.5                      # a breath before the first wave
 	_collect_spawn_points()
-	var player := _player()
-	var hp := player.get("health") as HealthComponent
-	if hp != null and not hp.died.is_connected(_on_player_died):
-		hp.died.connect(_on_player_died)
+	for p in get_tree().get_nodes_in_group("players"):      # in co-op: the whole party
+		var hp := p.get("health") as HealthComponent
+		if hp != null and not hp.died.is_connected(_on_player_died):
+			hp.died.connect(_on_player_died)
+	_send_state()
 	_title.text = title_text
 	_hud.visible = true
 	if not is_instance_valid(_enemies):
@@ -334,7 +503,7 @@ func _run(delta: float) -> void:
 	var player := _player()
 	if player == null:
 		return
-	var holding := player.global_position.distance_to(_portal.global_position) <= hold_radius
+	var holding := _anyone_within(hold_radius)
 	if state == State.RUNNING:
 		if holding:
 			progress = minf(progress + delta / load_time, 1.0)
@@ -497,8 +666,11 @@ func _held() -> void:
 	_hud.visible = false
 	_set_alert(false)
 	var qm := _qm()
-	if qm != null:
+	if qm != null and (not Coop.in_game or _own_need()):   # co-op: only if our own quest asked for it
 		qm.recover(held_key)                         # opens the portal, completes the step
+	if Coop.in_game:                                 # and for every guest whose quest did
+		_needed_by.clear()
+		Coop.event_send(_key(), "done", [])
 	QuestItems.toast(get_tree(), done_toast, COL_GOOD)
 
 
@@ -507,6 +679,8 @@ func _held() -> void:
 func _on_player_died() -> void:
 	if state != State.RUNNING and state != State.CLEARING:
 		return
+	if _someone_stands():
+		return                                       # co-op: not while one of the party still stands
 	for e in _alive:
 		if is_instance_valid(e):
 			e.queue_free()
@@ -517,6 +691,16 @@ func _on_player_died() -> void:
 	_hud.visible = false
 	_set_alert(false)
 	_restore_runners()
+	_send_state()
+
+
+## True while any player is alive (the one whose death we are hearing about already isn't).
+func _someone_stands() -> bool:
+	for p in get_tree().get_nodes_in_group("players"):
+		var hp := p.get("health") as HealthComponent
+		if hp != null and hp.current_health > 0.0:
+			return true
+	return false
 
 
 ## The minimap: ATTACK with the Null on it while the fight is on, SAFE ZONE after.
@@ -706,7 +890,7 @@ func _update_hud(holding: bool) -> void:
 		_status.text = progress_text % roundi(progress * 100.0)
 		_status.add_theme_color_override("font_color", Color(0.85, 0.96, 1.0))
 	var wave := "WAVE %d/%d" % [_wave, wave_sizes.size()] if _wave > 0 else ""
-	if _alive.is_empty():
+	if _alive_count() <= 0:
 		_count.text = wave
 	else:
-		_count.text = (count_text % _alive.size()) + ("   ·   " + wave if wave != "" else "")
+		_count.text = (count_text % _alive_count()) + ("   ·   " + wave if wave != "" else "")

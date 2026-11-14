@@ -41,13 +41,13 @@ const MAX_PACKET := 6.0                          # seconds: a loop never reporti
 const COL_VERIFY := Color(0.55, 0.85, 1.0)
 
 var phase := Phase.LISTENING
-var _loop: ProgramLoopRunner                    # the loop being received
-var _repeats_seen: Array = []                    # its repeats that landed
+var _loop := ""                                  # the loop being received (HitFacts.loop_id, "" = none)
+var _repeats_seen: Array = []                    # its repeats that landed (HitFacts.cast_id)
 var _held := 0.0                                 # its damage, released if the checksum passes
 var _last_hit := 0.0
 var _started := 0.0
 var _verify_left := 0.0
-var _seen: Array = []                            # recent loops that hit it (never a packet twice)
+var _seen: Array = []                            # recent loops (ids) that hit it (never a packet twice)
 const SEEN_KEEP := 12
 
 
@@ -58,7 +58,7 @@ func progress() -> Vector2i:
 
 func modify_incoming(info: HitInfo) -> void:
 	super(info)
-	var runner := _runner_of(info.cast)
+	var runner := info.facts.loop_id if info.facts != null else ""   # the hit's loop ("" = none)
 	if not info.absorbed:
 		_mark_seen(runner)                              # in flight as the port closes: not a packet
 		return                                          # the port is open: hits land as usual
@@ -68,7 +68,7 @@ func modify_incoming(info: HitInfo) -> void:
 			pop("VERIFYING...", Color(COL_VERIFY, 0.8), IGNORED_GAP)
 			return                                      # taking nothing in
 		Phase.LISTENING:
-			if runner == null:
+			if runner == "":
 				pop("LOCKED // LOOPS ONLY", Color(COL_REJECT, 0.85), LOCKED_GAP)
 				return
 			if runner in _seen:
@@ -82,23 +82,22 @@ func modify_incoming(info: HitInfo) -> void:
 		return
 	_held += info.damage
 	_last_hit = _now()
-	var cast := info.cast
-	if cast.extra.get("loop_repeat", false) and not cast.extra.get("forked", false) \
-			and not (cast in _repeats_seen):
-		_repeats_seen.append(cast)
+	var f := info.facts
+	if f.loop_repeat and not f.forked and not (f.cast_id in _repeats_seen):
+		_repeats_seen.append(f.cast_id)
 		var n := _repeats_seen.size()
 		say("LOOP %d/%d" % [n, packets], COL_SHORT if n <= packets else COL_REJECT, 0.85)
 
 
-func _mark_seen(runner: ProgramLoopRunner) -> void:
-	if runner == null or runner in _seen:
+func _mark_seen(runner: String) -> void:
+	if runner == "" or runner in _seen:
 		return
 	_seen.append(runner)
 	if _seen.size() > SEEN_KEEP:
 		_seen.pop_front()
 
 
-func _begin(runner: ProgramLoopRunner) -> void:
+func _begin(runner: String) -> void:
 	_mark_seen(runner)
 	phase = Phase.RECEIVING
 	_loop = runner
@@ -111,7 +110,7 @@ func _begin(runner: ProgramLoopRunner) -> void:
 func _closed_process(delta: float) -> void:
 	match phase:
 		Phase.RECEIVING:
-			var looping := _loop != null and is_instance_valid(_loop) and not _loop.finished
+			var looping := _loop != "" and HitFacts.loop_running(_loop)   # still repeating
 			if _now() - _started > MAX_PACKET:
 				looping = false
 			if looping:
@@ -127,7 +126,7 @@ func _closed_process(delta: float) -> void:
 func _verify() -> void:
 	phase = Phase.VERIFYING
 	_verify_left = verify_time
-	_loop = null
+	_loop = ""
 	say("PACKET RECEIVED // VERIFYING...", COL_VERIFY, 1.0)
 
 
@@ -150,13 +149,6 @@ func _resolve() -> void:
 ## The port closed again: start listening from scratch.
 func _on_closed() -> void:
 	phase = Phase.LISTENING
-	_loop = null
+	_loop = ""
 	_repeats_seen.clear()
 	_held = 0.0
-
-
-## The loop a hit's cast belongs to (the cast that started it or one of its repeats), or null.
-func _runner_of(cast: SkillCast) -> ProgramLoopRunner:
-	if cast == null:
-		return null
-	return cast.extra.get(ProgramSupport.LOOP_KEY) as ProgramLoopRunner

@@ -77,7 +77,7 @@ Five acts, three endings. Each act is built around its boss fights. Every boss h
 
 Item level 55 bases are kept for a planned endgame past level 50: no Act V dungeon drops them (a dungeon drops bases from 10 levels below its level up to it).
 
-Status: Acts I, II and III are built, Act III through Root Access (details and differences in `CodeBreak_Requiem_Act_III_Plan.md`). Acts IV and V are still to come.
+Status: Acts I, II and III are built, Act III through Root Access (details and differences in `CodeBreak_Requiem_Act_III_Plan.md`). Acts IV and V are playable prototypes (the full Act V plan, what's built and what's left is in `CodeBreak_Requiem_Act_V_Plan.md`).
 
 ---
 

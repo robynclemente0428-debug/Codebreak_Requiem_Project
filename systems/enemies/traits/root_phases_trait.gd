@@ -61,6 +61,7 @@ func _process(_delta: float) -> void:
 
 
 func _enter(i: int) -> void:
+	_tell_copies("root_enter", [i])              # co-op: the copies change phase too (their FormShift)
 	phase = i
 	say(NAMES[i], COL_PHASE, 1.3)
 	if i == 2:
@@ -71,3 +72,12 @@ func _enter(i: int) -> void:
 		enemy.add_child(t)
 		(t as FormShift).setup(enemy)
 		enemy.traits.append(t)
+
+
+## On a guest's copy: the host's Root Process changed phase. The copy does too (adding its FormShift
+## in the last one, switched off like every trait on a copy, for the host's to speak through).
+func _copy_message(what: String, args: Array) -> void:
+	if what == "root_enter" and not args.is_empty():
+		var i := int(args[0])
+		if i > phase and i <= 2:
+			_enter(i)

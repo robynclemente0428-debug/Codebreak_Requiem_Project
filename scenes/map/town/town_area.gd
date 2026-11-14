@@ -197,7 +197,7 @@ func on_player_arrived(player: Node3D) -> void:
 
 ## Records this town in every seated character's save, so logging back in starts here.
 func _remember_town() -> void:
-	if scene_file_path.is_empty():
+	if scene_file_path.is_empty() or Coop.visiting:   # co-op: a visitor logs back in to their own town
 		return
 	for slot in SaveManager.party:
 		SaveManager.get_data(slot)[SaveManager.LAST_TOWN_KEY] = scene_file_path

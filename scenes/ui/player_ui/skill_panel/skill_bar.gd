@@ -169,6 +169,7 @@ func _sync() -> void:
 			continue
 		var skill: SkillInstance = null
 		var title := ""
+		var glyph := ""
 		if _skills:
 			var index: int = _skills.bindings.get(action, -1)
 			if index >= 0 and index < _skills.sockets.size():
@@ -176,8 +177,10 @@ func _sync() -> void:
 				skill = s.skill
 				if s.gem:
 					title = s.gem.definition.display_name
+					glyph = ItemGlyph.kind_for(s.gem.definition)
 		slot.skill = skill
 		slot.title = title.left(3).to_upper()
+		slot.glyph = glyph
 		slot.visible = not hide_empty_slots or skill != null
 		if skill:
 			var c := _on_skill_used.bind(action)
@@ -397,6 +400,13 @@ class BarSlot extends Control:
 			if value != badge:
 				badge = value
 				queue_redraw()
+	## The skill's symbol (an ItemGlyph kind), drawn in place of the title. "" = show the title
+	## (its first three letters).
+	var glyph := "":
+		set(value):
+			if value != glyph:
+				glyph = value
+				queue_redraw()
 	var _cd_left := 0.0
 	var _cd_total := 0.0
 	var _cd_text := false
@@ -432,15 +442,18 @@ class BarSlot extends Control:
 		draw_colored_polygon(poly, Color(col, 0.18 if has else 0.04))
 		var ok := affordable and usable
 		var edge := col if (ok or not has) else warn_col
-		draw_string(font, Vector2(0, h * 0.5 + 8.0), title, HORIZONTAL_ALIGNMENT_CENTER, w,
-			roundi(20 * font_scale), Color(col, 1.0 if ok else 0.45))
 		if hovered:
 			draw_polyline(outline, Color(edge, 0.25), 7.0, true)    # glow
 		draw_polyline(outline, Color(edge, 0.9 if has else 0.25), 2.0, true)
 
 		if has:
-			draw_string(font, Vector2(0, h * 0.5 + 8.0), title, HORIZONTAL_ALIGNMENT_CENTER, w,
-				roundi(20 * font_scale), Color(col, 1.0 if affordable else 0.45))
+			var ink := Color(col, 1.0 if affordable else 0.45)
+			var top := 18.0 * font_scale                 # clear of the key text
+			var bottom := 14.0 * font_scale              # clear of the mana cost
+			var area := Rect2(w * 0.16, top, w * 0.68, h - top - bottom)
+			if glyph == "" or not ItemGlyph.draw(self, glyph, area, ink):
+				draw_string(font, Vector2(0, h * 0.5 + 8.0), title, HORIZONTAL_ALIGNMENT_CENTER, w,
+					roundi(20 * font_scale), ink)
 			if mana_cost > 0.0:
 				draw_string(font, Vector2(0, h - 6.0), GemText.num(mana_cost),
 					HORIZONTAL_ALIGNMENT_RIGHT, w - 6.0, roundi(12 * font_scale),

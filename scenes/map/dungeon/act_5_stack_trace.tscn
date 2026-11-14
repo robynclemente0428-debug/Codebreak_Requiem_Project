@@ -13,6 +13,9 @@
 [ext_resource type="Resource" uid="uid://0romkytgua4l" path="res://data/enemies/raider_boss.tres" id="e_raider"]
 [ext_resource type="Resource" uid="uid://6u4xrmsv0ii1" path="res://data/enemies/loop_hound.tres" id="e_hound"]
 [ext_resource type="Resource" path="res://data/enemies/null_weaver.tres" id="e_weaver"]
+[ext_resource type="PackedScene" path="res://scenes/npc/vesper.tscn" id="n_vesper"]
+[ext_resource type="Resource" path="res://data/dialogue/vesper_field.tres" id="n_vesper_dlg"]
+[ext_resource type="Script" path="res://systems/world/stand_near_arrival.gd" id="n_stand"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_1"]
 agent_height = 1.8
@@ -144,3 +147,12 @@ rarity = "rare"
 drops_key = "architect_log_c"
 clear_room = false
 metadata/_custom_type_script = "uid://bri1ph1ms875r"
+
+[node name="Vesper" parent="." instance=ExtResource("n_vesper")]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 12, 1.1, 97.6)
+npc_id = "vesper_field"
+info_description = "She is reading the replayed fights on the walls, mouthing along."
+dialogue = ExtResource("n_vesper_dlg")
+
+[node name="StandNearArrival" type="Node" parent="Vesper"]
+script = ExtResource("n_stand")

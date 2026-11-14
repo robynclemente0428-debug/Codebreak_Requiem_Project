@@ -60,7 +60,7 @@ static var _mirror_until := 0.0
 
 var _copied := ""                                # the rules of the last cast it copied
 var _copied_buff := 0.0                          # that cast's damage buff (+2.0 = +200%)
-var _landing: Object = null                      # the cast landing now: all its hits count
+var _landing := ""                               # the cast landing now (HitFacts.root_id): all its hits count
 var _loadout := ""
 var _copy_at := -10.0
 var _next_mirror := 0.0                          # when it may start charging again
@@ -89,20 +89,20 @@ func tag_state() -> String:
 
 
 func modify_incoming(info: HitInfo) -> void:
-	if info.cast == null or not info.cast.is_valid():
+	var f := info.facts
+	if f == null:
 		return
-	_note_loadout(info)
-	var root := _root_of(info.cast)
-	if root == _landing:
+	_note_loadout(f)
+	if f.root_id == _landing:                     # a loop's repeats count as the cast that started them
 		return
-	var key := rules_of(info.cast)
+	var key := rules_of(f)
 	if key == "" or key == _copied:
 		info.absorbed = true
 		pop("NO DIFF", COL_SAME, NO_DIFF_GAP)
 		return
 	_copied = key
-	_copied_buff = maxf((root as SkillCast).damage_mult - 1.0, 0.0) if root is SkillCast else 0.0
-	_landing = root
+	_copied_buff = maxf(f.root_damage_mult - 1.0, 0.0)
+	_landing = f.root_id
 	say("DIFF: %s" % key.replace("_", " ").replace(",", " + ").to_upper(), COL_DIFF, 0.95)
 
 
@@ -134,11 +134,13 @@ func _process(_delta: float) -> void:
 	_charging.create_tween().tween_property(_charging, "scale", Vector3.ONE, mirror_charge)
 	_charge_end = now + mirror_charge
 	_mirror_until = now + mirror_charge + 3.0          # held while it charges; set exactly on the throw
+	_tell_copies("diff_charge", [mirror_charge])     # co-op: the copies show the orb charging too
 	say("MIRRORING: %s" % _copied.replace("_", " ").replace(",", " + ").to_upper(), COL_MIRROR, 0.95)
 
 
 ## Throws the charged orb at where the player stands now, carrying the rule copied now.
 func _throw() -> void:
+	_tell_copies("diff_drop", [])                    # co-op: theirs goes; the flight is drawn (LockBlast.orb)
 	var orb := _charging
 	_charging = null
 	var now := Time.get_ticks_msec() / 1000.0
@@ -174,6 +176,7 @@ func _target() -> Node3D:
 
 func _drop_charge() -> void:
 	if _charging != null:
+		_tell_copies("diff_drop", [])
 		_drop_orb(_charging)
 		_charging = null
 		_mirror_until = 0.0
@@ -187,28 +190,44 @@ static func _drop_orb(orb: MeshInstance3D) -> void:
 ## RECALL swaps this lock out mid-fight: an orb still charging goes with it.
 func _exit_tree() -> void:
 	_drop_charge()
+	_drop_orb(_copy_orb)
 
 
-## The WHEN rules that fired for this cast, as text that's the same for the same rules.
-static func rules_of(cast: SkillCast) -> String:
-	var fired: Array = ProgramSupport.fired_conditions(cast)
+# ---------- CO-OP: A GUEST'S COPY ----------
+## The orb charging on the host's Diff, shown on the copy: on the enemy itself (nothing runs on a
+## copy per frame, so it rides along as a child). The throw is drawn by Coop.show_orb.
+var _copy_orb: MeshInstance3D
+
+
+func _copy_message(what: String, args: Array) -> void:
+	match what:
+		"diff_charge":
+			_drop_orb(_copy_orb)
+			var seconds := clampf(float(args[0]) if not args.is_empty() else mirror_charge, 0.1, 10.0)
+			_copy_orb = LockBlast.make_orb(COL_MIRROR, 0.3)
+			_copy_orb.top_level = false
+			enemy.add_child(_copy_orb)
+			_copy_orb.position = Vector3.UP * 2.0
+			_copy_orb.scale = Vector3.ONE * 0.3
+			_copy_orb.create_tween().tween_property(_copy_orb, "scale", Vector3.ONE, seconds)
+		"diff_drop":
+			_drop_orb(_copy_orb)
+			_copy_orb = null
+
+
+## The WHEN rules that fired for this hit's cast, as text that's the same for the same rules.
+static func rules_of(f: HitFacts) -> String:
+	var fired: Array = f.fired.duplicate()
 	fired.sort()
 	return ",".join(PackedStringArray(fired))
 
 
-## A loop's repeats, and a cast's follow-ups, count as the cast that started them.
-func _root_of(cast: SkillCast) -> Object:
-	var runner := cast.extra.get(ProgramSupport.LOOP_KEY) as ProgramLoopRunner
-	return runner.root if runner != null and runner.root != null else cast
-
-
 ## It copies whatever hits it: its next attack is that skill. A swap only earns a taunt.
-func _note_loadout(info: HitInfo) -> void:
-	if info.cast.skill == null or info.cast.skill.gem == null:
+func _note_loadout(f: HitFacts) -> void:
+	if f.gem == null:
 		return
-	var gem: SkillGemDefinition = info.cast.skill.gem
-	var skills := info.cast.caster.get("skills") as SkillComponent
-	var now_loadout := "%s|%d" % [gem.id, skills.script_set if skills != null else 0]
+	var gem: SkillGemDefinition = f.gem
+	var now_loadout := "%s|%d" % [gem.id, maxi(f.script_set, 0)]   # a hologram (-1) counts as set 0
 	if now_loadout == _loadout:
 		return
 	if _loadout != "":

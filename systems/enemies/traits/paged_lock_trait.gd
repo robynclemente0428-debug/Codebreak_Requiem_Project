@@ -71,11 +71,10 @@ func _process(delta: float) -> void:
 
 
 func _page(out: bool) -> void:
+	_tell_copies("trait_page", [out])            # co-op: the copies fade too
 	_out = out
 	_t = 0.0
-	for m in _meshes:
-		if is_instance_valid(m):
-			(m as GeometryInstance3D).transparency = FADE if out else 0.0
+	_fade(out)
 	if out:
 		var ai = enemy.get("ai")
 		if ai != null and "busy_time" in ai:
@@ -91,13 +90,31 @@ func modify_incoming(info: HitInfo) -> void:
 		pop("PAGED OUT", COL_OUT, 0.8)
 
 
-## True when any of the player's skills has this enemy in its registry.
+## True when any player's skills have this enemy in their registry: ours, or (co-op) a guest's,
+## as the guest reports it (Coop.referenced_elsewhere).
 func _is_referenced() -> bool:
-	var player := get_tree().get_first_node_in_group("players")
+	return holds(Coop.own_player(get_tree()), enemy) or Coop.referenced_elsewhere(enemy)
+
+
+## True when `player`'s skills have `target` in one of their registries.
+static func holds(player: Node, target: Node) -> bool:
 	var sk := player.get("skills") as SkillComponent if player != null else null
 	if sk == null:
 		return false
 	for s in sk.sockets:
-		if s.program != null and ScriptRegisters.has(s.program.state().registers, enemy):
+		if s.program != null and ScriptRegisters.has(s.program.state().registers, target):
 			return true
 	return false
+
+
+func _fade(out: bool) -> void:
+	for m in _meshes:
+		if is_instance_valid(m):
+			(m as GeometryInstance3D).transparency = FADE if out else 0.0
+
+
+## On a guest's copy: the host's paged out, or back in. Only the look (and _out, for the tag).
+func _copy_message(what: String, args: Array) -> void:
+	if what == "trait_page" and not args.is_empty():
+		_out = bool(args[0])
+		_fade(_out)

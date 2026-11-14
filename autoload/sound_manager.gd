@@ -134,6 +134,7 @@ func _on_node_added(node: Node) -> void:
 		var hc := node as HealthComponent
 		if not hc.damage_taken.is_connected(_on_damage_taken):
 			hc.damage_taken.connect(_on_damage_taken.bind(hc))
+			hc.damage_shown.connect(_on_damage_taken.bind(hc))   # co-op: a hit another machine applied
 		return
 	if node is BaseButton and not node.has_meta("no_click_sound"):
 		var b := node as BaseButton
@@ -176,7 +177,7 @@ func play_skill(key: String, source: Node3D, hit_in: float) -> void:
 		await get_tree().create_timer(wait, false).timeout
 		if not is_instance_valid(source):
 			return
-	if source.is_in_group("players"):
+	if _is_own_player(source):
 		_play_flat(entry[0], entry[2])
 	else:
 		_play_at(source, entry[0], entry[2])
@@ -197,7 +198,7 @@ func play_gunshot(shooter: Node3D) -> void:
 			gun = weapon.definition.weapon_type.id
 	var entry: Array = GUN_SOUNDS[gun]
 	var pitch := randf_range(1.0 - GUN_PITCH_JITTER, 1.0 + GUN_PITCH_JITTER)
-	if shooter.is_in_group("players"):
+	if _is_own_player(shooter):
 		_play_flat(entry[0], entry[1], pitch)
 	else:
 		_play_at(shooter, entry[0], entry[1], pitch)
@@ -251,10 +252,16 @@ func _on_damage_taken(amount: float, hc: HealthComponent) -> void:
 	if now - int(_last_hurt.get(key, -100000)) < int(HURT_COOLDOWN * 1000.0):
 		return
 	_last_hurt[key] = now
-	if target.is_in_group("players"):
+	if _is_own_player(target):
 		_play_flat(TAKE_DAMAGE, PLAYER_HURT_DB, randf_range(0.95, 1.05), TAKE_DAMAGE_LENGTH)
 	else:
 		_play_at(target, TAKE_DAMAGE, ENEMY_HURT_DB, randf_range(1.05, 1.25), TAKE_DAMAGE_LENGTH)
+
+
+## True for this machine's own character: its sounds play flat. Another player's character in
+## co-op (Player.is_remote) is heard from where it stands, like an enemy, and fades with distance.
+func _is_own_player(node: Node) -> bool:
+	return node.is_in_group("players") and node.get("is_remote") != true
 
 
 ## A one-off sound with no position (the local player's own sounds).

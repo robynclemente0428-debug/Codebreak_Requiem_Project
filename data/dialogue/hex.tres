@@ -21,6 +21,51 @@ source = "# Tinker Hex: trader. Sarcastic, fair. Gives Salvage Rights (Act I) an
 @ quest_ready:static_from_home -> ready_static
 @ quest_active:static_from_home -> remind_static
 @ can_start:static_from_home -> offer_static
+# Act V: Hex came along (Root Access). One-time lines in the Core ('said' deeds)
+@ quest_done:q08_null_gatekeeper -> core
+-> idle
+
+~ core
+@ !deed:said:hex_core -> core_first
+@ quest_done:q10_root_process -> core_end
+@ deed:said:vesper_packet -> core_packet_check
+@ quest_done:paged_out -> core_paged_check
+-> idle
+
+~ core_first
+> report said hex_core
+Hex: Shop's open. Don't ask what currency they use down here. I'm still charging in ours.
+Hex: Credits are worth exactly what someone will sell you for them. Down here, that's me. So they're worth a lot.
+Hex: I said nobody sells anything past the gate, and that's why I came. I didn't say I'd like it.
+-> idle
+
+~ core_packet_check
+@ !deed:said:hex_packet -> core_packet
+@ quest_done:paged_out -> core_paged_check
+-> idle
+
+~ core_packet
+> report said hex_packet
+Hex: Vesper's been looking at me funny. Like she read something she shouldn't have.
+Hex: If it's about the packet, I don't want to know. Brack's voice is Brack's voice. That's all I'm keeping.
+-> idle
+
+~ core_paged_check
+@ !deed:said:hex_paged -> core_paged
+-> idle
+
+~ core_paged
+> report said hex_paged
+Hex: Paged out. So that's where things go when nobody's holding on to them. Explains my inventory.
+-> idle
+
+~ core_end
+@ deed:ending:any -> core_after
+Hex: Whatever you pick down there, I want it in writing. A receipt. Something.
+-> idle
+
+~ core_after
+Hex: You picked. I'm still here, so I'm calling it a good sale.
 -> idle
 
 ~ offer_static

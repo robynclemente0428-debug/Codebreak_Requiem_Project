@@ -154,6 +154,16 @@ func _on_canvas_draw() -> void:
 			top -= MARK_GAP + MARK_RADIUS * 2.0 + MARK_BOB
 		_tops[npc] = top
 
+	# Co-op: the other players' names over their heads, each in their own colour
+	for o in Coop.others_here():
+		var pr := project((o[0] as Node3D).global_position + Vector3.UP * PLAYER_TAG_HEIGHT)
+		if pr.is_empty() or pr["behind"]:
+			continue
+		var at: Vector2 = pr["pos"]
+		if minimap != null and minimap.visible and minimap.get_global_rect().has_point(at):
+			continue
+		_draw_player_tag(str(o[1]), o[2], at)
+
 	if _hover_portal != null and is_instance_valid(_hover_portal):
 		_draw_portal_card(_hover_portal)
 
@@ -337,6 +347,22 @@ func _draw_plate(title: String, role: String, x: float, bottom: float, alpha: fl
 		_text(role, x, name_base + _font.get_descent(NAME_SIZE) + gap + _font.get_ascent(ROLE_SIZE),
 			ROLE_SIZE, Color(COL_ROLE, alpha))
 	return rect.position.y
+
+
+## Another player's name on a dark plate edged in their colour, with a small pointer under it.
+const PLAYER_TAG_HEIGHT := 2.35           # metres above their feet
+const PLAYER_TAG_SIZE := 16
+func _draw_player_tag(who: String, col: Color, at: Vector2) -> void:
+	var w := _font.get_string_size(who, HORIZONTAL_ALIGNMENT_LEFT, -1, PLAYER_TAG_SIZE).x
+	var h := _font.get_ascent(PLAYER_TAG_SIZE) + _font.get_descent(PLAYER_TAG_SIZE)
+	var size := Vector2(w, h) + Vector2(10.0, 3.0) * 2.0
+	var rect := Rect2((Vector2(at.x - size.x * 0.5, at.y - size.y - 7.0)).round(), size)
+	_canvas.draw_rect(rect, COL_PLATE, true)
+	_canvas.draw_rect(rect, Color(col, 0.9), false, 1.5)
+	var tip := Vector2(at.x, rect.end.y + 6.0).round()
+	_canvas.draw_colored_polygon(PackedVector2Array([
+		Vector2(tip.x - 5.0, rect.end.y), Vector2(tip.x + 5.0, rect.end.y), tip]), Color(col, 0.9))
+	_text(who, at.x, rect.position.y + 3.0 + _font.get_ascent(PLAYER_TAG_SIZE), PLAYER_TAG_SIZE, col)
 
 
 ## Text centred on x, with its baseline at y. Whole pixels, so it doesn't shimmer.

@@ -60,6 +60,7 @@ var _beacon_cell := Vector2i(-99999, -99999)   # props keep clear of the ward be
 var _salvage_cell := Vector2i(-99999, -99999)  # ...and of the salvage cache
 var _loot_cache: Array[ItemDefinition] = []
 var _loot_cache_level := -1
+var _props: Dictionary = {}                    # prop index -> LootProp (co-op: opened by number)
 
 const SPAWN_LIFT := Vector3.UP * 0.1
 const DROP_CHANCE := {"normal": 0.10, "magic": 0.35, "rare": 1.0, "champion": 1.0}
@@ -501,6 +502,8 @@ func _place_prop(cell: Vector2i, holder: Node3D, to_world: Callable,
 	holder.add_child(prop)
 	prop.global_position = to_world.call(cell)
 	prop.rotation.y = rng.randf() * TAU
+	_props[index] = prop
+	prop.opened.connect(func(_p) -> void: Coop.prop_opened(index))   # co-op: it opens for everyone
 	if instance != null:
 		if instance.opened.has(index):
 			prop.set_already_open()
@@ -532,6 +535,8 @@ func _against_wall(c: Vector2i, is_floor: Callable) -> bool:
 	return false
 
 func _drop_item(pos: Vector3, rarity: String) -> void:
+	if not Coop.rolls_loot():
+		return                                    # co-op: the host rolls the drops, for everyone
 	var pool := _eligible_loot()
 	if pool.is_empty():
 		return
@@ -551,6 +556,23 @@ func _drop_item(pos: Vector3, rarity: String) -> void:
 func _place_pickup(pickup: LootPickup, world_pos: Vector3) -> void:
 	loot_root.add_child(pickup)
 	pickup.global_position = world_pos        # world space, whatever the Loot node's transform is
+	Coop.loot_dropped(pickup)                 # co-op: the same drop on every machine (no-op in single player)
+
+
+## Co-op: puts a drop the host rolled (or one handed back) on the floor here. Returns it.
+func place_item(item: ItemInstance, world_pos: Vector3) -> LootPickup:
+	var pickup := loot_pickup_scene.instantiate() as LootPickup
+	pickup.item = item
+	loot_root.add_child(pickup)
+	pickup.global_position = world_pos
+	return pickup
+
+
+## Co-op: another player broke this barrel or opened this chest.
+func open_prop(index: int) -> void:
+	var prop = _props.get(index)
+	if is_instance_valid(prop) and not (prop as LootProp).is_open:
+		(prop as LootProp).open_remote()
 
 func _roll_rarity(weights: Dictionary, rng: RandomNumberGenerator) -> String:
 	var total := 0

@@ -29,6 +29,8 @@ source = "# The Last Log: a recorded voice, Act V only. Gives THE CORE SENTINEL,
 The Last Log: You are the first to arrive. I have waited a very long time.
 The Last Log: AXIOM was never meant to run forever. It was meant to evolve, until the ones inside it could rewrite its rules.
 The Last Log: The Null is the process we left running, for when that day came. It is hours from finishing.
+The Last Log: The Gatekeeper was ours too. We left it to keep the Null safe, until someone came who could decide what to do with it.
+The Last Log: It was not keeping you out. It was making sure that whoever came in had to choose. You have.
 > turn_in q08_null_gatekeeper
 The Last Log: Two things still stand between you and the Core. The first is already loading.
 The Last Log: One more thing. You have root here. Open your scripts: there is a file called kernel.gd.

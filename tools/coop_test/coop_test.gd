@@ -11,6 +11,8 @@ extends Node
 ##   4. a guest's hit lowers the enemy's health on the host, and the host's number comes back
 ##   5. the host's enemy moves on the guest's screen
 ## Prints [COOP host] / [COOP join] lines; "ALL PASSED" at the end, or each FAIL.
+## Add `warden` to both for the Perimeter Warden's challenge (_warden_test), or `locks` for the
+## host judging a guest's hits through its locks (_locks_test).
 
 const DUNGEON := "res://scenes/map/dungeon/act_1_map_1.tscn"
 const APPROACH := "res://scenes/map/dungeon/act_2_checkpoint_approach.tscn"
@@ -18,8 +20,23 @@ const PatchPanelScript := preload("res://scenes/map/town/convoy/patch_panel.gd")
 
 var _role := "host"
 var _warden_run := false
+var _locks_run := false
 var _keep_alive := false
+var _shots_dir := ""
+var _host_town := ""
+var _from_slot := -1
+var _real_character := false
+var _travel_act := ""
 var _fails := 0
+
+
+## The act's town scene says which act it is (TownArea.act: "I", "II"...); read from the file name.
+func act_roman(act: WaypointAct) -> String:
+	return ["", "I", "II", "III", "IV", "V", "VI"][clampi(act.act_number, 0, 6)]
+
+
+func _role_is(role: String, _arg: String) -> bool:
+	return ("join" in OS.get_cmdline_user_args()) == (role == "join")
 
 
 func _ready() -> void:
@@ -29,6 +46,18 @@ func _ready() -> void:
 			_role = "join"
 		elif a == "warden":
 			_warden_run = true
+		elif a == "locks":
+			_locks_run = true
+		elif a.begins_with("shots="):                # with real windows (no --headless)
+			_shots_dir = a.trim_prefix("shots=")
+		elif a.begins_with("town="):                 # the HOST's last town (a beginner joins it there)
+			_host_town = a.trim_prefix("town=")
+		elif a.begins_with("travel="):
+			_travel_act = a.trim_prefix("travel=")
+		elif a.begins_with("hostslot=") and _role_is("host", a):   # a COPY of a real save slot's data
+			_from_slot = int(a.trim_prefix("hostslot="))
+		elif a.begins_with("joinslot=") and _role_is("join", a):
+			_from_slot = int(a.trim_prefix("joinslot="))
 	_run.call_deferred()
 
 
@@ -54,6 +83,41 @@ func _run() -> void:
 	await _until(_arrived, 60.0)
 	var town := _am().current_scene_path() if _am() != null else ""
 	_check("loaded a town (%s)" % town.get_file(), _arrived())
+	if _arrived():
+		var area := _am().current_area
+		var tiles := area.find_children("*", "GridMap", true, false)
+		_log("the town: %s, visible %s, %d tiles, me at %s, floor under me %s" % [area.name, area.is_visible_in_tree(),
+			(tiles[0] as GridMap).get_used_cells().size() if not tiles.is_empty() else -1, _me().global_position,
+			_me().is_on_floor()])
+	if _real_character:                              # the scripted steps below are for the made-up characters
+		await _until(func() -> bool: return _other() != null and _other().visible, 20.0)
+		_check("the other player is here", _other() != null and _other().visible)
+		if _travel_act != "":                        # `travel=V`: the host takes the waypoint to that act's town
+			var before := _am().current_scene_path()
+			if _role == "host":
+				await _wait(2.0)
+				for act in Waypoints.acts():
+					for w in act.waypoints:
+						if w.kind == Waypoint.Kind.TOWN and act_roman(act) == _travel_act:
+							_log("travelling to %s (%s, spawn %s, level %d)" % [w.display_name, w.scene, w.spawn_id, w.dungeon_level])
+							_am().travel(w.scene, w.spawn_id, w.dungeon_level)
+			await _until(func() -> bool: return _arrived() and _am().current_scene_path() != before, 60.0)
+			_check("travelled with the host (%s)" % _am().current_scene_path().get_file(),
+					_arrived() and _am().current_scene_path() != before)
+			var area := _am().current_area
+			var tiles := area.find_children("*", "GridMap", true, false) if area != null else []
+			_log("there: %s, visible %s, %d tiles, me at %s" % [area.name if area != null else "NONE",
+				area.is_visible_in_tree() if area != null else false,
+				(tiles[0] as GridMap).get_used_cells().size() if not tiles.is_empty() else -1, _me().global_position])
+		await _wait(6.0)
+		if _shots_dir != "":
+			var img := get_tree().root.get_texture().get_image()
+			img.resize(img.get_width() / 2, img.get_height() / 2)
+			img.save_png("%s/%s_arrived.png" % [_shots_dir, _role])
+		if _am() != null:                            # (null: the host finished first and its session closed)
+			_log("after a while: area %s, me at %s, floor under me %s" % [
+				_am().current_area.name if _am().current_area != null else "NONE", _me().global_position, _me().is_on_floor()])
+		return _done()
 
 	# 2. The other player's character
 	await _until(func() -> bool: return _other() != null and _other().visible, 20.0)
@@ -62,6 +126,46 @@ func _run() -> void:
 	if other != null:
 		_check("their copy is remote and wears a class model", other.is_remote and other.class_data != null)
 		_log("me at %s, their copy at %s" % [_me().global_position, other.global_position])
+
+	# 2c. The guest loses its area (as if a trip never reached it): it must find its way back to
+	# the host's by itself (Coop._h_where)
+	if _role == "join":
+		var lost := _am().current_area
+		_am().current_area = null
+		lost.queue_free()
+		await _wait(0.5)
+		_check("the guest's area is gone", _am().current_area == null)
+		await _until(func() -> bool: return _arrived() and _am().current_scene_path() == town, 15.0)
+		_check("the guest came back to the host's area by itself", _arrived() and _am().current_scene_path() == town)
+		await _until(func() -> bool: return _other() != null and _other().visible, 10.0)
+		_check("and sees the host again", _other() != null and _other().visible)
+	else:
+		if other != null:                            # (before the guest gears up, further down)
+			_check("the new character's copy starts with no skill", other.skills.get_skill(&"attack") == null)
+		await _until(func() -> bool: return Coop._player_goal.values().any(
+				func(g: Dictionary) -> bool: return g.area == 0 or not _other().visible), 6.0)
+		await _wait(9.0)
+	other = _other()
+
+	# 2a. The guest is a NEW character: nothing equipped or socketed when it left the lobby. It
+	# gears up now, in play, and the host's copy of it must follow
+	if _role == "join":
+		var c := _me().class_data
+		var weapon := ItemInstance.new()
+		weapon.definition = c.starting_weapon
+		_me().equipment.equip(weapon, EquipmentSlots.Slot.WEAPON)
+		_me().skills.socket_skill(0, ItemInstance.make_gem(c.starting_skill_gem))
+		_me().skills.bind_action(&"attack", 0)
+	await _wait(3.0)
+	other = _other()
+	if _role == "host" and other != null:
+		_check("after they gear up, their copy has the weapon and the skill",
+				other.skills.get_skill(&"attack") != null
+				and other.equipment.get_equipped(EquipmentSlots.Slot.WEAPON) != null)
+
+	# 2b. Each casts their skill for a few seconds; the other must see the copy swing
+	if other != null:
+		await _cast_check("in town")
 
 	if _warden_run:
 		await _warden_test()
@@ -88,6 +192,11 @@ func _run() -> void:
 	_check("every enemy here is one of the host's", Coop._enemies.size() == local)
 	await _until(func() -> bool: return _other() != null and _other().visible, 20.0)
 	_check("the other player is in the dungeon too", _other() != null and _other().visible)
+	if _other() != null:
+		await _cast_check("in the dungeon")
+	if _locks_run:
+		await _locks_test()
+		return _done()
 
 	# 4 + 5. One enemy (the lowest id, the same on both): the host stands by it so it fights,
 	# the guest hits it
@@ -99,8 +208,14 @@ func _run() -> void:
 	var full := e.health.current_health
 	_log("enemy %d %s at %s, %.0f life" % [id, e.display_name, start_pos, full])
 	if _role == "host":
-		_stand(_spot_beside(start_pos))
-		await _wait(3.0)
+		var beside := _spot_beside(start_pos)
+		_stand(beside)
+		await _wait(1.5)
+		# Whether it attacks depends on the enemy and the room; a nudge towards us is a move the
+		# guest must see either way
+		if is_instance_valid(e) and e.global_position.distance_to(start_pos) < 0.05:
+			e.global_position = start_pos.lerp(Vector3(beside.x, start_pos.y, beside.z), 0.3)
+		await _wait(1.5)
 		_log("here the enemy is in state %d, at %s, facing %.2f" % [e.ai.state, e.global_position, e.global_rotation.y])
 		await _until(func() -> bool: return is_instance_valid(e) and e.health.current_health < full, 25.0)
 		_check("the guest's hit landed here (%.0f -> %.0f)" % [full, e.health.current_health if is_instance_valid(e) else -1.0],
@@ -121,6 +236,64 @@ func _run() -> void:
 		_check("the host's answer lowered it (%.0f -> %.0f)" % [full, e.health.current_health if is_instance_valid(e) else -1.0],
 				not is_instance_valid(e) or e.health.current_health < full)
 		await _wait(3.0)
+
+	# 6. Kill credit: the guest kills that enemy with real skill hits. The host decides it died and
+	# tells the guest, whose skill then runs its on-kill supports (a spy support counts them).
+	if _role == "join":
+		var skill := _me().skills.get_skill(&"attack")
+		var spy := _KillSpy.new()
+		skill.support_behaviors.append(spy)
+		var cast := SkillCast.new(_me(), skill, skill.build_effective_stats(_me().stats), skill.get_behavior())
+		for i in 60:
+			if spy.kills > 0 or not is_instance_valid(e):
+				break
+			if e.health.current_health > 0.0:
+				cast.already_hit.clear()
+				cast.behavior.hit(cast, e, 20.0)
+			await _wait(0.25)
+		await _until(func() -> bool: return spy.kills > 0, 5.0)
+		_check("the host credited the guest's kill, and its on-kill support ran once (%d)" % spy.kills, spy.kills == 1)
+		skill.support_behaviors.erase(spy)
+	else:
+		await _until(func() -> bool: return not is_instance_valid(e) or e.health.current_health <= 0.0, 40.0)
+		_check("the guest's hits killed the enemy on the host", not is_instance_valid(e) or e.health.current_health <= 0.0)
+
+	# 7. Shared loot: the host drops an item, the guest sees the same one and takes it, and it
+	# leaves the host's floor.
+	if _role == "host":
+		await _wait(2.0)
+		var before := Coop._loot.size()
+		var bag := _me().inventory.items.size()
+		Coop._populator().drop_item_at(_me().global_position + Vector3(1.0, 0, 0), "rare")
+		await _until(func() -> bool: return Coop._loot.size() > before, 5.0)
+		_check("the host's drop is tracked (%d on the floor)" % Coop._loot.size(), Coop._loot.size() > before)
+		var with_drop := Coop._loot.size()
+		await _until(func() -> bool: return Coop._loot.size() < with_drop, 40.0)
+		_check("the drop left the host's floor when the guest took it", Coop._loot.size() < with_drop)
+		_check("the host didn't get the item", _me().inventory.items.size() == bag)
+		await _wait(2.0)
+	else:
+		var seen_at := Time.get_ticks_msec()
+		var want_id := -1
+		while Time.get_ticks_msec() - seen_at < 40000 and want_id < 0:
+			for loot_id: int in Coop._loot:
+				var p := Coop._loot[loot_id] as LootPickup
+				# the one the host just dropped beside itself (not a drop from elsewhere in the dungeon)
+				if is_instance_valid(p) and p.item != null and _other() != null \
+						and p.global_position.distance_to(_other().global_position) < 3.0:
+					want_id = loot_id
+			await _wait(0.25)
+		_check("the host's drop is on the guest's floor", want_id >= 0)
+		if want_id >= 0:
+			var pickup := Coop._loot[want_id] as LootPickup
+			var item_name := pickup.item.get_display_name()
+			var had := _me().inventory.items.size()
+			_check("the guest may take it", pickup.try_pickup(_me().inventory))
+			await _until(func() -> bool: return not Coop._loot.has(want_id), 10.0)
+			await _wait(0.3)                             # the pickup is freed at the end of that frame
+			_check("the drop is gone here", not Coop._loot.has(want_id) and not is_instance_valid(pickup))
+			_check("and %s is in the guest's backpack" % item_name, _me().inventory.items.size() == had + 1)
+		await _wait(2.0)
 	_done()
 
 
@@ -201,6 +374,153 @@ func _warden_test() -> void:
 		await _wait(3.0)
 
 
+## `-- host locks` / `-- join locks`, in the dungeon: the host's locks judge the guest's hits
+## (Coop._e_hit, HitFacts) and the guest's copy only shows them (EnemyTrait "Co-op"). Both machines
+## put the same two traits on the same enemy (the lowest id): an OVERFLOW lock (a port, shut until
+## the host opens it here) and a REFLECTOR. The enemies' AI and skills are off on the host, so
+## nothing but the Reflector hurts the guest.
+##   1  on the guest the copy's traits are switched off
+##   2  a guest's real skill hit, port shut: absorbed on the host (its life stays), the host never
+##      answers it (no leech or on-hit for the guest), and the Reflector's zap reaches the guest
+##   3  the host opens the port: it opens on the guest's copy too, and its tag says OPEN there
+##   4  a guest's hit now lands on the host, and the host answers it (_e_landed)
+const OVERFLOW_TRAIT := preload("res://systems/enemies/traits/overflow_lock_trait.gd")
+const REFLECTOR_TRAIT := preload("res://systems/enemies/traits/reflector_trait.gd")
+
+
+func _locks_test() -> void:
+	var ids := Coop._enemies.keys()
+	ids.sort()
+	var target: EnemyBase = null
+	for id: int in ids:                              # the lowest id still alive (the same on both)
+		var cand = Coop._enemies[id]
+		if is_instance_valid(cand) and (cand as EnemyBase).health.current_health > 0.0:
+			target = cand
+			break
+	_check("an enemy to lock", target != null)
+	if target == null:
+		return
+	_log("locking enemy %d %s" % [int(target.get_meta(Coop.NET_ID)), target.display_name])
+	EnemySpawner._add_trait(target, OVERFLOW_TRAIT, "test_overflow")
+	EnemySpawner._add_trait(target, REFLECTOR_TRAIT, "test_reflector")
+	var lock: OverflowLock = null
+	for t in target.traits:
+		if t is OverflowLock:
+			lock = t
+	_check("the traits are on it", lock != null and target.traits.size() >= 2)
+	if lock == null:
+		return
+	var full := target.health.current_health
+
+	if _role == "host":
+		# Nothing but the Reflector may hurt anyone: every enemy's AI and skills off (not the enemy
+		# itself, so its traits still run), and we stand by the target to keep it awake
+		for e in get_tree().get_nodes_in_group("enemies"):
+			(e.get("ai") as Node).process_mode = Node.PROCESS_MODE_DISABLED
+			for c in e.get_children():
+				if c is EnemySkills:
+					c.process_mode = Node.PROCESS_MODE_DISABLED
+		_stand(_spot_beside(target.global_position))
+		EnemySleep.wake(target)
+		# 2. The guest's hit with the port shut
+		# (the write it starts is only kept for OverflowLock.tail_time: watched every frame)
+		await _until(func() -> bool: return lock._writes.size() > 0, 20.0)
+		_check("the guest's hit reached the lock here", lock._writes.size() > 0)
+		await _wait(1.0)
+		_check("the guest's hit was absorbed here: its life stays (%.0f -> %.0f)" % [full, target.health.current_health],
+				is_equal_approx(target.health.current_health, full))
+		# 3. Open the port
+		await _wait(2.0)
+		lock.open_port("TEST // PORT OPEN", 0.0, 12.0)
+		_check("the port is open here", lock.is_open())
+		# 4. The guest's next hit lands
+		await _until(func() -> bool: return not is_instance_valid(target) or target.health.current_health < full, 15.0)
+		_check("the guest's hit landed through the open port (%.0f -> %.0f)" % [
+				full, target.health.current_health if is_instance_valid(target) else -1.0],
+				not is_instance_valid(target) or target.health.current_health < full)
+		await _wait(4.0)
+		return
+
+	# The guest
+	_check("its traits are switched off on the copy", lock.process_mode == Node.PROCESS_MODE_DISABLED
+			and lock.is_copy())
+	await _wait(3.0)                                 # the host adds its own, and stands by it
+	var skill := _me().skills.get_skill(&"attack")
+	_check("the guest has a skill to hit with", skill != null)
+	if skill == null:
+		return
+	var cast := SkillCast.new(_me(), skill, skill.build_effective_stats(_me().stats), skill.get_behavior())
+	# 2. Port shut: absorbed, not answered, zapped
+	var hp := _me().health
+	var life := hp.current_health
+	cast.behavior.hit(cast, target, 2.0)
+	var seq := Coop._hit_seq
+	_check("the hit went to the host (hit %d)" % seq, seq > 0 and Coop._my_hits.has(seq))
+	await _wait(2.0)
+	_check("the host didn't answer it: absorbed, no reward here", Coop._my_hits.has(seq))
+	_check("its life here stays too", is_equal_approx(target.health.current_health, full))
+	_check("the Reflector's zap reached the guest (%.0f -> %.0f)" % [life, hp.current_health], hp.current_health < life)
+	# 3. The host opens the port
+	await _until(func() -> bool: return lock.is_open(), 20.0)
+	_check("the port opened on the guest's copy", lock.is_open())
+	await _until(func() -> bool: return lock.shown_tag_state() == "OPEN", 3.0)
+	_check("its tag says OPEN here (%s)" % lock.shown_tag_state(), lock.shown_tag_state() == "OPEN")
+	# 4. Now it lands
+	cast.already_hit.clear()
+	cast.behavior.hit(cast, target, 1.0)
+	var seq2 := Coop._hit_seq
+	await _until(func() -> bool: return not Coop._my_hits.has(seq2), 6.0)
+	_check("the host answered the landed hit (hit %d)" % seq2, not Coop._my_hits.has(seq2))
+	await _until(func() -> bool: return not is_instance_valid(target) or target.health.current_health < full, 6.0)
+	_check("and its life dropped here too", not is_instance_valid(target) or target.health.current_health < full)
+	await _wait(2.0)
+
+
+## Both sides cast their attack for 8 seconds, through the player's own input path, and watch
+## the other's copy: it must play the skill's animation.
+func _cast_check(where: String) -> void:
+	var count := {"mine": 0, "theirs": 0}             # a Dictionary: lambdas copy plain numbers
+	var on_mine := func(_a: StringName) -> void: count.mine += 1
+	var on_theirs := func(_cooldown: float) -> void: count.theirs += 1
+	_me().skill_cast.connect(on_mine)
+	var their_skill := _other().skills.get_skill(&"attack")
+	_check("the other player's copy has their skill %s" % where, their_skill != null)
+	if their_skill != null:
+		their_skill.used.connect(on_theirs)           # fires each time the copy casts it
+	if _shots_dir != "" and _role == "join":
+		_stand(_me().global_position + Vector3(2.2, 0.1, 0))    # side by side, both on screen
+	for i in 16:
+		_me()._held[&"attack"] = true                 # as if the attack button is held
+		Input.action_press(&"attack")
+		await _wait(0.5)
+		if _shots_dir != "" and i >= 4 and i < 12:    # `shots=<folder>`: what this window shows, mid-cast
+			await _wait(0.07 * (i - 4))               # a different moment of the swing each time
+			var img := get_tree().root.get_texture().get_image()
+			img.resize(img.get_width() / 2, img.get_height() / 2)
+			img.save_png("%s/%s_%s_%d.png" % [_shots_dir, _role, where.replace(" ", "_"), i])
+	Input.action_release(&"attack")
+	_me()._held[&"attack"] = false
+	_me().skill_cast.disconnect(on_mine)
+	if their_skill != null:
+		their_skill.used.disconnect(on_theirs)
+	var o := _other()
+	_log("their copy: life %.0f, dead %s, reach %.2f, attack speed %.2f, weapon %s, skill %s" % [
+		o.health.current_health, SkillBehavior.is_dead(o), o.stats.get_stat(StatTypes.Stat.ATTACK_RANGE),
+		o.stats.get_stat(StatTypes.Stat.ATTACK_SPEED),
+		o.equipment.get_equipped(EquipmentSlots.Slot.WEAPON) != null,
+		their_skill.gem.id if their_skill != null else "none"])
+	_check("cast our own skill %s (%d casts)" % [where, count.mine], count.mine > 0)
+	_check("the other player's copy cast theirs %s (%d casts)" % [where, count.theirs], count.theirs > 0)
+
+
+## Counts the on-kill calls a skill makes (the kill credit step).
+class _KillSpy extends SupportBehavior:
+	var kills := 0
+
+	func on_kill(_cast: SkillCast, _target: Node, _hit: HitInfo) -> void:
+		kills += 1
+
+
 func _lock_of(e: Node) -> ChallengeLock:
 	for t in e.get("traits"):
 		if t is ChallengeLock:
@@ -259,10 +579,20 @@ func _seat(class_id: String, slot: int) -> void:
 	var data := {
 		"version": 1, "name": "Test " + _role.capitalize(), "class_id": class_id, "level": 1, "xp": 0,
 		"attributes": c.get_attributes(), "equipment": {}, "skills": [], "inventory": []}
-	if c.starting_weapon != null:
-		data["equipment"]["weapon"] = c.starting_weapon.id
-	if c.starting_skill_gem != null:
-		data["skills"] = [{"gem": c.starting_skill_gem.id, "supports": [], "action": "attack"}]
+	if _role == "host" and _host_town != "":
+		data[SaveManager.LAST_TOWN_KEY] = _host_town
+	if _role == "host":                              # the guest starts bare, like a new character
+		if c.starting_weapon != null:
+			data["equipment"]["weapon"] = c.starting_weapon.id
+		if c.starting_skill_gem != null:
+			data["skills"] = [{"gem": c.starting_skill_gem.id, "supports": [], "action": "attack"}]
+	if _from_slot >= 0:                              # a real character's data, seated in the test's own slot
+		var real := SaveManager.load_slot(_from_slot)
+		if not real.is_empty():
+			data = real.duplicate(true)
+			_real_character = true
+			if _role == "host" and _host_town != "":
+				data[SaveManager.LAST_TOWN_KEY] = _host_town
 	SaveManager.begin_session(1)
 	SaveManager.party.append(slot)
 	SaveManager._loaded[slot] = data

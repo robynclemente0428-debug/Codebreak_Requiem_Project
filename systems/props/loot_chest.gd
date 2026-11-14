@@ -63,6 +63,10 @@ func set_already_open() -> void:
 	_play("Idle_Open")
 
 
+func open_remote() -> void:
+	open_chest()
+
+
 ## Open chests stay as solid as closed ones (LootProp lets broken props drop out of the navmesh).
 func still_blocks() -> bool:
 	return true

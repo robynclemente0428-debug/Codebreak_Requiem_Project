@@ -61,7 +61,64 @@ func is_running() -> bool:
 
 
 func blocks_route() -> bool:
-	return is_running() or (state == State.WAITING and is_due() and not _crates.is_empty())
+	return is_running() or (state == State.WAITING and _anyone_needs() and not _crates.is_empty())
+
+
+# ---------- CO-OP (see DockDefense) ----------
+## This player needs the sweep while a run of theirs is still owed one.
+func _own_need() -> bool:
+	return is_due() and not _crates.is_empty()
+
+
+## How far each crate is marked goes with the host's "state".
+func _state_extra() -> Array:
+	var out: Array = []
+	for c in _crates:
+		if is_instance_valid(c["prop"]):
+			out.append([str(c["id"]), float(c["marks"])])
+	return out
+
+
+func _apply_extra(extra: Array) -> void:
+	if not _is_on():
+		return
+	for entry in extra:
+		if not entry is Array or entry.size() != 2:
+			continue
+		var c := _crate_named(str(entry[0]))
+		if c.is_empty():
+			continue
+		var marks := clampf(float(entry[1]), 0.0, 1.0)
+		if marks <= 0.0 and c["tag"] != null:
+			_clear_mark(c)
+		elif marks > 0.0 and not is_equal_approx(marks, float(c["marks"])):
+			c["marks"] = marks
+			_show_mark(c)
+
+
+func _copy_started() -> void:
+	_find_crates()
+	super._copy_started()
+
+
+func _copy_stopped() -> void:
+	if state == State.WAITING:                       # called off: the marks come off
+		for c in _crates:
+			if is_instance_valid(c["prop"]):
+				_clear_mark(c)
+	super._copy_stopped()
+
+
+func _copy_run(_delta: float) -> void:
+	_update_hud(true)
+	var tagged := _tagged().size()
+	if tagged > 0:
+		_count.text += "   ·   TAGGED: %d" % tagged
+
+
+## The host's sweep ended: [the ids of the crates it deleted].
+func _copy_done(args: Array) -> void:
+	_settle(args[0] if args.size() == 1 and args[0] is Array else [])
 
 
 func route_block_text() -> String:
@@ -95,7 +152,7 @@ func _find_portal() -> Node3D:
 
 
 func _wants_to_start() -> bool:
-	if _crates.is_empty() or not is_due():
+	if _crates.is_empty() or not _anyone_needs():    # co-op, on the host: or a guest's run is owed one
 		return false
 	if _audit == "":
 		_announce_audit()                         # as you arrive: the alarm follows arrival_delay later
@@ -303,13 +360,35 @@ func _end_sweep(swept: bool) -> void:
 	state = State.DONE
 	_hud.visible = false
 	_set_alert(false)
+	var lost_ids: Array = []
+	if swept:
+		for c in _tagged():
+			lost_ids.append(str(c["id"]))
+	for e in _alive:
+		if is_instance_valid(e):
+			e.queue_free()
+	_alive.clear()
+	_assigned.clear()
+	if Coop.in_game:                             # the guests' copies settle up too
+		_needed_by.clear()
+		Coop.event_send(_key(), "done", [lost_ids])
+	_settle(lost_ids)
+
+
+## The sweep is over, here or (co-op) on the host: the crates in `lost_ids` are deleted, the rest
+## lose their marks, and the credits are paid. The loss and the run answered are only written
+## down for a player whose own run was owed a sweep.
+func _settle(lost_ids: Array) -> void:
+	var qm := _qm()
+	var owed := not Coop.in_game or is_due()
 	var lost := 0
 	var lost_names: Array = []
 	for c in _crates.duplicate():
 		if not is_instance_valid(c["prop"]):
 			continue
-		if swept and float(c["marks"]) >= 1.0:
-			GameEvents.report(LOST_DEED, String((c["prop"] as Node).name))
+		if str(c["id"]) in lost_ids:
+			if owed:
+				GameEvents.report(LOST_DEED, String((c["prop"] as Node).name))
 			lost_names.append(YardCrates.name_of(String((c["prop"] as Node).name)))
 			(c["prop"] as Node).queue_free()
 			_crates.erase(c)
@@ -317,16 +396,10 @@ func _end_sweep(swept: bool) -> void:
 		else:
 			_clear_mark(c)
 	_audit = ""                                  # the next sweep announces its own
-	for e in _alive:
-		if is_instance_valid(e):
-			e.queue_free()
-	_alive.clear()
-	_assigned.clear()
-	var qm := _qm()
-	if qm != null:                                # every run owed so far is answered by this one
+	if qm != null and owed:                       # every run owed so far is answered by this one
 		GameEvents.report(DEED, DEED_TARGET, maxi(_runs_finished(qm) - qm.deed_count(DEED, DEED_TARGET), 1))
 	var credits := reward_credits + crate_bonus * _crates.size()
-	var player := _player()
+	var player := Coop.own_player(get_tree())
 	var wallet := player.get("currency") as CurrencyComponent if player != null else null
 	if wallet != null:
 		wallet.add(credits)
@@ -345,7 +418,7 @@ func _clear_mark(c: Dictionary) -> void:
 
 
 func _on_player_died() -> void:
-	if is_running():
+	if is_running() and not _someone_stands():       # co-op: not while one of the party still stands
 		for c in _crates:
 			if is_instance_valid(c["prop"]):
 				_clear_mark(c)

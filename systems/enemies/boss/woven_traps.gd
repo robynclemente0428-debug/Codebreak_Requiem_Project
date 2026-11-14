@@ -11,6 +11,10 @@ extends Node
 ##                 off the weave, is safe
 ## Below `cross_below` of its life it weaves two at once, crossed: the safe spot is where the
 ## two gaps meet.
+##
+## Co-op: only the host's runs (a guest's copy has it switched off, Coop "A COPY RUNS NO LOGIC").
+## It weaves round the player the boss is hunting, its snap hurts every player's character on a
+## strand, and it tells the copies each weave ("weave_*" messages, coop_message) so they draw it.
 
 @export var interval: float = 7.0
 @export var first_delay: float = 4.0
@@ -75,7 +79,10 @@ func _physics_process(delta: float) -> void:
 
 
 func _weave() -> void:
-	var player := _enemy.get_tree().get_first_node_in_group("players") as Node3D
+	# Round the player it is hunting (in co-op that may be a guest's character), else the first one
+	var player := _enemy.ai.target as Node3D if is_instance_valid(_enemy.ai.target) else null
+	if player == null:
+		player = _enemy.get_tree().get_first_node_in_group("players") as Node3D
 	if player == null:
 		_timer = interval
 		return
@@ -89,6 +96,15 @@ func _weave() -> void:
 	_build_strips()
 	_phase = Phase.TELEGRAPH
 	_timer = telegraph
+	if Coop.in_game and Coop.is_host():               # the copies draw the same weave
+		var origins := PackedVector3Array()
+		var alongs := PackedVector3Array()
+		var gaps := PackedInt32Array()
+		for w in _weaves:
+			origins.append(w["origin"])
+			alongs.append(w["along"])
+			gaps.append(int(w["gap"]))
+		Coop.enemy_send(_enemy, "weave_lay", [origins, alongs, gaps])
 
 
 func _add_weave(centre: Vector3, angle: float) -> void:
@@ -132,13 +148,17 @@ func _snap() -> void:
 	_set_alpha(0.85, COL_SNAP)
 	_phase = Phase.SNAP
 	_timer = SNAP_TIME
+	if Coop.in_game and Coop.is_host():
+		Coop.enemy_send(_enemy, "weave_snap", [])
 	var dmg := _enemy.stats.get_stat(StatTypes.Stat.MAX_ATTACK_DAMAGE) * damage_mult
 	for p in _enemy.get_tree().get_nodes_in_group("players"):
 		var player := p as Node3D
 		if player != null and _on_a_strand(player.global_position):
 			var h = player.get("health")
 			if h != null:
+				Coop.hit_source = Coop.Hit.ENEMY     # co-op: a real hit, sent on to a guest's own machine
 				h.take_damage(dmg)
+				Coop.hit_source = Coop.Hit.NONE
 
 
 ## True when `pos` is on a strand of any weave (not in its gap, not off its ends or sides).
@@ -166,3 +186,42 @@ func _clear() -> void:
 		if is_instance_valid(s):
 			s.queue_free()
 	_strips.clear()
+
+
+# ---------- CO-OP ----------
+## A guest's copy: the host's weaver says what it laid and when it snaps. Only the look: the
+## host's deals the hits. Nothing runs here per frame, so the brightening is a tween on a strip.
+func coop_message(what: String, args: Array, from: int) -> void:
+	if from != 1 or _enemy == null or not _enemy.is_remote or _enemy.health.current_health <= 0.0:
+		return
+	match what:
+		"weave_lay":
+			if args.size() < 3 or not args[0] is PackedVector3Array or not args[1] is PackedVector3Array \
+					or not args[2] is PackedInt32Array:
+				return
+			var origins: PackedVector3Array = args[0]
+			var alongs: PackedVector3Array = args[1]
+			var gaps: PackedInt32Array = args[2]
+			if origins.size() != alongs.size() or origins.size() != gaps.size() or origins.size() > 4:
+				return
+			_weaves.clear()
+			for i in origins.size():
+				var along := alongs[i]
+				if not origins[i].is_finite() or not along.is_finite() or along.length() < 0.5:
+					return
+				along = along.normalized()
+				_weaves.append({"origin": origins[i], "along": along,
+						"across": Vector3(-along.z, 0.0, along.x), "gap": clampi(gaps[i], 0, strands - 1)})
+			_build_strips()
+			_phase = Phase.TELEGRAPH
+			if not _strips.is_empty():
+				_strips[0].create_tween().tween_method(func(a: float) -> void: _set_alpha(a, COL),
+						0.08, 0.53, telegraph)
+		"weave_snap":
+			_phase = Phase.SNAP
+			_set_alpha(0.85, COL_SNAP)
+			var strips := _strips.duplicate()
+			get_tree().create_timer(SNAP_TIME).timeout.connect(func() -> void:
+				if _strips == strips:                # not already replaced by the next weave
+					_clear()
+					_phase = Phase.WAIT)

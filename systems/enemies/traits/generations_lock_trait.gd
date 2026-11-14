@@ -72,10 +72,10 @@ func adds_alive() -> int:
 
 
 func modify_incoming(info: HitInfo) -> void:
-	if _dead or info.cast == null or not info.cast.is_valid():
+	if _dead or info.facts == null:
 		return
 	_update_generation()
-	var used := _set_of(info.cast.caster)
+	var used := info.facts.owner_set              # a hologram's: its owner's set (HitFacts)
 	var gen_name: String = GENS[open_set()]["name"]
 	var set_name: String = SkillComponent.SET_NAMES[open_set()]
 	if used != open_set():
@@ -105,8 +105,7 @@ func _process(delta: float) -> void:
 	if _dead or not is_instance_valid(enemy):
 		return
 	if _gen < 0:
-		var p := get_tree().get_first_node_in_group("players") as Node3D
-		if p != null and p.global_position.distance_to(enemy.global_position) <= notice_range:
+		if player_within(notice_range) != null:      # any player in range (co-op: a guest's too)
 			_enter_generation(0)
 		return
 	_update_generation()
@@ -192,14 +191,6 @@ func _sweep() -> void:
 	if hp != null:
 		hp.heal(max_health() * sweep_heal)
 	say("REFERENCE TO NULL. COLLECTING.", COL_GEN, 0.95)
-
-
-func _set_of(caster: Node) -> int:
-	var skills := caster.get("skills") as SkillComponent if caster != null else null
-	if skills == null:
-		var p := get_tree().get_first_node_in_group("players")      # a hologram: its owner's set
-		skills = p.get("skills") as SkillComponent if p != null else null
-	return skills.script_set if skills != null else 0
 
 
 func _on_died() -> void:
