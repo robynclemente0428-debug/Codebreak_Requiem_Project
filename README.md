@@ -9,6 +9,8 @@ CodeBreak: Requiem is a 3D action RPG built in **Godot 4.7 (GDScript)**. Players
 *Capstone project.*
 
 <!-- Add a screenshot or GIF here, e.g. ![Gameplay](docs/screenshot.png) -->
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/2862a8c9-36d4-40cf-a456-aaef9363a6d3" />
+
 
 ---
 
