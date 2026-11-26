@@ -205,7 +205,7 @@ Component, data-driven design, strategy, hook chain (decorator-like), observer /
 
 **Sherwin M. Ostria**
 
-## SY 2026-2027
+### SY 2026-2027
 
 ## Credits
 
