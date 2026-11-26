@@ -195,14 +195,14 @@ Component, data-driven design, strategy, hook chain (decorator-like), observer /
 
 **Robyn Paul M. Clemente**, BSIT-A707, STI
 
-**Angela Nicole B. Aporongao
+**Angela Nicole B. Aporongao**, BSIT-A707, STI
 
-**Earl Justine B. Español
+**Earl Justine B. Español**, BSIT-A707, STI
 
-**Dan Julian M. Masong
+**Dan Julian M. Masong**, BSIT-A707, STI
 
 ##Adviser
-**Sherwin M. Ostria
+**Sherwin M. Ostria**
 
 ##SY 2026-2027
 
