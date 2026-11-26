@@ -202,6 +202,7 @@ Component, data-driven design, strategy, hook chain (decorator-like), observer /
 **Dan Julian M. Masong**, BSIT-A707, STI
 
 ##Adviser
+
 **Sherwin M. Ostria**
 
 ##SY 2026-2027
