@@ -137,15 +137,6 @@ Two rules shape the codebase:
 
 ---
 
-## Documentation
-
-| Document | What it covers |
-|---|---|
-| **Overview** (`CodeBreak_Requiem_Overview.html`) | What each system does and why: scripting, combat, enemies, items, dungeons, quests, endings, networking, design patterns, status |
-| **Code Guide** (`CodeBreak_Requiem_Code_Guide.html`) | Godot basics, startup path, line-by-line walkthroughs, and recipes for adding conditions, support gems, enemies, locks and quests |
-
----
-
 ## Extending the game
 
 The Code Guide has full recipes. In short:
