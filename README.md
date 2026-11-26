@@ -194,8 +194,11 @@ Component, data-driven design, strategy, hook chain (decorator-like), observer /
 ## Author
 
 **Robyn Paul M. Clemente**, BSIT-A707, STI
+
 **Angela Nicole B. Aporongao
+
 **Earl Justine B. Español
+
 **Dan Julian M. Masong
 
 ##Adviser
