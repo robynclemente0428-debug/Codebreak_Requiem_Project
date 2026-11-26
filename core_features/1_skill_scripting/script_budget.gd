@@ -1,0 +1,65 @@
+class_name ScriptBudget
+extends RefCounted
+
+const GRADE_POINTS := [0.0, 0.5, 1.0]
+const POINTS_PER_CLEAR := 1.0
+const STEPS_PER_DISTINCTION := 1
+const STEPS_PER_ACT_BOSS := 1
+const BOSS_DEED := "act_boss"
+const DISTINCTION := 2
+const CLEAR_DEED := "clear_area"
+
+
+static func breakdown(qm: QuestManager) -> Dictionary:
+	var out := {"rank": 0.0, "grades": 0.0, "clears": 0.0, "areas": 0, "total": 0.0,
+		"distinctions": 0, "bosses": 0, "steps": 0}
+	if qm == null:
+		return out
+	out["rank"] = float(Ranks.perk(Ranks.index_of(qm), "budget"))
+	for r in Ranks.LADDER:
+		var g := qm.exam_grade(r["id"]) if r["id"] != "" else -1
+		if g >= 0 and g < GRADE_POINTS.size():
+			out["grades"] += GRADE_POINTS[g]
+		if g == DISTINCTION:
+			out["distinctions"] += 1
+	out["bosses"] = _deeds(qm, BOSS_DEED).size()
+	out["steps"] = out["distinctions"] * STEPS_PER_DISTINCTION + out["bosses"] * STEPS_PER_ACT_BOSS
+	out["areas"] = cleared_areas(qm).size()
+	out["clears"] = out["areas"] * POINTS_PER_CLEAR
+	out["total"] = out["rank"] + out["grades"] + out["clears"]
+	return out
+
+
+static func points(qm: QuestManager) -> float:
+	return breakdown(qm)["total"]
+
+
+static func steps(qm: QuestManager) -> int:
+	return breakdown(qm)["steps"]
+
+
+static func cleared_areas(qm: QuestManager) -> PackedStringArray:
+	return _deeds(qm, CLEAR_DEED)
+
+
+static func act_bosses_killed(qm: QuestManager) -> PackedStringArray:
+	return _deeds(qm, BOSS_DEED)
+
+
+static func is_boss_killed(qm: QuestManager, enemy_id: String) -> bool:
+	return qm != null and qm.deed_count(BOSS_DEED, enemy_id) > 0
+
+
+static func _deeds(qm: QuestManager, kind: String) -> PackedStringArray:
+	var out := PackedStringArray()
+	if qm == null:
+		return out
+	var prefix := kind + ":"
+	for key: String in qm.deeds:
+		if key.begins_with(prefix) and int(qm.deeds[key]) > 0:
+			out.append(key.substr(prefix.length()))
+	return out
+
+
+static func is_cleared(qm: QuestManager, area_id: String) -> bool:
+	return qm != null and qm.deed_count(CLEAR_DEED, area_id) > 0

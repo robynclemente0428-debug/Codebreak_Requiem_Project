@@ -1,0 +1,206 @@
+SKILLS AND COMBAT (key code)
+A cast flows from SkillInstance.cast to SkillBehavior.execute and hit, then to HealthComponent.take_damage. Stats are base values changed by flat, percent and multiplier modifiers.
+
+
+================================================================================
+# skill_instance.gd
+================================================================================
+
+func cast(caster: Node3D, caster_stats: StatComponent, mana: ManaComponent = null) -> void:
+	if mana != null:
+		mana.spend(get_mana_cost())
+	used.emit(get_cooldown(caster_stats))
+	get_behavior().execute(caster, self, build_effective_stats(caster_stats))
+
+func roll_damage(effective_stats: StatComponent) -> float:
+	var lo := effective_stats.get_stat(StatTypes.Stat.MIN_ATTACK_DAMAGE)
+	var hi := effective_stats.get_stat(StatTypes.Stat.MAX_ATTACK_DAMAGE)
+	var mult := effective_stats.get_stat(StatTypes.Stat.SKILL_DAMAGE_MULT)
+	var base := randf_range(lo, hi)
+	var total := base * mult
+
+	var chance := clampf(effective_stats.get_stat(StatTypes.Stat.CRIT_CHANCE), 0.0, 1.0)
+	var crit_mult := maxf(effective_stats.get_stat(StatTypes.Stat.CRIT_MULTIPLIER), 1.0)
+	last_roll_was_crit = randf() < chance
+	if last_roll_was_crit:
+		total *= crit_mult
+	return total
+
+
+================================================================================
+# skill_behavior.gd
+================================================================================
+
+func execute(caster: Node3D, skill: SkillInstance, stats: StatComponent) -> void:
+	var cast := SkillCast.new(caster, skill, stats, self)
+	var delay := _play_animation(cast)
+	if delay > 0.0:
+		await caster.get_tree().create_timer(delay).timeout
+		if not cast.is_valid() or is_dead(cast.caster):
+			return
+	if is_dead(caster):
+		return
+	for s in skill.support_behaviors:
+		s.before_release(cast)
+	_apply_defense(cast)
+	release(cast)
+
+func hit(cast: SkillCast, target: Node, damage_mult := 1.0) -> HitInfo:
+	var info := HitInfo.new()
+	info.cast = cast
+	info.target = target
+	if not cast.is_valid() or not is_instance_valid(target):
+		return info
+	if cast.caster.get("is_remote") == true:
+		return info
+	var target_health := target.get("health") as HealthComponent
+	if target_health == null:
+		return info
+	if target is Node3D:
+		info.position = (target as Node3D).global_position
+	info.damage = cast.skill.roll_damage(cast.stats) * damage_mult * cast.damage_mult
+	if cast.skill.class_trait != null:
+		info.damage *= cast.skill.class_trait.hit_damage_mult(cast.caster, target)
+	info.is_crit = cast.skill.last_roll_was_crit
+
+	for s in cast.skill.support_behaviors:
+		s.modify_hit(cast, target, info)
+	if info.cancelled:
+		return info
+	var traits: Array = target.get("traits") if "traits" in target else []
+	var on_copy: bool = target.get("is_remote") == true and target is EnemyBase
+	if not traits.is_empty() or on_copy:
+		info.facts = HitFacts.from_cast(cast)
+	if on_copy:
+		Coop.hit_facts = info.facts
+		traits = []
+	for t: EnemyTrait in traits:
+		t.modify_incoming(info)
+	if info.cancelled:
+		return info
+	if info.absorbed:
+		if target_health.current_health <= 0.0:
+			return info
+		info.landed = true
+		cast.already_hit.append(target)
+		for t: EnemyTrait in traits:
+			if is_instance_valid(t):
+				t.after_hit(info)
+		for s in cast.skill.support_behaviors:
+			s.on_hit(cast, target, info)
+		return info
+	var own: Array = cast.caster.get("traits") if "traits" in cast.caster else []
+	for t: EnemyTrait in own:
+		if is_instance_valid(t):
+			t.on_outgoing(info)
+
+	Coop.hit_source = Coop.Hit.PLAYER if cast.caster is Player else Coop.Hit.ENEMY
+	Coop.damage_by = Coop.my_id() if cast.caster is Player and Coop.in_game else 0
+	info.dealt = target_health.take_damage(info.damage)
+	Coop.damage_by = 0
+	Coop.hit_source = Coop.Hit.NONE
+	Coop.hit_facts = null
+	if info.dealt <= 0.0:
+		return info
+	info.landed = true
+	info.killed = target_health.current_health <= 0.0
+	Coop.my_hit(target, cast, info)
+	cast.already_hit.append(target)
+	for t: EnemyTrait in traits:
+		if is_instance_valid(t):
+			t.after_hit(info)
+
+	if not target.is_in_group(&"breakables") and not on_copy:
+		landing_rewards(cast, info)
+
+	for s in cast.skill.support_behaviors:
+		s.on_hit(cast, target, info)
+		if info.killed:
+			s.on_kill(cast, target, info)
+	return info
+
+
+================================================================================
+# stat_component.gd
+================================================================================
+
+func _recompute() -> void:
+	_cache.clear()
+	var touched: Dictionary = {}
+
+	for stat in base_stats.keys():
+		touched[stat] = true
+
+	for m in _modifiers:
+		touched[m.stat] = true
+
+	for stat in touched.keys():
+		var base: float = base_stats.get(stat, 0.0)
+		var flat := 0.0
+		var percent_add := 0.0
+		var percent_mult := 1.0
+		var override_val = null
+		for m in _modifiers:
+			if m.stat != stat:
+				continue
+			match m.op:
+				Modifier.ModOp.FLAT_ADD:
+					flat += m.value
+				Modifier.ModOp.PERCENT_ADD:
+					percent_add += m.value
+				Modifier.ModOp.PERCENT_MULT:
+					percent_mult *= (1.0 + m.value)
+				Modifier.ModOp.OVERRIDE:
+					override_val = m.value
+		var result: float = override_val if override_val != null \
+		else (base + flat) * (1.0 + percent_add) * percent_mult
+		if stat == StatTypes.Stat.MAX_HEALTH and override_val == null:
+			result = maxf(result, 1.0)
+		_cache[stat] = result
+	_dirty = false
+
+func get_stat(stat: StatTypes.Stat) -> float:
+	if _dirty:
+		_recompute()
+	return _cache.get(stat, 0.0)
+
+
+================================================================================
+# health_component.gd
+================================================================================
+
+func take_damage(amount: float, ignore_armour := false) -> float:
+	if not _initialized:
+		push_warning("take_damage called before HealthComponent.initialize()")
+		return 0.0
+	if current_health <= 0.0:
+		return 0.0
+	if remote_damage.is_valid():
+		remote_damage.call(amount, ignore_armour)
+		return amount if ignore_armour else mitigate(amount, stats.get_stat(StatTypes.Stat.ARMOUR))
+	if untouchable:
+		return 0.0
+	var now := Time.get_ticks_msec()
+	if guard > 0.0 and now < _guard_until:
+		amount *= 1.0 - guard
+	if barrier > 0.0 and now < _barrier_until:
+		var absorbed := minf(barrier, amount)
+		barrier -= absorbed
+		amount -= absorbed
+		barrier_changed.emit(barrier)
+		if amount <= 0.0:
+			return 0.0
+	var armour: float = stats.get_stat(StatTypes.Stat.ARMOUR)
+	var mitigated := amount if ignore_armour else mitigate(amount, armour)
+	last_damaged_msec = now
+	current_health -= mitigated
+	damage_taken.emit(mitigated)
+	_emit_changed()
+	if current_health <= 0.0:
+		died.emit()
+	return mitigated
+
+func mitigate(amount: float, armour: float) -> float:
+	var reduction := armour / (armour + ARMOUR_CONSTANT * amount)
+	reduction = minf(reduction, max_damage_reduction)
+	return maxf(amount * (1.0 - reduction), 1.0)    

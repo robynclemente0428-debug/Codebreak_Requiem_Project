@@ -1,0 +1,74 @@
+STORY: ACT V KERNEL AND ENDINGS (key code)
+In Act V the Null offers lines of code. Merging, overwriting or terminating each one changes what runs in the zone, and the player's choices lean toward one of three endings.
+
+
+================================================================================
+# kernel_script.gd
+================================================================================
+
+static func answer(qm: QuestManager, lines: Array[String], null_id: String, how: String, pick := "") -> void:
+	if qm == null or not NULL_LINES.has(null_id) or answer_of(qm, null_id) != "" or not how in ANSWERS:
+		return
+	var line := ""
+	if how == "merge":
+		line = str(NULL_LINES[null_id]["gift"])
+	elif how == "overwrite":
+		line = pick if pick in offers(lines, null_id) else ""
+	if line != "" and not line in lines:
+		lines.append(line)
+	GameEvents.report(deed_of(how), null_id)
+
+static func lean(qm: QuestManager) -> String:
+	var t := tally(qm)
+	var best := 0
+	for a in ANSWERS:
+		best = maxi(best, int(t[a]))
+	if best == 0:
+		return "terminate"
+	var ids: Array = NULL_LINES.keys()
+	ids.reverse()
+	for id in ids:
+		var a := answer_of(qm, id)
+		if a != "" and int(t[a]) == best:
+			return a
+	return "terminate"
+
+
+================================================================================
+# kernel_director.gd
+================================================================================
+
+func answer(null_id: String, how: String, pick := "") -> void:
+	var sk := _player.get("skills") as SkillComponent if is_instance_valid(_player) else null
+	if sk == null:
+		return
+	KernelScript.answer(_qm(), sk.kernel, null_id, how, pick)
+	Coop.kernel_changed()
+	match how:
+		"merge":
+			QuestItems.toast(get_tree(), "MERGED: the Null's line runs\nYours too: %s" % KernelScript.code_of(
+				str(KernelScript.NULL_LINES[null_id]["gift"])), KernelScript.COL_NULL)
+		"overwrite":
+			QuestItems.toast(get_tree(), "OVERWRITTEN: your line runs instead\n%s" % KernelScript.code_of(pick),
+				KernelScript.COL_ROOT)
+		"terminate":
+			QuestItems.toast(get_tree(), "TERMINATED: the process fights its shutdown", KernelScript.COL_TERMINATE)
+			if Coop.in_game and not Coop.is_host():
+				Coop.event_send("kernel", "defend", [_player.global_position])
+			else:
+				_spawn_defender(_player.global_position)
+	_update_strip()
+
+
+================================================================================
+# endings.gd
+================================================================================
+
+static func choose(qm: QuestManager, id: String) -> void:
+	if qm == null or not id in IDS:
+		return
+	for other in IDS:
+		qm.deeds.erase("%s:%s" % [NOW_DEED, other])
+	qm.deeds["%s:%s" % [NOW_DEED, id]] = 1
+	GameEvents.report("ending", id)
+	Coop.kernel_changed()

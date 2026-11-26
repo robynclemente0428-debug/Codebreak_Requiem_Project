@@ -1,0 +1,125 @@
+INFRASTRUCTURE: SAVING AND LAN CO-OP (key code)
+Saves are JSON written to a temp file and then renamed, so a crash can't corrupt them. In co-op the host owns the enemies: clients send their hits, and the host applies them and replies.
+
+
+================================================================================
+# save_manager.gd
+================================================================================
+
+func save_slot(slot: int, data: Dictionary) -> bool:
+	var tmp := _path(slot) + '.tmp'
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		push_error('Could not write save: %s' % error_string(FileAccess.get_open_error()))
+		return false
+	f.store_string(JSON.stringify(data, '\t'))
+	f.close()
+	if DirAccess.rename_absolute(tmp, _path(slot)) != OK:
+		push_error('Could not finalize save for slot %d' % slot)
+		return false
+	return true
+
+func load_slot(slot: int) -> Dictionary:
+	if not slot_exists(slot):
+		return {}
+	var f := FileAccess.open(_path(slot), FileAccess.READ)
+	if f == null:
+		return {}
+	var parsed = JSON.parse_string(f.get_as_text())
+	f.close()
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_warning('Slot %d is corrupted' % slot)
+		return {}
+	return _migrate(parsed)
+
+
+================================================================================
+# coop.gd
+================================================================================
+
+func host() -> Error:
+	var peer := ENetMultiplayerPeer.new()
+	var err := peer.create_server(PORT, MAX_PLAYERS - 1)
+	if err != OK:
+		return err
+	multiplayer.multiplayer_peer = peer
+	active = true
+	roster = {1: my_info()}
+	_host_id = "%d-%d" % [randi(), Time.get_ticks_usec()]
+	_announcer = PacketPeerUDP.new()
+	_announcer.set_broadcast_enabled(true)
+	_announce_timer = 0.0
+	roster_changed.emit()
+	return OK
+
+func join(address: String, port: int = PORT) -> Error:
+	var peer := ENetMultiplayerPeer.new()
+	var err := peer.create_client(address, port)
+	if err != OK:
+		return err
+	multiplayer.multiplayer_peer = peer
+	return OK
+
+func _register(version: int, info: Dictionary) -> void:
+	if not is_host():
+		return
+	var id := multiplayer.get_remote_sender_id()
+	var why := ""
+	if version != PROTOCOL:
+		why = "That game is on a different version."
+	elif in_game:
+		why = "That game has already started."
+	elif roster.size() >= MAX_PLAYERS:
+		why = "That game is full."
+	elif str(info.get("class_id", "")) == "" or not info.get("loadout") is Dictionary:
+		why = "That game couldn't read your character."
+	if why != "":
+		_refused.rpc_id(id, why)
+		get_tree().create_timer(0.5).timeout.connect(func() -> void:
+			if multiplayer.multiplayer_peer is ENetMultiplayerPeer and id in multiplayer.get_peers():
+				(multiplayer.multiplayer_peer as ENetMultiplayerPeer).disconnect_peer(id))
+		return
+	roster[id] = {
+		"name": str(info.get("name", "Player")).left(24), "class_id": str(info["class_id"]),
+		"rank": str(info.get("rank", Ranks.LADDER[0]["name"])).left(16), "loadout": info["loadout"]}
+	_set_roster.rpc(roster)
+	_apply_roster()
+
+func _e_hit(id: int, amount: float, ignore_armour: bool, seq: int, facts: Dictionary) -> void:
+	var e := _enemies.get(id) as EnemyBase
+	var from := multiplayer.get_remote_sender_id()
+	if not is_host() or e == null or not is_instance_valid(e) or not (amount > 0.0 and amount < MAX_DAMAGE) \
+			or not roster.has(from) or var_to_bytes(facts).size() > 4096:
+		return
+	var info := HitInfo.new()
+	info.target = e
+	info.position = e.global_position
+	info.damage = amount
+	if not facts.is_empty():
+		info.facts = HitFacts.from_dict(facts, _players.get(from))
+		if info.facts.loop_id != "":
+			HitFacts.remote_loop(info.facts.loop_id, true)
+	var was_alive := e.health.current_health > 0.0
+	var traits: Array = e.traits.filter(func(t) -> bool: return is_instance_valid(t))
+	hit_source = Hit.ENEMY
+	damage_by = from
+	for t: EnemyTrait in traits:
+		t.modify_incoming(info)
+	damage_by = 0
+	hit_source = Hit.NONE
+	if info.cancelled:
+		return
+	if info.absorbed:
+		if was_alive:
+			info.landed = true
+			_after_hit(traits, info)
+		return
+	damage_by = from
+	info.dealt = e.health.take_damage(info.damage, ignore_armour)
+	damage_by = 0
+	if info.dealt <= 0.0:
+		return
+	info.landed = true
+	info.killed = e.health.current_health <= 0.0
+	_after_hit(traits, info)
+	_e_landed.rpc_id(from, seq, info.dealt, was_alive and info.killed)

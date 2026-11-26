@@ -1,0 +1,148 @@
+WORLD, AREAS AND DUNGEONS (key code)
+AreaManager swaps areas while the player persists. DungeonDirector builds a dungeon grid from designer markers, joins the rooms with a minimum spanning tree and checks connectivity.
+
+
+================================================================================
+# area_manager.gd
+================================================================================
+
+func _change_area(scene_path: String, spawn_id: StringName, use_fade: bool, revive := false) -> void:
+	_busy = true
+	player.set_physics_process(false)
+	player.velocity = Vector3.ZERO
+
+	if use_fade:
+		await _fade_to(1.0)
+	get_tree().call_group("blast_swarms", "clear")
+	var leaving = current_area.get("instance") if current_area else null
+	if leaving is DungeonInstance:
+		leaving.has_return_spot = _remember_spot and not revive
+		if leaving.has_return_spot:
+			leaving.return_spot = player.global_position
+	Coop.area_changing()
+	if current_area:
+		current_area.queue_free()
+		await current_area.tree_exited
+		current_area = null
+
+	var packed := load(scene_path) as PackedScene
+	var area := packed.instantiate() as GameArea if packed else null
+	if area == null:
+		push_error("AreaManager: '%s' is missing or its root doesn't extend GameArea" % scene_path)
+		if Coop.in_game:
+			Coop.note("AREA FAILED TO LOAD: %s (exists %s)" % [scene_path, ResourceLoader.exists(scene_path)])
+		await _finish(use_fade)
+		return
+
+	area_container.add_child(area)
+	current_area = area
+	_current_path = scene_path
+	GraphicsQuality.apply(get_tree())
+
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+
+	var spot := area.get_spawn_position(spawn_id)
+	var inst = area.get("instance")
+	if inst is DungeonInstance and inst.has_return_spot and not revive:
+		spot = inst.return_spot
+		inst.has_return_spot = false
+	player.global_position = spot + Vector3.UP * 0.05
+	player.velocity = Vector3.ZERO
+	player.reset_physics_interpolation()
+	if revive:
+		player.revive()
+
+	if area.has_method("on_player_arrived"):
+		area.on_player_arrived(player)
+	if not area is TownArea:
+		GameEvents.report("enter_area", area.scene_file_path.get_file().get_basename())
+	Waypoints.arrived(scene_path)
+	GlitchDeath.prewarm(area, spot)
+	EffectWarmup.run(area, spot)
+	Coop.area_loaded(scene_path)
+
+	await _wait_for_navigation(area, use_fade)
+	await _finish(use_fade)
+
+
+================================================================================
+# dungeon_director.gd
+================================================================================
+
+func generate_from_layout(max_retries: int = 5) -> bool:
+	if layout_root == null:
+		push_error("DungeonDirector: layout_root not assigned")
+		return false
+	layout = DungeonLayoutReader.read(layout_root, grid_map, grid_width, grid_height)
+	print("Layout root: %s, markers found: %d, spawn: %s" % [
+	layout_root.get_path(), layout.rooms.size(), layout.spawn_cell])
+	if layout.spawn_cell == DungeonLayout.NO_CELL:
+		push_error("Layout needs one SpawnMarker")
+		return false
+
+	if use_random_seed:
+		rng.randomize()
+	else:
+		rng.seed = fixed_seed
+
+	for attempt in max_retries:
+		grid = GridData.new(grid_width, grid_height)
+		rooms.clear()
+		rooms += layout.rooms
+		var extra := _random_rooms(layout.rooms)
+		rooms += extra
+
+		var cells: Array = _connect_rooms(layout.rooms + extra)
+		if not cells.is_empty():
+			if filler_rooms:
+				rooms += RoomGenerator.place_along_path(grid, cells, rng, min_room_size,
+						max_room_size, room_interval, room_min_gap, rooms)
+			if num_branch_rooms > 0:
+				rooms += BranchGenerator.generate(grid, cells, rng, num_branch_rooms,
+						min_room_size, max_room_size, rooms, room_min_gap)
+		for r: RoomData in rooms:
+			RoomGenerator.carve_room(grid, r.rect)
+
+		var targets: Array[Vector2i] = []
+		for r: RoomData in rooms:
+			targets.append(r.center())
+		for s in layout.spawns.values():
+			targets.append(s)
+		for en in layout.enemies:
+			targets.append(en["cell"])
+		if ConnectivityChecker.validate_all(grid, layout.spawn_cell, targets):
+			return _paint()
+		push_warning("Layout attempt %d failed connectivity, retrying..." % (attempt + 1))
+
+	push_error("Layout generation failed after %d attempts" % max_retries)
+	return false
+
+func _connect_rooms(list: Array) -> Array:
+	var cells: Array = []
+	if list.size() < 2:
+		return cells
+	var in_tree: Array[int] = [0]
+	var pending: Array[int] = []
+	for i in range(1, list.size()):
+		pending.append(i)
+
+	while not pending.is_empty():
+		var best := Vector2i(-1, -1)
+		var best_d := 1 << 60
+		for i in in_tree:
+			for j in pending:
+				var d := _room_dist(list[i], list[j])
+				if d < best_d:
+					best_d = d
+					best = Vector2i(i, j)
+		cells += _link(list[best.x], list[best.y])
+		in_tree.append(best.y)
+		pending.erase(best.y)
+
+	for k in loop_connections:
+		var a := rng.randi() % list.size()
+		var b := rng.randi() % list.size()
+		if a != b:
+			cells += _link(list[a], list[b])
+	return cells

@@ -1,0 +1,98 @@
+QUESTS AND PROGRESSION (key code)
+Gameplay reports events on one bus (GameEvents). Quests listen, match the events against their objectives, and pay rewards when turned in.
+
+
+================================================================================
+# game_events.gd
+================================================================================
+
+extends Node
+
+func report(kind: String, target: String = "", amount: int = 1) -> void:
+	if muted:
+		return
+	happened.emit(kind, target, amount)
+
+
+================================================================================
+# objective.gd
+================================================================================
+
+class_name Objective
+extends Resource
+
+@export var description: String = "Kill 5 Grunt Drones"
+@export var kind: String = "kill"
+@export var target: String = ""
+@export var required: int = 1
+@export var hidden: bool = false
+
+func matches(event_kind: String, event_target: String) -> bool:
+	return event_kind == kind and (target == "" or target == event_target)
+
+
+================================================================================
+# quest_manager.gd
+================================================================================
+
+func start(q: QuestDefinition) -> bool:
+	if not can_start(q):
+		return false
+	var s := QuestState.new(q)
+
+	_credit_already_met(s)
+
+	active[q.id] = s
+	quest_started.emit(s)
+	_check_ready(s)
+	return true
+
+func _on_event(kind: String, target: String, amount: int) -> void:
+	if kind in DEED_KINDS and target != "":
+		var key := "%s:%s" % [kind, target]
+		var first := not deeds.has(key)
+		deeds[key] = int(deeds.get(key, 0)) + amount
+		if first and (kind == ScriptBudget.CLEAR_DEED or kind == ScriptBudget.BOSS_DEED):
+			budget_changed.emit()
+	for s: QuestState in active.values().duplicate():
+		if s.status != QuestState.Status.ACTIVE:
+			continue
+		if s.handle_event(kind, target, amount):
+			_credit_already_met(s)
+			quest_updated.emit(s)
+			_check_ready(s)
+
+func _check_ready(s: QuestState) -> void:
+	if s.status == QuestState.Status.ACTIVE and s.all_done():
+		s.status = QuestState.Status.READY_TO_TURN_IN
+		quest_ready.emit(s)
+
+func turn_in(id: String) -> String:
+	var s: QuestState = active.get(id)
+	if s == null or s.status != QuestState.Status.READY_TO_TURN_IN:
+		return "QUEST NOT READY"
+	var q := s.def
+
+	var inv: InventoryComponent = _player.get("inventory")
+	var slots_needed := q.reward_items.size() + (1 if q.reward_support_choice else 0)
+	if slots_needed > 0:
+		if inv == null or inv.capacity - inv.items.size() < slots_needed:
+			return "BACKPACK FULL"
+
+	if q.reward_credits > 0 and _player.get("currency") != null:
+		_player.currency.add(q.reward_credits)
+	for def in q.reward_items:
+		inv.add_item(_make_reward_item(def))
+
+	s.status = QuestState.Status.COMPLETED
+	active.erase(id)
+	completed_ids.append(id)
+	quest_completed.emit(s)
+	GameEvents.report("quest_done", id)
+	if q.reward_support_choice and not support_choices().is_empty():
+		pending_choices.append(id)
+		reward_choice_changed.emit()
+
+	if q.next_quest != null:
+		start(q.next_quest)
+	return ""

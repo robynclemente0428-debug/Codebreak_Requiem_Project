@@ -1,0 +1,81 @@
+PLAYER (key code)
+Each physics frame: gravity, movement from input, turning to face the mouse, then casting the bound skill.
+
+
+================================================================================
+# player.gd
+================================================================================
+
+func _physics_process(delta: float) -> void:
+	if _dead or is_remote:
+		return
+	if not is_on_floor():
+		velocity += get_gravity() * delta
+	_handle_movement()
+	_handle_rotation(delta)
+	_handle_attack(delta)
+
+func _handle_movement() -> void:
+	if input_locked:
+		velocity.x = 0.0
+		velocity.z = 0.0
+		if walking:
+			walking = false
+			walking_changed.emit(false)
+		move_and_slide()
+		return
+	
+	var input_dir = InputManager.get_input_direction()
+	var velocity_vector = input_dir * stats.get_stat(StatTypes.Stat.MOVE_SPEED)
+	velocity.x = velocity_vector.x
+	velocity.z = velocity_vector.z
+	
+	var is_walking = input_dir.length() > 0.0
+	if is_walking != walking:
+		walking = is_walking
+		walking_changed.emit(walking)
+	for action in [&"forward", &"backward", &"left", &"right"]:
+		if Input.is_action_just_pressed(action):
+			GameEvents.report("walk", String(action))
+	move_and_slide()
+
+func _handle_rotation(delta: float) -> void:
+	if input_locked or not camera_rig:
+		return
+	var camera: Camera3D = camera_rig.camera
+	var mouse_pos := get_viewport().get_mouse_position()
+	var from := camera.project_ray_origin(mouse_pos)
+	var dir := camera.project_ray_normal(mouse_pos)
+
+	var p = Plane(Vector3.UP, global_position.y + aim_height).intersects_ray(from, dir)
+	if p == null:
+		return
+	var aim_point: Vector3 = p
+
+	_cursor_point = aim_point
+	var to_aim := aim_point - global_position
+	to_aim.y = 0.0
+	if to_aim.length_squared() < 0.04:
+		return
+
+	var target_rot_y := atan2(to_aim.x, to_aim.z)
+	global_rotation.y = lerp_angle(global_rotation.y, target_rot_y, 1.0 - pow(0.001, delta * ease_speed))
+
+func _handle_attack(delta: float) -> void:
+	if input_locked:
+		return
+	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
+	if _attack_cooldown > 0.0 or Input.is_action_pressed("pickup"):
+		return
+	var actions := SkillComponent.ACTIONS
+	for i in range(actions.size() - 1, -1, -1):
+		if not _wants(actions[i]):
+			continue
+		var skill := skills.get_skill(actions[i])
+		if skill == null or not skill.weapon_allows(equipment) or not skill.can_afford(mana):
+			continue
+		_attack_cooldown = skill.get_cooldown(stats)
+		skill.cast(self, stats, mana)
+		GameEvents.report("cast", String(actions[i]))
+		skill_cast.emit(actions[i])
+		return

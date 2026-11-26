@@ -1,0 +1,112 @@
+ENEMIES (key code)
+The AI picks a target and switches between idle, chase and attack. Traits (locks) change incoming hits, so different skill scripts work better against different enemies.
+
+
+================================================================================
+# enemy_base.gd
+================================================================================
+
+func setup() -> void:
+	health.stats = stats              
+	health.initialize()
+	health.died.connect(_on_died)
+	health.health_changed.connect(_on_health_changed)
+	stats.stats_changed.connect(health._on_stats_changed)
+	
+	ai.setup(self, stats, nav)
+	ai.attack_requested.connect(_on_attack_requested)
+
+func _on_attack_requested(target: Node3D) -> void:
+	if model == null:
+		return
+	var cooldown := 1.0 / maxf(stats.get_stat(StatTypes.Stat.ATTACK_SPEED), 0.1)
+	var delay := model.play_attack(cooldown)
+	SoundManager.play_skill("attack", self, delay)
+	if delay > 0.0:
+		await get_tree().create_timer(delay).timeout
+		if not is_instance_valid(self) or health.current_health <= 0.0:
+			return
+		if not is_instance_valid(target):
+			return
+	if global_position.distance_to(target.global_position) > ai.attack_range * 1.5:
+		return
+	var dmg := randf_range(
+		stats.get_stat(StatTypes.Stat.MIN_ATTACK_DAMAGE),
+		stats.get_stat(StatTypes.Stat.MAX_ATTACK_DAMAGE))
+	Coop.hit_source = Coop.Hit.ENEMY
+	target.health.take_damage(dmg)
+	Coop.hit_source = Coop.Hit.NONE
+
+
+================================================================================
+# ai_component.gd
+================================================================================
+
+func _update_target() -> void:
+	var best := _find_nearest_visible_player()
+	if best == null and objective != null:
+		if is_instance_valid(objective) and objective.is_inside_tree():
+			target = objective
+			_time_since_seen = 0.0
+			return
+		objective = null
+	if best != null:
+		target = best
+		_time_since_seen = 0.0
+	elif target != null:
+		_time_since_seen += SCAN_INTERVAL
+		if _time_since_seen > lose_target_time or not is_instance_valid(target):
+			target = null
+
+func _physics_process(delta: float) -> void:
+	if _body == null:
+		return
+	
+	_attack_cooldown = maxf(_attack_cooldown - delta, 0.0)
+	busy_time = maxf(busy_time - delta, 0.0)
+	
+	_scan_timer -= delta
+	if _scan_timer <= 0.0:
+		_scan_timer = SCAN_INTERVAL
+		_update_target()
+		if target != null:
+			_nav.target_position = target.global_position + _slot_offset()
+
+	var speed := _stats.get_stat(StatTypes.Stat.MOVE_SPEED)
+	var move_dir := Vector3.ZERO
+
+	if target == null:
+		state = State.IDLE
+	else:
+		var dist := _body.global_position.distance_to(target.global_position)
+		var range_limit := attack_range * (1.25 if state == State.ATTACK else 1.0)
+		state = State.ATTACK if dist <= range_limit else State.CHASE
+
+	# ... (rest of the function left out)
+
+
+================================================================================
+# enemy_trait.gd
+================================================================================
+
+class_name EnemyTrait
+extends Node
+
+func modify_incoming(_info: HitInfo) -> void:
+	pass
+
+func after_hit(_info: HitInfo) -> void:
+	pass
+
+
+================================================================================
+# firewalled_trait.gd
+================================================================================
+
+extends EnemyTrait
+
+@export_range(0.0, 0.95, 0.05) var block_fraction := 0.75
+
+func modify_incoming(info: HitInfo) -> void:
+	info.damage *= 1.0 - block_fraction
+	pop("FIREWALL", Color(COL, 0.8), 1.2)

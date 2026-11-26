@@ -1,0 +1,220 @@
+SKILL SCRIPTING (key code)
+A program is a list of WHEN/DO rules. Conditions are checked on each cast or hit, and effects change the skill's stats. Always-on rules are baked into the skill once; conditional rules run at cast time.
+
+
+================================================================================
+# skill_program.gd
+================================================================================
+
+class_name SkillProgram
+extends Resource
+
+@export var rules: Array[ProgramRule] = []
+
+func validate(limits: SkillProgramLimits) -> ProgramValidation:
+	if limits != null and has_calls():
+		var resolved := resolve(limits.routines, limits)
+		var v := resolved._validate_plain(limits)
+		resolved._remap(v)
+		for p in resolved._call_problems:
+			v.add_issue("%s rule: %s" % [_owner_name((p[0] as ProgramRule).owner), p[2]], p[3], p[4], p[0], p[1])
+		return v
+	return _validate_plain(limits)
+
+
+================================================================================
+# program_rule.gd
+================================================================================
+
+class_name ProgramRule
+extends Resource
+
+@export var owner: String = ""
+@export var conditions: Array[ProgramCondition] = []
+@export var effects: Array[ProgramEffect] = []
+@export var loop: ProgramLoop
+@export var branches: Array[ProgramBranch] = []
+
+func all_true(cast: SkillCast, target: Node) -> bool:
+	if parent != null:
+		if not parent.is_always():
+			if parent.scope() == ProgramCondition.Scope.CAST:
+				if not ProgramSupport.rule_fired(cast, parent):
+					return false
+			elif not parent.all_true(cast, target):
+				return false
+		for c in own_conditions():
+			if not c.is_true(cast, target):
+				return false
+		return true
+	for c in conditions:
+		if not c.is_true(cast, target):
+			return false
+	return true
+
+
+================================================================================
+# program_condition.gd
+================================================================================
+
+class_name ProgramCondition
+extends Resource
+
+func is_true(_cast: SkillCast, _target: Node) -> bool:
+	return false
+
+func cost_multiplier() -> float:
+	return 1.0
+
+
+================================================================================
+# enemies_nearby_condition.gd
+================================================================================
+
+class_name EnemiesNearbyCondition
+extends ProgramCondition
+
+@export var min_count: int = 3
+@export var radius: float = 4.0
+
+func is_true(cast: SkillCast, _target: Node) -> bool:
+	var origin := cast.caster.global_position
+	var count := 0
+	for t in SkillTargets.candidates(cast.caster):
+		if not (t is Node3D) or ProgramCondition.health_fraction(t) <= 0.0:
+			continue
+		var d: Vector3 = (t as Node3D).global_position - origin
+		var dist := Vector2(d.x, d.z).length()
+		if dist <= radius:
+			count += 1
+			if count >= min_count:
+				return true
+	return false
+
+
+================================================================================
+# program_effect.gd
+================================================================================
+
+class_name ProgramEffect
+extends Resource
+
+@export var knob: StringName
+@export var steps: int = 1
+@export var op: int = 0
+@export var ramp: int = -1
+@export var reg: int = 0
+@export var sort_by: int = 0
+
+
+================================================================================
+# skill_instance.gd
+================================================================================
+
+func _apply_program() -> void:
+	program_validation = null
+	if program == null or not program.has_rules():
+		return
+	var limits := get_program_limits()
+	program_validation = program.validate(limits)
+	if not program_validation.valid:
+		push_warning("[Skill] %s: program ignored: %s" % [gem.id, "; ".join(program_validation.errors)])
+		return
+	var run := program.resolve(limits.routines, limits) if program.has_calls() else program
+	var has_conditional := run != program
+	for rule in run.rules:
+		if not rule.is_baked():
+			has_conditional = true
+			continue
+		has_conditional = has_conditional or rule.uses_registers()
+		for e in rule.effects:
+			var knob := limits.get_knob(e.knob)
+			if knob == null or e.steps == 0 or knob.kind == SkillKnob.Kind.VARIABLE or e.ramps():
+				continue
+			if knob.kind == SkillKnob.Kind.FLAG:
+				_flags[knob.flag_key] = _flags.get(knob.flag_key, 0.0) + knob.value_for(e.steps)
+			else:
+				_add_modifier(knob.make_modifier(e.steps, "program"))
+	var tier := program_validation.tier
+	if tier != null:
+		for m in tier.modifiers:
+			_add_modifier(_tagged(m, "program_tier_%s" % tier.display_name))
+		for key in tier.flag_bonus.keys():
+			_flags[key] = _flags.get(key, 0.0) + float(tier.flag_bonus[key])
+	if has_conditional:
+		support_behaviors.push_front(ProgramSupport.new(run, limits))
+
+
+================================================================================
+# program_support.gd
+================================================================================
+
+func before_release(cast: SkillCast) -> void:
+	if cast.extra.get("hologram", false) or cast.depth > 0:
+		return
+	_caster = cast.caster
+	_clear_stale_registers()
+	program.state().sort_by = 0
+	_order_frame = -1
+	_hit_speed = 0.0
+	if _counts_swings(cast.skill):
+		cast.extra[CAST_NUMBER_KEY] = cast.skill.count_swing(cast)
+	else:
+		_cast_count += 1
+		cast.extra[CAST_NUMBER_KEY] = _cast_count
+	var undo := {"damage": 1.0, "flags": {}}
+	var tickets: Array[ProgramRule] = []
+	var whiles: Array[ProgramRule] = []
+	var late_fors: Array[ProgramRule] = []
+	_flat = program.flat_rules()
+	for rule in program.rules:
+		if rule.is_always() and rule.loop == null:
+			_report_calls(rule, cast)
+	for rule in _flat:
+		if rule.scope() != ProgramCondition.Scope.CAST or rule.in_loop():
+			continue
+		if rule.loop != null:
+			if rule.loop.mode == ProgramLoop.Mode.WHILE:
+				whiles.append(rule)
+			elif _is_repeat_rule(rule):
+				late_fors.append(rule)
+			elif rule.is_always() or rule.all_true(cast, null):
+				if not rule.is_always():
+					announce(cast, rule)
+				for i in rule.loop.count:
+					tickets.append(rule)
+			continue
+		if rule.is_always():
+			_write_registers(rule, cast)
+			_apply_effects(cast, rule, {}, true)
+			continue
+		if not rule.all_true(cast, null):
+			continue
+		_fire_cast_rule(cast, rule, undo if _is_repeat_rule(rule) else {})
+	cast.extra[REPEAT_UNDO_KEY] = undo
+	if tickets.is_empty() and whiles.is_empty() and late_fors.is_empty():
+		return
+	var runner := ProgramLoopRunner.new(self, cast, limits.loop_cap(), tickets, whiles, late_fors)
+	_runners.append(runner)
+	runner.start()
+
+func _apply_effects(cast: SkillCast, rule: ProgramRule, record: Dictionary, only_growing := false) -> void:
+	var mult := limits.rule_effect_mult(rule)
+	for e in rule.effects:
+		if only_growing and not e.ramps():
+			continue
+		var knob := limits.get_knob(e.knob)
+		if knob == null:
+			continue
+		var v := knob.step * _steps_now(e, knob, cast) * mult
+		match knob.kind:
+			SkillKnob.Kind.VARIABLE:
+				_queue_write(e, cast, null)
+			SkillKnob.Kind.DAMAGE:
+				cast.damage_mult *= 1.0 + v
+				if not record.is_empty():
+					record["damage"] = float(record["damage"]) * (1.0 + v)
+			SkillKnob.Kind.FLAG:
+				cast.flag_bonus[knob.flag_key] = cast.flag_bonus.get(knob.flag_key, 0.0) + v
+				if not record.is_empty():
+					record["flags"][knob.flag_key] = float(record["flags"].get(knob.flag_key, 0.0)) + v
