@@ -186,7 +186,7 @@ Component, data-driven design, strategy, hook chain (decorator-like), observer /
 | Acts IV–V | Playable prototypes. Act V has an automated test scene but has not been playtested by hand |
 | Endings | All three built with epilogues; **credits still missing** |
 | LAN co-op | Lobby, shared travel, host-run enemies, boss locks, shared events and trading (`feature/lan-coop`) |
-| Theorist rank | Planned after the campaign; exam not designed yet |
+| Theorist rank | Planned after the campaign; final and endgame content |
 | Art gaps | Act V's own regular enemies and the two final bosses' models (currently reused) |
 
 ---
