@@ -11,16 +11,20 @@ extends Node
 ##   4. a guest's hit lowers the enemy's health on the host, and the host's number comes back
 ##   5. the host's enemy moves on the guest's screen
 ## Prints [COOP host] / [COOP join] lines; "ALL PASSED" at the end, or each FAIL.
-## Add `warden` to both for the Perimeter Warden's challenge (_warden_test), or `locks` for the
-## host judging a guest's hits through its locks (_locks_test).
+## Add `warden` to both for the Perimeter Warden's challenge (_warden_test), `locks` for the
+## host judging a guest's hits through its locks (_locks_test), or `kernel` for Act V's pull
+## requests with a party (_kernel_test).
 
 const DUNGEON := "res://scenes/map/dungeon/act_1_map_1.tscn"
 const APPROACH := "res://scenes/map/dungeon/act_2_checkpoint_approach.tscn"
 const PatchPanelScript := preload("res://scenes/map/town/convoy/patch_panel.gd")
+const STACK := "res://scenes/map/dungeon/act_5_stack_trace.tscn"
+const CORE := "res://scenes/map/town/act_5_core.tscn"
 
 var _role := "host"
 var _warden_run := false
 var _locks_run := false
+var _kernel_run := false
 var _keep_alive := false
 var _shots_dir := ""
 var _host_town := ""
@@ -48,6 +52,8 @@ func _ready() -> void:
 			_warden_run = true
 		elif a == "locks":
 			_locks_run = true
+		elif a == "kernel":
+			_kernel_run = true
 		elif a.begins_with("shots="):                # with real windows (no --headless)
 			_shots_dir = a.trim_prefix("shots=")
 		elif a.begins_with("town="):                 # the HOST's last town (a beginner joins it there)
@@ -169,6 +175,9 @@ func _run() -> void:
 
 	if _warden_run:
 		await _warden_test()
+		return _done()
+	if _kernel_run:
+		await _kernel_test()
 		return _done()
 
 	# 3. Into a dungeon together
@@ -476,6 +485,99 @@ func _locks_test() -> void:
 	await _wait(2.0)
 
 
+## `-- host kernel` / `-- join kernel`: Act V's pull requests with a party (KernelDirector's co-op).
+## Both have root (the Gatekeeper turned in); the guest already holds `max_hp -= 15%` from an
+## earlier answer. The host takes the party into the Stack Trace, where each gets their own card:
+##   - co-op doesn't pause: each is marked answering, and nothing lands on them meanwhile
+##   - the host sees the guest answering (ANSWERING over them) and a trip waits for them
+##   - the host MERGEs, the guest TERMINATEs: the host spawns the guest's champion, by the guest,
+##     and it stays on the guest's screen (it's the host's, not a stray)
+##   - on the host, that champion carries the guest's max_hp -= 15% and the host's merged armour
+##   - the guest's KERNEL card shows the host's answer
+func _kernel_test() -> void:
+	_me().quests.completed_ids.append("q08_null_gatekeeper")
+	if _role == "join":
+		_me().skills.kernel.append("weaken")
+		Coop.kernel_changed()
+	await _wait(2.0)
+	if _role == "host":
+		_am().go_to(STACK, &"stack_in", 41)
+	await _until(func() -> bool: return _arrived() and Waypoints.normalize(_am().current_scene_path()) == STACK, 90.0)
+	_check("in the Stack Trace", _arrived() and Waypoints.normalize(_am().current_scene_path()) == STACK)
+	_check("not visiting", not Coop.visiting)
+	_keep_alive = true
+	await _until(func() -> bool: return _card() != null, 10.0)
+	_check("our pull request card is up", _card() != null)
+	_check("co-op doesn't pause for it", not get_tree().paused)
+	_check("we're answering, and nothing lands on us", Coop.answering and _me().health.untouchable)
+	if _card() == null:
+		return
+
+	if _role == "host":
+		var guest: int = Coop.roster.keys().filter(func(i: int) -> bool: return i != 1)[0]
+		await _until(func() -> bool: return bool(Coop._answering.get(guest, false)), 10.0)
+		_check("the host sees the guest answering", bool(Coop._answering.get(guest, false)))
+		_check("ANSWERING shows over them", Coop.others_here().any(func(o: Array) -> bool: return o.size() > 3 and o[3]))
+		_card()._answer("merge", "")
+		await _wait(1.0)
+		_check("the host merged", KernelScript.answer_of(_me().quests, "null_armour") == "merge"
+			and not Coop.answering and not _me().health.untouchable)
+		_am().go_to(CORE, &"from_stack", 0)
+		await _wait(3.0)
+		_check("a trip waits while the guest answers", Waypoints.normalize(_am().current_scene_path()) == STACK)
+		await _until(func() -> bool: return _defender() != null, 20.0)
+		var champ := _defender()
+		_check("the host spawned the guest's TERMINATE champion", champ != null)
+		if champ != null and _other() != null:
+			_check("by the guest (%.1f m)" % champ.global_position.distance_to(_other().global_position),
+				champ.global_position.distance_to(_other().global_position) < 15.0)
+			await _until(func() -> bool: return champ.has_meta(&"kernel_marked"), 5.0)
+			var sources: Array = (champ.get("stats") as StatComponent)._modifiers.map(func(m: Modifier) -> String: return m.source_id)
+			_check("it carries the guest's max_hp -= 15%", "kernel_weaken" in sources)
+			_check("and the host's merged armour += 40%", "kernel_null_armour" in sources)
+		await _wait(8.0)                             # the guest checks it keeps the champion
+		return
+
+	# The guest
+	var champs_before := _champions_near_me()
+	await _wait(5.0)                                 # the host checks us and tries to leave
+	_check("the host's trip waited for us", Waypoints.normalize(_am().current_scene_path()) == STACK)
+	_card()._answer("terminate", "")
+	await _wait(1.0)
+	_check("the guest terminated", KernelScript.answer_of(_me().quests, "null_armour") == "terminate"
+		and not Coop.answering and not _me().health.untouchable)
+	await _until(func() -> bool: return _champions_near_me() > champs_before, 10.0)
+	_check("the host's champion came for us", _champions_near_me() > champs_before)
+	await _wait(4.0)                                 # past Coop.UNMATCHED_GRACE: a stray would be gone
+	_check("and it stays: it's the host's", _champions_near_me() > champs_before)
+	var party := Coop.party_answers()
+	_check("our KERNEL card shows the host's MERGE (%s)" % str(party),
+		party.size() == 1 and (party[0][2] as Array).size() > 0 and party[0][2][0] == "merge")
+	await _wait(4.0)
+
+
+func _card() -> PullRequestCard:
+	var found := get_tree().root.find_children("*", "PullRequestCard", false, false)
+	return found[0] if not found.is_empty() else null
+
+
+func _defender() -> Node3D:
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e.has_meta(&"kernel_defender") and not SkillBehavior.is_dead(e):
+			return e
+	return null
+
+
+## Champions within 20 m of our player (a guest's copies carry no metas: counted by rarity).
+func _champions_near_me() -> int:
+	var n := 0
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e.get("rarity") == "champion" and not SkillBehavior.is_dead(e) \
+				and (e as Node3D).global_position.distance_to(_me().global_position) < 20.0:
+			n += 1
+	return n
+
+
 ## Both sides cast their attack for 8 seconds, through the player's own input path, and watch
 ## the other's copy: it must play the skill's animation.
 func _cast_check(where: String) -> void:
@@ -577,7 +679,7 @@ func _fix(pz, id: String) -> void:
 func _seat(class_id: String, slot: int) -> void:
 	var c := load("res://data/classes/%s.tres" % class_id) as ClassData
 	var data := {
-		"version": 1, "name": "Test " + _role.capitalize(), "class_id": class_id, "level": 1, "xp": 0,
+		"version": 1, "name": "Test " + _role.capitalize(), "class_id": class_id,
 		"attributes": c.get_attributes(), "equipment": {}, "skills": [], "inventory": []}
 	if _role == "host" and _host_town != "":
 		data[SaveManager.LAST_TOWN_KEY] = _host_town
@@ -586,6 +688,8 @@ func _seat(class_id: String, slot: int) -> void:
 			data["equipment"]["weapon"] = c.starting_weapon.id
 		if c.starting_skill_gem != null:
 			data["skills"] = [{"gem": c.starting_skill_gem.id, "supports": [], "action": "attack"}]
+	if _kernel_run:                                  # both have been to the Stack Trace: neither is visiting
+		data[Waypoints.SAVE_KEY] = [Waypoints.for_scene(STACK).id]
 	if _from_slot >= 0:                              # a real character's data, seated in the test's own slot
 		var real := SaveManager.load_slot(_from_slot)
 		if not real.is_empty():

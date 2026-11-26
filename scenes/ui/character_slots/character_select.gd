@@ -30,6 +30,9 @@ var _first := 0                     # index of the leftmost visible card
 var _scroll_tween: Tween
 
 var _pending_delete := -1
+var _reboot_dialog: ConfirmationDialog   # REBOOT: what the new character keeps (Reboot)
+var _pending_reboot := -1
+const REBOOT_DIALOG_WIDTH := 900
 var _moving := -1                   # slot whose MOVE was pressed: the next card clicked swaps with it
 
 
@@ -67,6 +70,7 @@ func _build_slots() -> void:
 		card.slot_chosen.connect(_on_slot_chosen)
 		card.delete_requested.connect(_on_delete_requested)
 		card.move_requested.connect(_on_move_requested)
+		card.reboot_requested.connect(_on_reboot_requested)
 		card.focus_entered.connect(_reveal.bind(i))
 	_layout_cards()
 
@@ -107,6 +111,41 @@ func _confirm_delete() -> void:
 	SaveManager.delete_slot(_pending_delete)
 	_build_slots()                                  # keeps _first, so the strip stays put
 	_focus_slot(_pending_delete)
+
+# ---------- REBOOT ----------
+## REBOOT on a TERMINATE character: say what carries over, then reboot it in its own slot.
+func _on_reboot_requested(index: int) -> void:
+	if _reboot_dialog == null:
+		_reboot_dialog = ConfirmationDialog.new()
+		CyberDialog.style(_reboot_dialog)
+		_reboot_dialog.ok_button_text = "REBOOT"
+		_reboot_dialog.dialog_autowrap = true         # long lines wrap inside the panel
+		_reboot_dialog.get_label().add_theme_font_size_override("font_size", 22)
+		_reboot_dialog.confirmed.connect(_confirm_reboot)
+		add_child(_reboot_dialog)
+	_pending_reboot = index
+	var data := SaveManager.load_slot(index)
+	var who := str(data.get("name", "this character"))
+	var lines := PackedStringArray([
+		"REBOOT %s?" % who,
+		"%s starts the campaign again from Act I, in this slot. This run's save is replaced (a backup copy is kept in the saves folder)." % who,
+		"KEPT: rank %s and exam grades, the script library, routines, kernel.gd's root lines (they run from Act I)." % Reboot.rank_name(data),
+		"RESET: quests, waypoints, gear, credits, the tower and the ending.",
+		"HARDER: enemies have +%d%% health and damage, and the Null copies you from Act II." % roundi(
+			Reboot.ENEMY_BONUS * (Reboot.count_of_save(data) + 1) * 100.0),
+	])
+	_reboot_dialog.dialog_text = "\n\n".join(lines)
+	_reboot_dialog.size = Vector2i(REBOOT_DIALOG_WIDTH, 0)   # shrink to fit the text again
+	_reboot_dialog.popup_centered(Vector2i(REBOOT_DIALOG_WIDTH, 0))
+
+
+func _confirm_reboot() -> void:
+	if not Reboot.make(_pending_reboot):
+		push_warning("REBOOT of slot %d failed" % _pending_reboot)
+		return
+	_build_slots()
+	_focus_slot(_pending_reboot)
+
 
 # ---------- MOVE ----------
 ## MOVE on a card: every other card shows SWAP HERE / MOVE HERE; the next card clicked takes

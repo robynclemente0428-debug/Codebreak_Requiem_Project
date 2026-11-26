@@ -18,6 +18,9 @@ const VESPER_GAP := 22.0
 ## The Mirror Forge: a champion Echo in the room farthest from the way in, whose copy also calls
 ## every one of your routines.
 @export var champion := false
+## Added by a REBOOT in Act II and III (Dungeon._add_reboot_echoes): Vesper isn't there yet, so
+## the Null speaks for itself.
+var rebooted := false
 
 static var _greeted := {}                 # zone scene path -> true: Vesper's arrival line, once a session
 var _spoke_at := -100.0
@@ -45,6 +48,9 @@ func _greet() -> void:
 	await get_tree().create_timer(3.0).timeout
 	if not is_inside_tree():
 		return
+	if rebooted:
+		QuestItems.toast(get_tree(), "REBOOT: THE NULL REMEMBERS YOU\nIt copies the first skill it sees you use.", COL_VESPER)
+		return
 	var line := "\"They copy the first thing they see you do. Show them something you don't mind losing.\""
 	if copies > 1:
 		line = "\"These ones watch longer. Two of your skills each, before they've seen enough.\""
@@ -62,6 +68,8 @@ func _on_event(kind: String, target: String, _amount: int) -> void:
 
 
 func _vesper(line: String, always := false) -> void:
+	if rebooted:
+		return                                  # no Vesper this early in a rebooted run
 	var now := Time.get_ticks_msec() / 1000.0
 	if not always and now - _spoke_at < VESPER_GAP:
 		return

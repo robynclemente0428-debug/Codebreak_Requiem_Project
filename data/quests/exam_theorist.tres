@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="QuestDefinition" format=3]
+
+[ext_resource type="Script" uid="uid://bo3sbbxgckkre" path="res://systems/quest/objective.gd" id="1_obj"]
+[ext_resource type="Script" uid="uid://ddwasls37yxoi" path="res://systems/quest/quest_definition.gd" id="2_quest"]
+
+[sub_resource type="Resource" id="Objective_0"]
+script = ExtResource("1_obj")
+description = "Pass the Theorist trial (the gold gate on floor 10 of The Recursion)"
+kind = "exam_passed"
+target = "theorist"
+
+[resource]
+script = ExtResource("2_quest")
+id = "exam_theorist"
+title = "RANK TRIAL: THEORIST"
+description = "Floor 10 of The Recursion holds a gate Sudo didn't build: the Theorist trial.
+No script check this time. Your own gear, skills and scripts, against five waves that each hit harder than the last. The last is a single champion.
+Graded on the lowest life you drop to: MERIT above 40%, DISTINCTION above 70%. Die and it fails; retake it as often as you like.
+Report to Examiner Sudo in the Core for the rank."
+objectives = Array[ExtResource("1_obj")]([SubResource("Objective_0")])
+ordered = false
+prerequisite_quest_ids = Array[String](["exam_defragmenter"])
+reward_credits = 0
+metadata/_custom_type_script = "uid://ddwasls37yxoi"
+metadata/giver = "Sudo"

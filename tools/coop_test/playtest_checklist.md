@@ -17,6 +17,7 @@ godot --headless res://tools/coop_test/coop_test.tscn -- join
 | *(none)* | lobby, travel, seeing each other, a guest's hit on the host's enemy, kill credit, shared loot |
 | `warden` | the Perimeter Warden's challenge with a party |
 | `locks` | the host's locks judging a guest's hits: absorbed vs landed, the Reflector's zap, a port opening on the guest's copy |
+| `kernel` | Act V's pull requests: each player's own card, no pause, a trip waiting for the one answering, the host spawning a guest's TERMINATE champion, every player's lines on the shared enemies |
 
 Each window prints `[COOP host]` / `[COOP join]` lines and ends with `ALL PASSED` or the failures.
 
@@ -63,3 +64,12 @@ Each window prints `[COOP host]` / `[COOP join]` lines and ends with `ALL PASSED
 ## Not covered yet
 
 Joining mid-game, quests, and the convoy's and dock's wave fights.
+
+## Act V: the Null's pull requests
+
+- [ ] Each player who has root gets their own card on a new floor; a visitor (carried there) gets none.
+- [ ] The game keeps running, but nothing hurts the one answering; the others see **ANSWERING...** over them.
+- [ ] A portal or the waypoint map while someone is answering: **WAITING FOR <name>**, and nobody leaves.
+- [ ] A guest's **TERMINATE**: the champion appears by the guest on **both** screens and stays.
+- [ ] A guest's `max_hp -= 15%` / `move_speed -= 25%` / merged Null lines change the enemies on the host too.
+- [ ] The KERNEL card shows each partner's answers (`NAME  M O T -`).

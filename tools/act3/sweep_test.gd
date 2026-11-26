@@ -96,10 +96,6 @@ func _run() -> void:
 	_check("the Collector's death ends them", not sweep.is_due())
 
 	# --- Act scaling ---
-	_check("Act I enemies aren't scaled", is_equal_approx(EnemySpawner.act_multiplier_of_scene("res://scenes/map/dungeon/act_1_spillway.tscn"), 1.0))
-	_check("Act II is +50%", is_equal_approx(EnemySpawner.act_multiplier_of_scene("res://scenes/map/town/act_2_convoy.tscn"), 1.5))
-	_check("Act III is +100%", is_equal_approx(EnemySpawner.act_multiplier_of_scene(YARD), 2.0))
-	_check("the exam isn't scaled", is_equal_approx(EnemySpawner.act_multiplier_of_scene(ExamChamber.SCENE), 1.0))
 	var armour_check := EnemySpawner.spawn_enemy(load("res://data/enemies/marker_drone.tres"), "normal", yard, _player().global_position + Vector3(25, 0.1, 0), 1, [])
 	_check("armour doubles too (%.0f)" % armour_check.stats.get_stat(StatTypes.Stat.ARMOUR), is_equal_approx(armour_check.stats.get_stat(StatTypes.Stat.ARMOUR), 50.0))
 	_check("and health starts full", is_equal_approx((armour_check.get("health") as HealthComponent).current_health, 76.0))

@@ -2,7 +2,6 @@ extends Control
 
 @onready var play_btn: Button = $VBoxContainer/ButtonCenter/ButtonBox/PlayButton
 @onready var settings_btn: Button = $VBoxContainer/ButtonCenter/ButtonBox/SettingsButton
-@onready var credits_btn: Button = $VBoxContainer/ButtonCenter/ButtonBox/CreditsButton
 @onready var exit_btn: Button = $VBoxContainer/ButtonCenter/ButtonBox/ExitButton
 
 
@@ -11,7 +10,6 @@ func _ready() -> void:
 	
 	play_btn.pressed.connect(_on_play)
 	settings_btn.pressed.connect(_on_settings)
-	credits_btn.pressed.connect(_on_credits)
 	exit_btn.pressed.connect(_on_exit)
 	
 	# Co-op: a LOBBY button under PLAY (a copy of it, so it looks and behaves the same)
@@ -33,7 +31,7 @@ func _ready() -> void:
 		exit_btn.add_sibling(note)
 		Coop.notice = ""
 
-	for b in [play_btn, lobby_btn, settings_btn, credits_btn, exit_btn]:
+	for b in [play_btn, lobby_btn, settings_btn, exit_btn]:
 		b.pivot_offset = b.size / 2.0
 		b.mouse_entered.connect(_hover.bind(b, true))
 		b.mouse_exited.connect(_hover.bind(b, false))
@@ -57,9 +55,6 @@ func _on_lobby() -> void:
 
 func _on_settings() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/settings/settings.tscn")
-
-func _on_credits() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/credits/credits.tscn")
 
 func _on_exit() -> void:
 	await get_tree().create_timer(0.3).timeout      # let the exit click play before closing

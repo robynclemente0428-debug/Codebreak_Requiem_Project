@@ -226,7 +226,7 @@ func _open_menu(peer: int) -> void:
 	var name_l := _label(Coop.peer_name(peer).to_upper(), 20, Coop.player_colour(peer))
 	_menu_box.add_child(name_l)
 	var class_id := str(info.get("class_id", ""))
-	_menu_box.add_child(_label("%s  ·  LV %d" % [class_id.capitalize().to_upper(), int(info.get("level", 1))], 14, COL_DIM))
+	_menu_box.add_child(_label("%s  ·  %s" % [class_id.capitalize().to_upper(), Coop.rank_name(peer)], 14, COL_DIM))
 	var info_b := _button("INFO", func() -> void: _show_info(peer))
 	_menu_box.add_child(info_b)
 	var trade_b := _button("TRADE", func() -> void: _ask_trade(peer))

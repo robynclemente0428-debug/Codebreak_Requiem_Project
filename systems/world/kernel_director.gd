@@ -7,8 +7,10 @@ extends Node
 ##   enemy_killed       each kill (the populator's "kill" event)
 ##   life_below(n%)     while your life is under it (rollback: once per zone; the Null's drain:
 ##                      every DRAIN_GAP seconds at most)
-## The first time you enter a zone, the Null writes its line into kernel.gd (a kernel_null deed),
-## and a strip at the top of the screen shows CORE STABILITY while you're here.
+## The first time you enter a floor with a request of its own, the Null submits it (a kernel_null
+## deed) and PullRequestCard asks for your answer (KernelScript.answer): MERGE runs its line and
+## gives you a root line, OVERWRITE runs one of yours instead, TERMINATE runs neither and brings
+## a champion. A card at the top centre (KernelStrip) shows your answers so far while you're here.
 
 const SPOT_RANGE := 14.0
 const SCAN_EVERY := 0.25
@@ -23,24 +25,34 @@ var _scan := 0.0
 var _history: Array = []                 # [[seconds, life], ...] for stack.rollback
 var _rolled := false
 var _drained_at := -100.0
-var _strip: PanelContainer
-var _strip_label: Label
+var _strip: KernelStrip
 var _scheduling := false                 # the Scheduler: the Null runs one of its lines at a time
 var _scheduled := ""
 var _schedule_left := 0.0
 var _schedule_index := -1
+## kernel.gd is ours here (the Last Log gave us root): our card, our strip, our player-side lines.
+## In co-op the host also runs without it, for the other players' enemy-side lines (party_kernel).
+var _mine := false
+var _in_act5 := false                    # one of Act V's zones (not a dungeon kernel.gd reaches after an ending)
+var _card: PullRequestCard                # our pull request, while it waits for an answer (null after)
 
 
 func _ready() -> void:
 	GameEvents.happened.connect(_on_event)
+	Coop.event_register("kernel", self)    # co-op: a guest's TERMINATE asks the host (coop_message)
 	_begin.call_deferred()
 
 
+## Leaving the floor (a co-op trip, a death, quitting) with the card still up: it goes, nothing
+## is recorded, and the same request waits for the next visit.
 func _exit_tree() -> void:
 	if GameEvents.happened.is_connected(_on_event):
 		GameEvents.happened.disconnect(_on_event)
 	if is_instance_valid(_strip):
 		_strip.queue_free()
+	if is_instance_valid(_card):
+		_card.queue_free()
+	_set_answering(false)
 
 
 func _begin() -> void:
@@ -50,14 +62,35 @@ func _begin() -> void:
 			break
 		await get_tree().process_frame
 	var qm := _qm()
-	if _player == null or not KernelScript.unlocked(qm):
+	if _player == null:
+		queue_free()
 		return
+	# Act V's zones; past them only once an ending runs kernel.gd everywhere (Endings)
+	_in_act5 = KernelScript.is_zone(get_parent().scene_file_path)
+	_mine = KernelScript.unlocked(qm) and (_in_act5 or Endings.runs_everywhere(qm))
+	if not _mine:
+		if Coop.in_game and Coop.is_host():
+			_started = true                     # only to apply the others' lines to our enemies
+		else:
+			queue_free()                        # nothing to run here
+		return
+	_build_strip()
 	var zone_line := KernelScript.null_line_of(get_parent().scene_file_path)
-	if zone_line != "" and not KernelScript.is_inserted(qm, zone_line):
-		GameEvents.report(KernelScript.NULL_DEED, zone_line)
-		QuestItems.toast(get_tree(), "THE NULL WROTE TO %s\n%s\n%s Overwrite it in %s for %d root points." % [
-			KernelScript.FILE_NAME, KernelScript.code_of(zone_line), KernelScript.NULL_LINES[zone_line]["tip"],
-			KernelScript.FILE_NAME, KernelScript.OVERWRITE_COST], KernelScript.COL_NULL)
+	# A visitor (carried here by the party, Coop.visiting) isn't asked: nothing here is theirs yet
+	if zone_line != "" and KernelScript.answer_of(qm, zone_line) == "" and not Coop.visiting:
+		if not KernelScript.is_inserted(qm, zone_line):
+			GameEvents.report(KernelScript.NULL_DEED, zone_line)
+		await get_tree().create_timer(0.6).timeout          # the arrival settles first
+		if not is_instance_valid(_player) or not is_inside_tree() or KernelScript.answer_of(qm, zone_line) != "":
+			return
+		var ids: Array = KernelScript.NULL_LINES.keys()
+		var w := Waypoints.for_scene(get_parent().scene_file_path)
+		_card = PullRequestCard.open(get_tree(), zone_line, w.display_name if w != null else "",
+			ids.find(zone_line) + 1, ids.size(), _lines())
+		_set_answering(true)
+		var reply: Array = await _card.answered
+		_set_answering(false)
+		answer(zone_line, str(reply[0]), str(reply[1]))
 	if "barrier_on_entry" in _lines():
 		var hp := _hp()
 		if hp != null:
@@ -66,12 +99,27 @@ func _begin() -> void:
 	_scheduling = get_parent().scene_file_path.get_file().get_basename() == KernelScript.SCHEDULE_ZONE
 	if _scheduling:
 		_next_schedule()
-	_build_strip()
 	_started = true
+
+
+## Co-op: our card is up. The party's travel waits for it (Coop.answering, sent with our state),
+## the others see ANSWERING over us, and nothing lands on us until it's answered. Single player
+## pauses instead (PullRequestCard).
+func _set_answering(on: bool) -> void:
+	Coop.answering = on and Coop.in_game
+	var hp := _hp()
+	if hp != null:
+		hp.untouchable = on and Coop.in_game
 
 
 func _process(delta: float) -> void:
 	if not _started or not is_instance_valid(_player):
+		return
+	if not _mine:                                 # the host without root: only the others' lines
+		_scan -= delta
+		if _scan <= 0.0:
+			_scan = SCAN_EVERY
+			_scan_enemies()
 		return
 	if _scheduling:
 		_schedule_left -= delta
@@ -99,7 +147,7 @@ func _process(delta: float) -> void:
 		var mana := _player.get("mana") as ManaComponent
 		if mana != null and mana.current_mana > 0.0:
 			_drained_at = now
-			var take := minf(mana.get_max_mana() * 0.25 * _scale(), mana.current_mana)
+			var take := minf(mana.get_max_mana() * 0.25, mana.current_mana)
 			mana.spend(take)
 			_pop("mana.drain(25%%)  -%d" % roundi(take), KernelScript.COL_NULL)
 	_scan -= delta
@@ -109,23 +157,44 @@ func _process(delta: float) -> void:
 
 
 # ---------- enemy_spotted ----------
+## Two passes over the same enemies:
+##   ours     the first time one comes within SPOT_RANGE of OUR player: our registry.add (it's
+##            our skills' registry), on every machine
+##   the body once, the first time it comes within SPOT_RANGE of ANY player here: the enemy-side
+##            lines (max_hp, move_speed, defragment, the Null's armour and life) of EVERY player
+##            here (Coop.party_kernel), only where the enemy is real: single player, or the host.
+##            A guest's copy only takes defragment off, so its FRAGMENTED tag goes too.
 func _scan_enemies() -> void:
 	var at := _player.global_position
-	var lines := _lines()
-	var running := _running()
+	var lines := _lines() if _mine else []
+	var real := not Coop.in_game or Coop.is_host()
+	var party := Coop.party_kernel(_player if _mine else null, not _in_act5)
+	var enemy_lines: Array = party.lines
+	var enemy_null: Array = party.merged.duplicate()
+	if _scheduled != "" and not _scheduled in enemy_null:
+		enemy_null.append(_scheduled)
+	var players := get_tree().get_nodes_in_group("players")
 	for e in get_tree().get_nodes_in_group(&"enemies"):
 		var body := e as Node3D
-		if body == null or body.has_meta(&"kernel_spotted") or SkillBehavior.is_dead(body):
+		if body == null or SkillBehavior.is_dead(body):
 			continue
-		if body.global_position.distance_to(at) > SPOT_RANGE:
-			continue
-		body.set_meta(&"kernel_spotted", true)
-		_spotted(body, lines, running)
+		if _mine and not body.has_meta(&"kernel_spotted") and body.global_position.distance_to(at) <= SPOT_RANGE:
+			body.set_meta(&"kernel_spotted", true)
+			_spotted(body, lines)
+		if not body.has_meta(&"kernel_marked") and _near_any(body, players):
+			body.set_meta(&"kernel_marked", true)
+			_mark(body, enemy_lines, enemy_null, real)
 
 
-func _spotted(e: Node3D, lines: Array, running: Array) -> void:
-	var stats := e.get("stats") as StatComponent
-	var hp := e.get("health") as HealthComponent
+func _near_any(body: Node3D, players: Array) -> bool:
+	for p in players:
+		if is_instance_valid(p) and (p as Node3D).global_position.distance_to(body.global_position) <= SPOT_RANGE:
+			return true
+	return false
+
+
+## Our own player-side lines on an enemy we've spotted.
+func _spotted(e: Node3D, lines: Array) -> void:
 	if "registry_add" in lines:
 		var sk := _player.get("skills") as SkillComponent
 		var key: Variant = ScriptRegisters.entry_key(e)
@@ -133,21 +202,29 @@ func _spotted(e: Node3D, lines: Array, running: Array) -> void:
 			for s in sk.sockets:
 				if s.program != null:
 					s.program.state().registers[key] = true
+
+
+## The party's enemy-side lines on an enemy: `real` = it's ours to change (not a guest's copy).
+func _mark(e: Node3D, lines: Array, running: Array, real: bool) -> void:
 	if "defragment" in lines and "traits" in e:
 		for t in (e.get("traits") as Array).duplicate():
 			if t is FragmentLock:
 				(e.get("traits") as Array).erase(t)
 				(t as Node).queue_free()
+	if not real:
+		return
+	var stats := e.get("stats") as StatComponent
+	var hp := e.get("health") as HealthComponent
 	if stats != null:
 		if "weaken" in lines:
 			_mod(stats, StatTypes.Stat.MAX_HEALTH, -0.15, "kernel_weaken")
 		if "slow" in lines:
 			_mod(stats, StatTypes.Stat.MOVE_SPEED, -0.25, "kernel_slow")
 		if "null_armour" in running:
-			_mod(stats, StatTypes.Stat.ARMOUR, 0.4 * _scale(), "kernel_null_armour")
+			_mod(stats, StatTypes.Stat.ARMOUR, 0.4, "kernel_null_armour")
 		if "null_regrow" in running:
 			var before := stats.get_stat(StatTypes.Stat.MAX_HEALTH)
-			_mod(stats, StatTypes.Stat.MAX_HEALTH, 0.2 * _scale(), "kernel_null_regrow")
+			_mod(stats, StatTypes.Stat.MAX_HEALTH, 0.2, "kernel_null_regrow")
 			if hp != null:
 				hp.heal(stats.get_stat(StatTypes.Stat.MAX_HEALTH) - before)
 	if hp != null and stats != null:                # less maximum life: what's left can't be over it
@@ -185,8 +262,68 @@ func _on_event(kind: String, _target: String, _amount: int) -> void:
 			_pop("registry.clear()", KernelScript.COL_NULL)
 
 
+# ---------- THE PULL REQUEST ----------
+## Your answer to this floor's request: recorded (KernelScript.answer, which adds the root line it
+## brings), then shown. TERMINATE brings the process's last defender, a champion, to you.
+## Public for tests: they answer without the card (KernelDirector.answer, then the card isn't needed).
+func answer(null_id: String, how: String, pick := "") -> void:
+	var sk := _player.get("skills") as SkillComponent if is_instance_valid(_player) else null
+	if sk == null:
+		return
+	KernelScript.answer(_qm(), sk.kernel, null_id, how, pick)
+	Coop.kernel_changed()                      # co-op: the host's party_kernel and our copies learn it
+	match how:
+		"merge":
+			QuestItems.toast(get_tree(), "MERGED: the Null's line runs\nYours too: %s" % KernelScript.code_of(
+				str(KernelScript.NULL_LINES[null_id]["gift"])), KernelScript.COL_NULL)
+		"overwrite":
+			QuestItems.toast(get_tree(), "OVERWRITTEN: your line runs instead\n%s" % KernelScript.code_of(pick),
+				KernelScript.COL_ROOT)
+		"terminate":
+			QuestItems.toast(get_tree(), "TERMINATED: the process fights its shutdown", KernelScript.COL_TERMINATE)
+			if Coop.in_game and not Coop.is_host():
+				# Enemies are the host's: one spawned here would be removed as not its own
+				Coop.event_send("kernel", "defend", [_player.global_position])
+			else:
+				_spawn_defender(_player.global_position)
+	_update_strip()
+
+
+## Co-op, on the host: a guest TERMINATED their request. Their champion comes for them, by them.
+func coop_message(what: String, args: Array, _from: int) -> void:
+	if what == "defend" and Coop.is_host() and args.size() == 1 and args[0] is Vector3 and (args[0] as Vector3).is_finite():
+		_spawn_defender(args[0])
+
+
+## A champion from this floor's own enemies, a little way from `near`, coming straight for whoever
+## is there. In co-op only the host spawns it (every machine then gets it from the host).
+func _spawn_defender(near: Vector3) -> Node3D:
+	var d := get_parent()
+	var director = d.get("director")
+	var pool: Array = director.dungeon_theme.enemy_pool if director != null and director.get("dungeon_theme") != null else []
+	var root := d.get_node_or_null("Enemies")
+	var def := EnemyDefinition.pick(pool, "champion") if not pool.is_empty() else null
+	if def == null or root == null or not is_instance_valid(_player):
+		return null
+	var level := int(d.get("dungeon_level")) if d.get("dungeon_level") != null else 1
+	var at := near + Vector3(9.0, 0.0, 0.0).rotated(Vector3.UP, randf() * TAU)
+	var nav := _player.get_world_3d().navigation_map
+	if NavigationServer3D.map_get_iteration_id(nav) > 0:
+		at = NavigationServer3D.map_get_closest_point(nav, at)
+	var e := EnemySpawner.spawn_enemy(def, "champion", root, at + Vector3.UP * 0.1, level, null)
+	if e == null:
+		return null
+	e.set_meta(&"kernel_defender", true)
+	if e.get("ai") != null:
+		e.ai.aggro_range = SPOT_RANGE * 3.0
+	var numbers := get_tree().get_first_node_in_group("damage_numbers") as DamageNumbers
+	if numbers:
+		numbers.track(e.health)
+	return e
+
+
 # ---------- THE SCHEDULER ----------
-## The Null's lines that run here now: the ones it wrote, and the one it has scheduled.
+## The Null's lines that run here now: the ones you merged, and the one it has scheduled.
 func _running() -> Array:
 	var out := KernelScript.null_running(_qm())
 	if _scheduled != "" and not (_scheduled in out):
@@ -194,8 +331,17 @@ func _running() -> Array:
 	return out
 
 
+## The Scheduler runs, one at a time, the lines you didn't merge: what you turned down comes back
+## here. Merged them all: there's nothing left for it to schedule.
 func _next_schedule() -> void:
-	var ids: Array = KernelScript.NULL_LINES.keys()
+	var qm := _qm()
+	var ids: Array = KernelScript.NULL_LINES.keys().filter(func(id: String) -> bool:
+		var a := KernelScript.answer_of(qm, id)
+		return a != "" and a != "merge" and Endings.current(qm) != "overwrite")   # patched: the Null is dormant
+	if ids.is_empty():
+		_scheduled = ""
+		_schedule_left = KernelScript.SCHEDULE_SECONDS
+		return
 	_schedule_index = (_schedule_index + 1) % ids.size()
 	_scheduled = ids[_schedule_index]
 	_schedule_left = KernelScript.SCHEDULE_SECONDS
@@ -206,50 +352,29 @@ func _next_schedule() -> void:
 
 
 # ---------- THE STRIP ----------
-## kernel.gd  //  CORE STABILITY 60%  //  1 NULL LINE: top of the screen, on the HUD.
+## kernel.gd's card (KernelStrip): your answer on each floor, what your kernel leans toward, your
+## lines and the Null's, and what the Scheduler runs now. Top centre, in the Announcer's strip, on the HUD's layer (outside the 3D view),
+## clear of the corner cards and the FPS counter.
 func _build_strip() -> void:
-	_strip = PanelContainer.new()
+	_strip = KernelStrip.new()
 	_strip.name = "KernelStrip"
-	_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.02, 0.03, 0.06, 0.72)
-	sb.border_color = Color(KernelScript.COL_ROOT, 0.6)
-	sb.border_width_bottom = 2
-	sb.content_margin_left = 12
-	sb.content_margin_right = 12
-	sb.content_margin_top = 3
-	sb.content_margin_bottom = 3
-	_strip.add_theme_stylebox_override("panel", sb)
-	_strip_label = Label.new()
-	_strip_label.add_theme_font_size_override("font_size", 15)
-	_strip_label.add_theme_color_override("font_color", KernelScript.COL_ROOT)
-	_strip.add_child(_strip_label)
 	var hud := get_tree().root.find_child("StimLayer", true, false)
 	if hud != null:
 		hud.add_child(_strip)
 	else:
 		add_child(_strip)
-	_strip.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_strip.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_strip.position.y = 6.0
 	_update_strip()
 
 
 func _update_strip() -> void:
-	if not is_instance_valid(_strip_label):
+	if not is_instance_valid(_strip):
 		return
 	var qm := _qm()
 	var lines := _lines()
-	var running := KernelScript.null_running(qm).size()
-	var text := "%s  //  CORE STABILITY %d%%  //  %d ROOT LINE%s" % [KernelScript.FILE_NAME,
-		roundi(KernelScript.stability(lines, qm) * 100.0), lines.size(), "" if lines.size() == 1 else "S"]
-	if running > 0:
-		text += "  //  %d NULL LINE%s x%.1f" % [running, "" if running == 1 else "S", _scale()]
-	if _scheduling and _scheduled != "":
-		text += "  //  SCHEDULED: %s (%ds)" % [KernelScript.NULL_LINES[_scheduled]["code"], ceili(_schedule_left)]
-	if _strip_label.text != text:
-		_strip_label.text = text
-		_strip.reset_size()
+	var sched := KernelScript.code_of(_scheduled) if _scheduling and _scheduled != "" else ""
+	var answers: Array = KernelScript.NULL_LINES.keys().map(func(id: String) -> String: return KernelScript.answer_of(qm, id))
+	_strip.show_state(answers, KernelScript.lean(qm), lines.size(), KernelScript.null_running(qm).size(),
+		sched, _schedule_left, Coop.party_answers())
 
 
 # ---------- HELPERS ----------
@@ -260,10 +385,6 @@ func _qm() -> QuestManager:
 func _lines() -> Array:
 	var sk := _player.get("skills") as SkillComponent if is_instance_valid(_player) else null
 	return Array(sk.kernel) if sk != null else []
-
-
-func _scale() -> float:
-	return KernelScript.null_scale(_lines(), _qm())
 
 
 func _hp() -> HealthComponent:

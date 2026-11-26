@@ -90,7 +90,10 @@ func show_brief() -> void:
 	var best := qm.exam_grade(spec.rank_id) if qm != null else -1
 	if best >= 0:
 		_card_box.add_child(_label("BEST GRADE: %s" % ExamSpec.GRADES[best], 15, GRADE_COLORS[best]))
-	_card_box.add_child(_wrapped("Edit your script with [K]. Then press [T] at the terminal to RUN.", 15, COL_GOLD))
+	if spec.trial:
+		_card_box.add_child(_wrapped("Your own gear, skills and scripts. It starts in a moment.", 15, COL_GOLD))
+	else:
+		_card_box.add_child(_wrapped("Edit your script with [K]. Then press [T] at the terminal to RUN.", 15, COL_GOLD))
 
 
 ## The terminal turned the script down.
@@ -149,6 +152,25 @@ func update_run(wave: int, waves: int, t: float, limit: float, fires: int, need:
 	_run_labels[3].add_theme_color_override("font_color", COL_WARN if lost > chamber.spec.par_damage else COL_TEXT)
 
 
+## A trial's run panel (ExamSpec.trial): the wave, the clock, your life now and the lowest it went.
+func update_trial(wave: int, waves: int, t: float, limit: float, life: float, lowest: float) -> void:
+	if _run_labels.size() < 4:
+		return
+	var spec := chamber.spec
+	_run_labels[0].text = "WAVE      %d / %d" % [wave, waves]
+	var name_now := spec.wave_name(wave - 1)
+	if name_now != "":
+		_run_labels[0].text += "  " + name_now
+		_run_labels[0].add_theme_color_override("font_color", spec.wave_tint(wave - 1))
+	_run_labels[1].text = "TIME      %s / %s" % [_clock(t), _clock(limit)]
+	_run_labels[1].add_theme_color_override("font_color", COL_WARN if limit - t < 10.0 else COL_TEXT)
+	_run_labels[2].text = "LIFE      %d%%" % roundi(life * 100.0)
+	_run_labels[2].add_theme_color_override("font_color", COL_WARN if life < spec.trial_merit else COL_TEXT)
+	var g := spec.trial_grade(lowest)
+	_run_labels[3].text = "LOWEST    %d%%  (%s)" % [roundi(lowest * 100.0), ExamSpec.GRADES[g]]
+	_run_labels[3].add_theme_color_override("font_color", GRADE_COLORS[g])
+
+
 # ---------- RESULT ----------
 func show_result(r: Dictionary) -> void:
 	_card.visible = false
@@ -162,15 +184,10 @@ func show_result(r: Dictionary) -> void:
 		_result_box.add_child(_wrapped("%s  //  FAILED: %s" % [spec.title, r["fail"]], 26, COL_WARN,
 				_result_text_width()))                 # a long reason wraps instead of widening it
 	_result_box.add_child(_rule())
-	# The numbers, each marked with whether it earned its grade point
-	var tier: String = r["tier"]
-	_result_box.add_child(_stat("SCRIPT TIER", tier.to_upper() if tier != "" else "NONE",
-			"+2" if tier == "elegant" else ("+1" if tier == "lean" else "+0")))
-	_result_box.add_child(_stat("TIME", "%s  (par %s)" % [_clock(r["time"]), _clock(spec.par_time)],
-			"+1" if r["fast"] else "+0"))
-	_result_box.add_child(_stat("HEALTH LOST", "%d%%  (par %d%%)" % [roundi(r["damage"] * 100.0),
-			roundi(spec.par_damage * 100.0)], "+1" if r["unhurt"] else "+0"))
-	_result_box.add_child(_stat("RULE FIRED", "%d times in %d casts" % [r["fires"], r["casts"]], ""))
+	if spec.trial:
+		_trial_stats(r, spec)
+	else:
+		_exam_stats(r, spec)
 	_result_box.add_child(_rule())
 	_result_box.add_child(_label("EXAMINER SUDO:", 16, ACCENT))
 	for line in ExamDebrief.lines(spec, r):
@@ -197,6 +214,27 @@ func show_result(r: Dictionary) -> void:
 	buttons.add_child(_button("RETURN TO TOWN", chamber.leave))
 	_result.visible = true
 	_center_result.call_deferred()
+
+
+## A trial is graded on one number: the lowest life reached.
+func _trial_stats(r: Dictionary, spec: ExamSpec) -> void:
+	_result_box.add_child(_stat("LOWEST LIFE", "%d%%  (MERIT %d%%, DISTINCTION %d%%)" % [roundi(r["lowest"] * 100.0),
+			roundi(spec.trial_merit * 100.0), roundi(spec.trial_distinction * 100.0)], ""))
+	_result_box.add_child(_stat("WAVES", "%d / %d" % [r["waves"], spec.wave_sizes.size()], ""))
+	_result_box.add_child(_stat("TIME", _clock(r["time"]), ""))
+
+
+## A scripting exam's numbers, each marked with whether it earned its grade point.
+func _exam_stats(r: Dictionary, spec: ExamSpec) -> void:
+	# The numbers, each marked with whether it earned its grade point
+	var tier: String = r["tier"]
+	_result_box.add_child(_stat("SCRIPT TIER", tier.to_upper() if tier != "" else "NONE",
+			"+2" if tier == "elegant" else ("+1" if tier == "lean" else "+0")))
+	_result_box.add_child(_stat("TIME", "%s  (par %s)" % [_clock(r["time"]), _clock(spec.par_time)],
+			"+1" if r["fast"] else "+0"))
+	_result_box.add_child(_stat("HEALTH LOST", "%d%%  (par %d%%)" % [roundi(r["damage"] * 100.0),
+			roundi(spec.par_damage * 100.0)], "+1" if r["unhurt"] else "+0"))
+	_result_box.add_child(_stat("RULE FIRED", "%d times in %d casts" % [r["fires"], r["casts"]], ""))
 
 
 ## Shrinks the panel to its content and centres it. Twice, a frame apart: a wrapping label only

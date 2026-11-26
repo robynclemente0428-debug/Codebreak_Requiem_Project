@@ -71,6 +71,9 @@ const CREDIT_DROP := {
     "champion": [30, 60]
 }
 var _level := 1
+## The Recursion: what this floor's threats pay (Tower.rewards_for), set by TowerFloor. Empty
+## everywhere else, so drops are as usual.
+var rewards: Dictionary = {}
 ## Set by dungeon.gd: the instance record. Enemies killed on an earlier visit are not spawned
 ## again. null = don't track (e.g. a test scene).
 var instance: DungeonInstance
@@ -290,6 +293,10 @@ func _check_cleared(inst: DungeonInstance) -> void:
 					Color(1.0, 0.82, 0.30))
 		return
 	inst.cleared = true
+	var floor_area := owner if owner != null else get_parent()
+	if floor_area != null and floor_area.has_method("on_floor_cleared"):
+		floor_area.on_floor_cleared()           # The Recursion: the tower keeps its own progress
+		return
 	var area_id := _area_id()
 	if area_id == "":
 		return
@@ -327,9 +334,13 @@ func _on_enemy_died(enemy: Node3D, rarity: String, enemy_id: String) -> void:
 
 	# Award credits when the enemy dies
 	_award_credits(rarity, enemy.global_position)
-	# Roll for an item drop
-	if randf() <= DROP_CHANCE.get(rarity, 0.1):
-		_drop_item(enemy.global_position, rarity)
+	# Roll for an item drop. More threats in The Recursion: more drops (rewards.quantity, above 1
+	# a sure drop can become two).
+	var chance: float = DROP_CHANCE.get(rarity, 0.1) * float(rewards.get("quantity", 1.0))
+	while chance > 0.0:
+		if randf() < chance:
+			_drop_item(enemy.global_position + Vector3(randf_range(-0.6, 0.6), 0, randf_range(-0.6, 0.6)), rarity)
+		chance -= 1.0
 
 func _award_credits(rarity: String, at: Vector3) -> void:
 	var player := get_tree().get_first_node_in_group("players")
@@ -547,8 +558,35 @@ func _drop_item(pos: Vector3, rarity: String) -> void:
 	var item_rarity := "normal"
 	if not is_gem:
 		item_rarity = "rare" if rarity == "champion" else rarity
+		# The Recursion's REFLECTOR reward: a step up now and then
+		if item_rarity != "rare" and randf() < float(rewards.get("rarity", 0.0)):
+			item_rarity = "magic" if item_rarity == "normal" else "rare"
 
-	var item := ItemGenerator.generate_item(def, _level, item_rarity)
+	var item := ItemGenerator.generate_item(def, _drop_level(), item_rarity,
+			bool(rewards.get("top_tier", false)) and item_rarity == "rare")
+	var pickup := loot_pickup_scene.instantiate() as LootPickup
+	pickup.item = item
+	_place_pickup.call_deferred(pickup, pos + Vector3(0, 0.5, 0))
+
+
+## The item level drops roll at: the dungeon's, plus The Recursion's FIREWALLED reward (never past
+## Tower.ITEM_LEVEL_CAP, and never below the dungeon's own).
+func _drop_level() -> int:
+	var bonus := int(rewards.get("item_level", 0))
+	return maxi(_level, mini(_level + bonus, Tower.ITEM_LEVEL_CAP)) if bonus > 0 else _level
+
+
+## The Recursion's PAGED reward: one rare, a little above the floor's level, where `pos` is.
+func drop_bonus_rare(pos: Vector3) -> void:
+	if not Coop.rolls_loot():
+		return
+	var pool := _eligible_loot().filter(func(d: ItemDefinition) -> bool:
+		return d.skill_gem == null and d.support_gem == null and d.stim == null)
+	if pool.is_empty():
+		return
+	var def: ItemDefinition = pool[randi() % pool.size()]
+	var lvl := mini(_drop_level() + Tower.BONUS_RARE_LEVELS, Tower.ITEM_LEVEL_CAP)
+	var item := ItemGenerator.generate_item(def, maxi(lvl, _level), "rare", bool(rewards.get("top_tier", false)))
 	var pickup := loot_pickup_scene.instantiate() as LootPickup
 	pickup.item = item
 	_place_pickup.call_deferred(pickup, pos + Vector3(0, 0.5, 0))

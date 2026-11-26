@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_m6wfj"]
 [ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/act1_ward.tres" id="4_1xd53"]
 [ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_sjelw"]
-[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act1_surge_meshes.tres" id="6_wtjry"]
+[ext_resource type="MeshLibrary" uid="uid://ck70a8xc3ikxx" path="res://dungeon_generation/rendering/mesh_library/act1_surge_meshes.tres" id="6_wtjry"]
 [ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_f6dcc"]
 [ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_6yc5e"]
 [ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_cq4kx"]
@@ -14,8 +14,6 @@
 [ext_resource type="Script" uid="uid://mtj1pbb1yxv7" path="res://systems/enemies/enemy_modifier_definition.gd" id="12_d1m0w"]
 [ext_resource type="Resource" uid="uid://b1aqjhrgh548a" path="res://data/enemy_modifiers/ironclad.tres" id="13_g13u2"]
 [ext_resource type="Resource" uid="uid://cv1bcwdxgryst" path="res://data/enemy_modifiers/juggernaut.tres" id="14_4n3du"]
-[ext_resource type="Resource" uid="uid://dp0dpoxeakybw" path="res://data/enemy_modifiers/stalwart.tres" id="15_rs3nq"]
-[ext_resource type="Resource" uid="uid://b2e6onjdyrak" path="res://data/enemy_modifiers/undying.tres" id="16_cj6yf"]
 [ext_resource type="Resource" uid="uid://b5nkrgwcyida3" path="res://data/enemy_modifiers/burly.tres" id="17_23hxy"]
 
 [sub_resource type="NavigationMesh" id="NavigationMesh_5uciv"]
@@ -106,7 +104,7 @@ metadata/_custom_type_script = "uid://c5hhflptas7h1"
 [node name="GateGuardMarker" type="Marker3D" parent="Layout/GateArena" unique_id=1309959870]
 script = ExtResource("10_enemy")
 enemy = ExtResource("11_guard")
-modifiers = Array[ExtResource("12_d1m0w")]([ExtResource("13_g13u2"), ExtResource("14_4n3du"), ExtResource("15_rs3nq"), ExtResource("16_cj6yf"), ExtResource("17_23hxy")])
+modifiers = Array[ExtResource("12_d1m0w")]([ExtResource("13_g13u2"), ExtResource("14_4n3du"), ExtResource("17_23hxy")])
 metadata/_custom_type_script = "uid://bri1ph1ms875r"
 
 [node name="PortalToTown" type="Marker3D" parent="Layout" unique_id=484040001]
@@ -114,10 +112,10 @@ transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 178,
 script = ExtResource("7_f6dcc")
 target_area = "uid://de57t2qg8my1n"
 target_spawn = &"_from_act_1_map_1"
-room_size = Vector2i(3, 3)
 route_after_quest = "q02b_the_road_out"
 routed_area = "res://scenes/map/town/act_1_town.tscn"
 routed_spawn = &"from_convoy"
+room_size = Vector2i(3, 3)
 metadata/_custom_type_script = "uid://5iqyjjqg3pro"
 
 [node name="RoomMarker" type="Marker3D" parent="Layout" unique_id=1686782260]

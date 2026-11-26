@@ -1,0 +1,140 @@
+ok    The Core loads
+ok    it's a town of Act V
+ok    the player lands on the floor ((-1.414215, 1.089856, 45.25483))
+ok    the act is on the map
+ok    LastLog is here
+ok    ExaminerSudo is here
+ok    TinkerHex is here
+ok    kernel.gd is unlocked
+ok    the Core has two portals (2)
+ok    one back to the Core's Gate, one down to the Stack Trace
+ok    the way down is shut before Sudo ranks you (stack_road)
+ok    and opens with stack_road
+ok    or once the Defragmenter exam is passed
+ok    THE CORE SENTINEL can start
+ok    The Stack Trace loads
+ok    the player lands on the floor ((-62.50824, 1.089062, 80.32733))
+ok    enemies spawn (89)
+ok    at level 41 (41)
+ok    on the waypoint map
+ok    the zone's enemies are FRAGMENTED (69 of 69)
+ok    the Null submits when enemy_spotted: target.armour += 40%
+ok    its card asks for an answer
+ok    and the game waits while it's up
+ok    answered MERGE (merge)
+ok    the card is gone and the game runs again
+ok    its line runs, and its gift is yours (registry_add)
+ok    the KERNEL card is on screen
+ok    top centre, clear of the corners ([P: (579.9999, 80.0), S: (440.0, 73.0)] in (1600.0, 899.9999))
+ok    portals back up and on to Sentinel's Hall (level 43)
+ok    the way on is open
+ok    Sentinel's Hall loads
+ok    the player lands on the floor ((-62.50824, 1.089062, 80.32733))
+ok    enemies spawn (43)
+ok    at level 43 (43)
+ok    on the waypoint map
+ok    the Null submits when life_below(50%): mana.drain(25%)
+ok    its card asks for an answer
+ok    and the game waits while it's up
+ok    answered OVERWRITE (overwrite)
+ok    the card is gone and the game runs again
+ok    its line doesn't run; yours does (barrier_on_entry)
+ok    a portal on to the Page File (level 46), shut by kernel_road
+ok    the Core Sentinel is there
+ok    it has RECALL, starting on BROOD LINK
+ok    a burst past a lock is RESTORED FROM BACKUP to the middle of the next third (50%)
+ok    and it loads CHECKSUM
+ok    then DIFF, with no restore (20%)
+ok    killing it finishes THE CORE SENTINEL
+ok    and counts as an act boss
+ok    it drops kernel_road (1 on the floor)
+ok    walking onto it picks up kernel_road
+ok    the Page File portal opens
+ok    The Page File loads
+ok    the player lands on the floor ((-62.50824, 1.089062, 80.32733))
+ok    enemies spawn (76)
+ok    at level 46 (46)
+ok    on the waypoint map
+ok    the zone's enemies are PAGED (64 of 64)
+ok    the Null submits when enemy_killed: registry.clear()
+ok    its card asks for an answer
+ok    and the game waits while it's up
+ok    answered TERMINATE (terminate)
+ok    the card is gone and the game runs again
+ok    neither runs, and a champion comes for you (1)
+ok    a portal on to the Scheduler (level 48), shut by swap_road
+ok    The Watchdog is there
+ok    it has HEARTBEAT and is PAGED
+ok    no hit in time: it heals 12% and reboots (40% -> 52%, REBOOT)
+ok    killing it counts as an act boss
+ok    it drops swap_road (1 on the floor)
+ok    walking onto it picks up swap_road
+ok    the Scheduler portal opens
+ok    The Scheduler loads
+ok    the player lands on the floor ((-62.50824, 1.089062, 80.32733))
+ok    enemies spawn (177)
+ok    at level 48 (48)
+ok    on the waypoint map
+ok    no pull request of its own here
+ok    the Null schedules a line you turned down (null_drain, overwrite)
+ok    then the other one, round and round (null_swap, terminate)
+ok    an open portal on to the Kernel (level 50)
+ok    The Kernel loads
+ok    the player lands on the floor ((-62.50824, 1.089062, 80.32733))
+ok    enemies spawn (30)
+ok    at level 50 (50)
+ok    on the waypoint map
+ok    the Null submits when enemy_spotted: target.max_hp += 20%
+ok    its card asks for an answer
+ok    and the game waits while it's up
+ok    answered MERGE (merge)
+ok    the card is gone and the game runs again
+ok    its line runs, and its gift is yours (slow)
+ok    THE ROOT PROCESS can start
+ok    the Root Process is there
+ok    it starts in PHASE 1 // SPAWN
+ok    its adds come FRAGMENTED (5)
+ok    PHASE 2 // LOOP at two thirds
+ok    PHASE 3 // FORK at a third, swapping forms
+ok    killing it finishes THE ROOT PROCESS
+ok    and counts as an act boss
+ok    the far exit goes back up to the Core, open
+ok    all four requests answered (merge 2, overwrite 1, terminate 1)
+ok    two merges lean MERGE (merge)
+ok    and both merged lines run (null_armour, null_regrow)
+ok    two terminates lean TERMINATE (terminate)
+ok    two overwrites lean OVERWRITE (overwrite)
+ok    a 1-1-1 tie goes to the deepest answer, the Page File's TERMINATE (terminate)
+ok    back in the Core
+ok    the player lands on the floor ((1.414213, 1.089062, 53.74011))
+ok    no KERNEL card in the Core
+ok    Vesper is in the Core (after The Collector)
+ok    the Core watches the ending (CoreEnding)
+ok    no ending yet: the Core as it was
+ok    MERGE: the Core shows it (merge)
+ok    the Null's glow brightens (2.5 -> 6.0)
+ok    Vesper is gone from the Core
+ok    its epilogue: 6 pages (MERGE, VESPER, HARDFAULT, HEX AND SUDO, YOUR KERNEL, AFTER)
+ok    one of them reads back your kernel
+ok    your lines run everywhere now
+ok    the character sheet's title: MERGED
+ok    the epilogue card opens
+ok    past Act V, kernel.gd runs (the Core's Gate)
+ok    and its card is up there
+ok    back in the Core, still merged
+ok    OVERWRITE: the Core shows it
+ok    the Null's glow is out
+ok    Vesper is back in the Core
+ok    the Null is dormant: none of its lines run (0)
+ok    kernel.gd is yours to edit (up to 4 lines)
+ok    its epilogue counts the convoy
+ok    TERMINATE: the Core goes dark (sun 0.36 -> 0.03)
+ok    but the Last Log's terminal still glows
+ok    its FINAL LOG reads the run
+ok    and notes the endings tried before
+ok    it ends: END OF LOG
+ok    lines don't run everywhere after it
+ok    chosen again: MERGE says so
+ok    leaving the Core puts the light back: the next area's own (sun 0.024, its 0.024; the Core's was 0.30)
+ALL PASSED
+DONE

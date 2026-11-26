@@ -8,6 +8,8 @@ extends Button
 signal slot_chosen(slot_index: int)
 signal delete_requested(slot_index: int)
 signal move_requested(slot_index: int)
+## REBOOT (Reboot): a character who chose TERMINATE can start a new game plus.
+signal reboot_requested(slot_index: int)
 
 const ACCENT := Color("#00E5FF")
 const CARD_BG := Color(0.035, 0.13, 0.17, 0.92)
@@ -15,6 +17,7 @@ const CARD_BG_EMPTY := Color(0.035, 0.13, 0.17, 0.55)
 const CARD_BG_HOVER := Color(0.06, 0.22, 0.28, 0.96)
 const CARD_BG_PRESSED := Color(0.08, 0.29, 0.36, 1.0)
 const DANGER := Color(1.0, 0.35, 0.3)
+const REBOOT_COL := Color(1.0, 0.78, 0.35)
 const CORNER := 48
 
 @onready var slot_number: Label = $SlotNumber
@@ -34,6 +37,7 @@ const CORNER := 48
 var slot_index := 0
 var _move_tag: Label                # "SWAP HERE" / "MOVE HERE" / "MOVING" while a move is on
 var _filled := false
+var _reboot_button: Button          # shown on TERMINATE characters only
 
 ## Long names shrink down to this font size before they get cut with "...".
 const MIN_NAME_SIZE := 22
@@ -49,6 +53,17 @@ func _ready() -> void:
 	delete_button.pressed.connect(func(): delete_requested.emit(slot_index))
 	_style_action(move_button, ACCENT)
 	_style_action(delete_button, DANGER)
+	_reboot_button = Button.new()
+	_reboot_button.text = "REBOOT"
+	_reboot_button.tooltip_text = "New game plus: this character starts over from Act I, keeping its rank, scripts and routines"
+	_reboot_button.focus_mode = Control.FOCUS_NONE
+	_reboot_button.custom_minimum_size = Vector2(0, 44)
+	_reboot_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_reboot_button.visible = false
+	_reboot_button.pressed.connect(func(): reboot_requested.emit(slot_index))
+	actions.add_child(_reboot_button)
+	actions.move_child(_reboot_button, 0)
+	_style_action(_reboot_button, REBOOT_COL)
 	_build_move_tag()
 	_apply_card_style()
 
@@ -180,8 +195,19 @@ func setup(index: int, data: Dictionary) -> void:
 	location_label.text = _location_text(str(data.get(SaveManager.LAST_TOWN_KEY, "")))
 	location_label.tooltip_text = location_label.text
 	_add_detail("CREDITS", _group_digits(credits))
+	var runs := Reboot.count_of_save(data)
+	if runs > 0:
+		_add_detail("RUN", "REBOOT %d" % runs)
+	if _reboot_button != null:
+		_reboot_button.visible = Reboot.can_reboot(data)
 	_add_detail("PLAYTIME", _playtime_text(int(data.get("playtime_seconds", 0))))
+	var saved_at := int(data.get("saved_at", 0))
+	if saved_at > 0:
+		_add_detail("LAST PLAYED", _date_text(saved_at))
 
+static func _date_text(unix: int) -> String:
+	var d := Time.get_datetime_dict_from_unix_time(unix)
+	return "%04d-%02d-%02d" % [d.year, d.month, d.day]
 
 func _add_detail(key: String, value: String) -> void:
 	var k := Label.new()

@@ -1,12 +1,12 @@
 # CodeBreak Requiem: Act V Plan (Final Execution)
 
-*Status: a playable prototype, not yet playtested. Built: The Core (hub) and a single descent of five zones (levels 41-50), the Defragmenter exam and sorting, the FRAGMENTED and PAGED threats, kernel.gd (root scripts) and Core stability, the Core Sentinel (RECALL), the Watchdog (HEARTBEAT), the Root Process (three phases), three side quests and a prototype ending card. Not built: Act V's own regular enemies, the Core Sentinel's and Root Process's own models, an epilogue and credits, Act V field lines, and an Act V test tool. Sections 11 to 14 list what's left. This plan builds on `CodeBreak_Requiem_Setting_and_Campaign.md`, which is the source of truth.*
+*Status: a playable prototype, not yet playtested. Built: The Core (hub) and a single descent of five zones (levels 41-50), the Defragmenter exam and sorting, the FRAGMENTED and PAGED threats, kernel.gd (the Null's pull requests), the Core Sentinel (RECALL), the Watchdog (HEARTBEAT), the Root Process (three phases), three side quests, Act V field lines, an epilogue per ending with a changed Core (section 9), co-op support for the pull requests and endings, and an Act V test tool (138 checks, all passing). Not built: Act V's own regular enemies, the Core Sentinel's and Root Process's own models, credits, distinct Page File and Scheduler layouts, and the ending extras in section 9. Sections 11 to 14 list what's left. This plan builds on `CodeBreak_Requiem_Setting_and_Campaign.md`, which is the source of truth.*
 
 ---
 
 ## 1. The Act in Four Lines
 
-The Executor reaches the Core. The Last Log, the Architects' recorded farewell, explains: AXIOM was meant to evolve until its people could rewrite its rules, and the Null is the process the Architects left running for that day. It is hours from finishing. The Executor has **root** here: they can write the rules the Core runs on (kernel.gd), and so can the Null. They descend through the Core's memory to the Kernel, break the Root Process, and decide what AXIOM becomes: **Merge**, **Overwrite** or **Terminate**.
+The Executor reaches the Core. The Last Log, the Architects' recorded farewell, explains: AXIOM was meant to evolve until its people could rewrite its rules, and the Null is the process the Architects left running for that day. It is hours from finishing. The Executor has **root** here: they decide what the Core runs (kernel.gd), and so does the Null: on every floor down it asks to run a line, and the Executor merges, overwrites or terminates it. They descend through the Core's memory to the Kernel, break the Root Process, and decide what AXIOM becomes: **Merge**, **Overwrite** or **Terminate**.
 
 ## 2. What Act V Picks Up From Acts I to IV
 
@@ -31,7 +31,7 @@ The Executor reaches the Core. The Last Log, the Architects' recorded farewell, 
 3. **The Stack Trace.** The Core replays every process it has run, the player's old enemies among them, in fragments. Three of them carry the Architects' own logs (Last Words).
 4. **Sentinel's Hall.** The Core Sentinel *"remembers every enemy you have faced"* and borrows their locks. It carries the way down.
 5. **The Page File.** Where the Core puts what it can't hold: processes paged out until nothing points at them. The Watchdog guards the way on.
-6. **The Scheduler.** The Null decides what runs next. It writes a new line into the Executor's kernel.gd every 45 seconds: *"the only exam the Null ever set."*
+6. **The Scheduler.** The Null decides what runs next. It runs every line the Executor turned down on the way, one at a time, 45 seconds each: *"the only exam the Null ever set."*
 7. **The Kernel.** The Root Process, *"the last thing in AXIOM that still believes the old rules"* (Vesper). No lock, three phases.
 8. **The choice.** The Last Log reads the Executor's kernel back, says which ending it leans toward, and offers all three.
 
@@ -45,7 +45,7 @@ Act I taught reacting, Act II repeating, Act III remembering, Act IV referencing
 | 2 | Defragmenter exam | `registry.sort(key=hp)` and `when target is registry[0]:`: kill each fragment while it's first |
 | 3 | The Stack Trace (after) | Sorting in the field, every pack fragmented |
 | 4 | The Page File | Keep enemies *referenced* (the Registry as memory), and a steady rhythm for the Watchdog |
-| 5 | The Scheduler | kernel.gd planned for all four of the Null's lines, not just the one in front of you |
+| 5 | The Scheduler | A build planned for every line you turned down, not just the one in front of you |
 | 6 | The Kernel | Everything: sorted adds, a loop to dodge, fast form swaps |
 
 **Sorting (`registry.sort`).** The Registry has always kept enemies in the order they joined. `registry.sort(key=hp)` orders it by life left, least first (keys `age`, `hp`, `max_hp`, `distance`, each also `reverse=true`). `when target is registry[0]:` (also `[1]`, `[2]`, `[-1]`, `[:2]`, `[:3]`) is checked per hit against that order. A sort is a free line like add and remove. Every cast starts back at oldest first. One place discounts a rule x0.6, a slice x0.68 or x0.75. The editor writes each read in plain words ("the 2nd nearest"). Full rules are in the source-of-truth doc.
@@ -126,37 +126,30 @@ The Null Gatekeeper's last objective is to talk to the Last Log in the Core. Tha
 - **On defeat:** the Last Log offers the choice (section 9).
 - **Model:** a placeholder (the Collector's, larger). See section 12.
 
-## 7. kernel.gd: Root Scripts (Act V's thread)
+## 7. kernel.gd: The Null's Pull Requests (Act V's thread)
 
-Act IV's thread was the Null copying the player. Act V's is the reverse: **the player writes the world's rules**, and the Null writes back into the same file.
+Act IV's thread was the Null copying the player. Act V's is the reverse: **the player decides what runs on the Core**, one floor at a time, and every decision is the final choice in small.
 
-- **The file:** when the Null Gatekeeper is turned in, the script editor gets a fourth file next to the skills and routines.gd: **kernel.gd** (`KernelScript`, run by `KernelDirector`). Its lines run in all five Act V zones, whatever the player casts.
-- **The player's lines** (one each, priced in root points out of 10):
+- **Root:** when the Null Gatekeeper is turned in, the Last Log says the Executor has root, and so does the Null. The script editor gets **kernel.gd** (`KernelScript`, run by `KernelDirector`): a **read-only record** of what runs on the zone and of every answer given.
+- **Pull requests:** on the first visit to each of four floors, the Null submits one line it wants to run on the Core, and a card (`PullRequestCard`) asks for an answer before play goes on (single player pauses while it's up):
 
-  | Line | Cost |
-  |---|---|
-  | `when area_entered: barrier(20%)` | 1 |
-  | `when enemy_spotted: registry.add(target)` (every enemy within 14 m joins every skill's registry) | 1 |
-  | `when enemy_spotted: target.defragment()` | 3 |
-  | `when enemy_spotted: target.max_hp -= 15%` | 3 |
-  | `when enemy_spotted: target.move_speed -= 25%` | 2 |
-  | `when enemy_killed: mana(10%)` | 1 |
-  | `when enemy_killed: heal(4%)` | 2 |
-  | `when life_below(30%): stack.rollback(5s)` (once per zone) | 4 |
+  | Floor | The Null's line | MERGE gives you | OVERWRITE offers (two you don't have yet) |
+  |---|---|---|---|
+  | The Stack Trace | `when enemy_spotted: target.armour += 40%` | `registry.add(target)` | `target.defragment()`, `target.max_hp -= 15%`, `move_speed -= 25%` |
+  | Sentinel's Hall | `when life_below(50%): mana.drain(25%)` | `mana(10%)` on kill | `barrier(20%)` on entry, `stack.rollback(5s)`, `heal(4%)` on kill |
+  | The Page File | `when enemy_killed: registry.clear()` | `heal(4%)` on kill | `registry.add(target)`, `move_speed -= 25%`, `barrier(20%)` |
+  | The Kernel | `when enemy_spotted: target.max_hp += 20%` | `move_speed -= 25%` | `target.max_hp -= 15%`, `stack.rollback(5s)`, `mana(10%)` |
 
-- **Core stability:** the points left over, shown on a strip at the top of the screen. The lower it is, the harder the Null's lines run (up to x2).
-- **The Null writes back:** the first time the player enters a zone, it inserts one violet line of its own:
-
-  | Zone | The Null's line |
-  |---|---|
-  | The Stack Trace | `when enemy_spotted: target.armour += 40%` |
-  | Sentinel's Hall | `when life_below(50%): mana.drain(25%)` |
-  | The Page File | `when enemy_killed: registry.clear()` |
-  | The Kernel | `when enemy_spotted: target.max_hp += 20%` |
-  | The Scheduler | no line of its own: it schedules one of the four above for 45 s at a time, round and round |
-
-- **Overwriting:** deleting one of the Null's lines costs 3 root points, permanently.
-- **It feeds the ending:** before the choice, the Last Log reads the kernel back. Two or more overwrites lean **Overwrite**, two or more Null lines kept lean **Merge**, and anything else leans **Terminate**. The leaning choice is marked "(YOUR KERNEL)". All three stay open.
+- **The three answers** (the three endings in small):
+  - **MERGE:** the Null's line runs, and it gives you a root line too. A trade.
+  - **OVERWRITE:** its line never runs; the root line you pick does.
+  - **TERMINATE:** neither runs, and the process fights its shutdown: a champion from the floor's own enemies comes for you.
+- **Lines run everywhere below:** every root line you hold, and every Null line you merged, runs in all five Act V zones from then on, whatever you cast.
+- **The Scheduler** has no request of its own. There the Null runs, 45 s at a time, the lines you **turned down**: *"everything you said no to, it runs in there anyway"* (Sudo). Merge them all and it has nothing to schedule.
+- **The KERNEL card** (top centre, in every Act V zone): one cell per request with your answer (M, O, T), what the answers lean toward, and the lines running.
+- **It feeds the ending:** the answer given most is what the kernel leans toward. A tie goes to the answer given deepest down (the Kernel's, then the Page File's...). The Last Log reads it back (*"You merged it... / You overwrote it... / You terminated it..."*) and marks that ending "(YOUR KERNEL)". All three stay open.
+- **Replaced (the first prototype):** root points out of 10, Core stability and the Null's lines scaling with it, hand-picked root lines in the editor, and overwrites for 3 points. The pull requests keep the lines, the Null's writes and the readback, and turn the budget into four decisions that match the ending.
+- **Saves:** answers are deeds (`kernel_null`, then `kernel_merge` / `kernel_overwrite` / `kernel_terminate`); root lines are `SkillComponent.kernel`. A save from the first prototype keeps its root lines, and is asked each request it hasn't answered on its next visit to that floor.
 - **Not built:** `enemies.sort(key=...)` as a world line (*"the toughest comes at you first, alone"*), which would be sorting applied to spawns.
 
 ## 8. Side Quests
@@ -189,10 +182,19 @@ After the Root Process falls, the Last Log reads the kernel and offers the choic
 | **Overwrite** | A patch written from scratch. AXIOM survives, degraded but knowable; the Null goes dormant. The convoy keeps moving. | The Last Log: *"A patch, then. Written by the first of you to get here."* |
 | **Terminate** | A controlled shutdown. Everything in AXIOM stops. The player's log is the last entry. | The Last Log: *"Shutdown confirmed. Goodbye, Executor."* |
 
-**Built:** a prototype `EndingCard` (full-screen text, CONTINUE back to the Core). **Planned:**
-- A short epilogue per ending showing what happens to Hardfault at Checkpoint, Brack, Hex, Sudo and Vesper.
-- Credits.
-- Feeding Act III's census and Act II's deeds into each epilogue, so it isn't only the choice that shows.
+**Built** (`Endings`, `EndingCard`, `CoreEnding`): each ending is an epilogue of pages, a changed Core, and something that lasts. The choice is **final** (`ending_now` deed): `Endings.choose` refuses a second one, and the Last Log only offers READ THE EPILOGUE AGAIN (`> epilogue`). A save from before keeps the last ending it chose.
+
+| | Merge | Overwrite | Terminate |
+|---|---|---|---|
+| **Epilogue** | Vesper merges into the Core; Brack's relay call (its *Static from Home* version if that quest was done); Hex and Sudo (*"No more exams. It grades itself now."*) | The convoy, counted from Act III's census (crates that made it), with the Registrar's *"Records updated. Patch applied."*; Vesper, ordinary now; Hex and Sudo | The **FINAL LOG**: rank, exam grades, act bosses, areas cleared, Architect logs, the four answers, the endings tried before; Vesper asks to be shut down last; *"// END OF LOG. Goodbye, Executor."* |
+| **Every epilogue** | "YOUR KERNEL": one line per floor by your pull-request answer (*"The Page File stayed shut down..."*), then "AFTER": what lasts | | |
+| **The Core** | Violet: the Null's glow and the light | The Architects' white and gold; the Null's glow out | Dark; only the Last Log's terminal glows |
+| **Vesper** | Gone from the Core; she speaks through the Last Log's terminal | Back, ordinary | Stays; asks to be last |
+| **What lasts** | Your root lines and merged Null lines run in **every dungeon** | kernel.gd is **yours to edit** (up to 4 root lines), they run in every dungeon, and the Null's lines never run again | Nothing runs on; the character can **REBOOT** (New Game+, see the Endgame plan) |
+
+The character sheet shows the title: **MERGED**, **PATCHED** or **LAST ENTRY**. Co-op: each player's own ending, Core and title; outside Act V the host applies a guest's lines only if their ending runs them everywhere.
+
+**Built since:** Merge's violet rule slot and Null floors, Overwrite's floor patches (in place of weakening the Null), Terminate's REBOOT (all in `CodeBreak_Requiem_Endgame_Plan.md`, section 7). **Not built yet:** credits; ending-specific Hex stock. **Left open on purpose:** who signed the Null (no epilogue names them).
 
 ## 10. Cast in Act V
 
@@ -251,19 +253,19 @@ All of these are now in the game. They use `said` deeds (`> report said <id>`, `
 | Exam | `data/exams/defragmenter.tres`; sorting (`registry.sort`, `RegistryPositionCondition`) |
 | Threats | `FragmentLock` (FRAGMENTED), `PagedLock` (PAGED) |
 | Bosses | `RecallLock` (Core Sentinel), `RootPhases` + `Summoner` + `LoopCharger` + `FormShift` (Root Process), `WatchdogLock` + `watchdog_model.tscn` + `watchdog_scan_overlay.gdshader` (Watchdog) |
-| kernel.gd | `KernelScript`, `KernelDirector`, the editor's `@kernel` file, Core stability strip, save/load in `player.gd` |
+| kernel.gd | `KernelScript`, `KernelDirector`, `PullRequestCard`, the KERNEL card (`KernelStrip`), the editor's read-only `@kernel` file, save/load in `player.gd` |
 | Keys | `stack_road`, `kernel_road`, `swap_road` in `QuestItems` |
 | Endings | `EndingCard`, `> ending`, the `ending` deed, `kernel_leans:` conditions |
 
-**To do (by weight in the completeness score, about 73% today)**
+**To do (by weight in the completeness score, about 80% today)**
 
-1. **An Act V test tool** (`tools/act5/`, like `tools/act4/act4_test.gd`): walk the descent, check every portal and key, run each boss's lock headless. Then playtest.
+1. ~~**An Act V test tool**~~ (built: `tools/act5/act5_test.tscn` walks the descent, every portal and key, each zone's threat, the Null's pull requests and the ending lean, and each boss's lock, plus the endings, the Core's relight and the epilogues; 138 checks, all passing). Next: playtest.
 2. **Act V regular enemies (2 or 3)** with their own look, using the Watchdog's `material_override` + `material_overlay` approach. Candidates:
    - a **Page Fault**, which blinks between two places;
    - a **Stack Frame**, which splits into its caller when killed;
    - a **Null Writer**, which lays violet kernel lines on the floor.
 3. **Boss models:** the Core Sentinel and the Root Process each need their own look. At minimum, an override and overlay pass on the borrowed models.
-4. **Endings:** an epilogue per ending, and credits (section 9).
+4. **Endings:** ~~an epilogue per ending~~ (built, section 9). Left: credits, and the extras in section 9.
 5. ~~**Dialogue:** Hex in the Core, Vesper's field lines, the Gatekeeper acknowledgement and Brack's packet~~ (built).
 6. **Distinct layouts** for the Page File and Scheduler (today they reuse the Stack Trace's rooms).
 7. **kernel.gd:** `enemies.sort(key=...)`.
@@ -288,7 +290,7 @@ Each is built on a real systems idea, like the bosses before it.
 
 ## 15. Open Questions
 
-- **Who signed the Null?** Architect log 2 erases the name. The First Executor, Sudo's examiner, or nobody: decide before the epilogues are written.
+- **Who signed the Null?** Architect log 2 erases the name. The First Executor, Sudo's examiner, or nobody: the epilogues are written and leave it open; decide before credits or a Theorist endgame name them.
 - **Does Vesper merge?** Her Act IV arc (finishing the Null's sentences) suggests she is partly Null by the Core. Merge could be hers; Terminate could cost her something the player sees.
-- **Theorist.** The rank after Defragmenter is reserved for an endgame past level 50, along with the level 55 bases. Does it start from the Core after any ending, or from a new hub?
-- **Replay.** The choice can be made again today. Keep that (see every ending), or lock the first choice and offer the others only in a new game?
+- **Theorist.** Decided: a trial on floor 10 of The Recursion, reached from the Core after any ending (Endgame Plan).
+- **Replay.** Decided: the choice is final. Seeing the other endings takes another character (or Terminate's New Game+, if built).

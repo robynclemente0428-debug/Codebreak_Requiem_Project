@@ -54,6 +54,11 @@ extends Node
 ## hold (_p_refs); a Null Echo sees guests' casts (player_cast); Handshake sees a guest's shield
 ## (_p_state's `shielded`).
 ##
+## Act V's pull requests (KernelDirector): each player answers their own card; the host waits to
+## travel while anyone has one open (_p_state's `answering`), and applies the enemy-side root and
+## merged Null lines of every player here to its enemies (party_kernel, from the loadouts). A
+## guest's TERMINATE champion is spawned by the host (KernelDirector.coop_message "defend").
+##
 ## Not synced yet: Diff's charging orb, the convoy's and the dock's wave fights, quests, joining
 ## mid-game.
 
@@ -70,7 +75,7 @@ const PORT := 24547
 const DISCOVERY_PORT := 24548
 const GAME_TAG := "codebreak_requiem_coop"
 ## Bumped whenever the messages change: a host refuses a player on another number.
-const PROTOCOL := 11
+const PROTOCOL := 12
 const MAX_PLAYERS := 4
 const ANNOUNCE_EVERY := 1.0
 const HOST_TIMEOUT := 3.5
@@ -112,13 +117,16 @@ var in_game := false
 ## The main menu's LOBBY was pressed: Character Select goes to the lobby instead of the game.
 var picking := false
 var notice := ""                         # why the last session ended, for the main menu
-var roster: Dictionary = {}              # peer id -> {name, class_id, level, loadout}
+var roster: Dictionary = {}              # peer id -> {name, class_id, rank, loadout}
 var start_town := ""                     # the host's last town: where the party starts
 var travelling := false                  # go_to is running for a trip the host sent
 ## This player was taken somewhere they couldn't have reached themselves: nothing here unlocks
 ## for them (Waypoints.arrived / clear_stop, TownArea._remember_town). See _set_visiting.
 var visiting := false
 var _told_visiting := false
+## This player has a card open the game can't pause for (the Null's PullRequestCard): sent with
+## _p_state, so the host holds the party's travel and the others see ANSWERING over them.
+var answering := false
 
 # ---- finding hosts ----
 var found: Dictionary = {}               # host id -> {name, class, address, port, players, max, seen}
@@ -131,6 +139,7 @@ var _host_id := ""
 var _am: AreaManager
 var _players: Dictionary = {}            # peer id -> Player (the remote copies)
 var _player_goal: Dictionary = {}        # peer id -> {area, pos, rot, vel, walking}
+var _answering: Dictionary = {}          # peer id -> true while their PullRequestCard is open (_p_state)
 var _enemies: Dictionary = {}            # enemy id -> EnemyBase
 var _enemy_goal: Dictionary = {}         # enemy id -> {pos, rot} (clients)
 var _enemy_sent: Dictionary = {}         # enemy id -> [pos, rot, state] last sent (host)
@@ -179,7 +188,17 @@ func my_info() -> Dictionary:
 			loadout[key] = data[key]
 	return {
 		"name": str(data.get("name", "Player")).left(24), "class_id": str(data.get("class_id", "")),
-		"level": int(data.get("level", 1)), "loadout": loadout}
+		"rank": Ranks.name_of_save(data), "loadout": loadout}
+
+
+## A player's rank as it is now: from their live loadout once in game (it follows exams passed
+## mid-session), else what the lobby was told.
+func rank_name(peer: int) -> String:
+	var info: Dictionary = roster.get(peer, {})
+	var limits = (info.get("loadout", {}) as Dictionary).get("limits", {})
+	if limits is Dictionary and limits.has("rank"):
+		return Ranks.name_at(int(limits["rank"]))
+	return str(info.get("rank", Ranks.LADDER[0]["name"]))
 
 
 func host() -> Error:
@@ -226,6 +245,8 @@ func _forget_game() -> void:
 	_am = null
 	_players.clear()
 	_player_goal.clear()
+	_answering.clear()
+	answering = false
 	_my_loops.clear()
 	_waiting.clear()
 	_where = {}
@@ -314,7 +335,7 @@ func _register(version: int, info: Dictionary) -> void:
 		return
 	roster[id] = {
 		"name": str(info.get("name", "Player")).left(24), "class_id": str(info["class_id"]),
-		"level": int(info.get("level", 1)), "loadout": info["loadout"]}
+		"rank": str(info.get("rank", Ranks.LADDER[0]["name"])).left(16), "loadout": info["loadout"]}
 	_set_roster.rpc(roster)
 	_apply_roster()
 
@@ -341,6 +362,7 @@ func _apply_roster() -> void:
 				_players[id].queue_free()
 			_players.erase(id)
 			_player_goal.erase(id)
+			_answering.erase(id)                   # their card can't hold the party up any more
 
 
 ## The host's START: everyone loads the game, in the host's last town.
@@ -474,6 +496,72 @@ func game_ready(am: AreaManager) -> void:
 	mine.camera_rig.camera.make_current()          # a copy's camera may have taken over
 
 
+## Our kernel changed (a pull request answered): the others' copies, and the host's party_kernel,
+## get it with the next loadout.
+func kernel_changed() -> void:
+	if in_game:
+		_loadout_changed()
+
+
+## Act V: the root lines and merged Null lines of every player in this area (ours, and each copy's
+## from its loadout): {"lines": [...], "merged": [...]}. KernelDirector applies the enemy-side ones
+## on the host, so every player's answers count on the enemies they share.
+## `beyond_act5`: a dungeon past Act V's zones, where only the players whose ending runs kernel.gd
+## everywhere (Endings.runs_everywhere, sent as kernel_everywhere) count.
+func party_kernel(mine: Node, beyond_act5 := false) -> Dictionary:
+	var lines: Array = []
+	var merged: Array = []
+	if mine != null and is_instance_valid(mine):
+		lines.append_array(Array(mine.skills.kernel))
+		merged.append_array(KernelScript.null_running(mine.get("quests")))
+	if in_game:
+		for id: int in _players:
+			var p = _players[id]
+			if not is_instance_valid(p) or not (p as Player).visible:
+				continue
+			var loadout: Dictionary = (roster.get(id, {}) as Dictionary).get("loadout", {})
+			if beyond_act5 and not bool(loadout.get("kernel_everywhere", false)):
+				continue
+			lines.append_array(loadout.get("kernel", []))
+			merged.append_array(loadout.get("kernel_merged", []))
+	var out := {"lines": [], "merged": []}
+	for id in lines:
+		if KernelScript.LINES.has(str(id)) and not str(id) in out.lines:
+			out.lines.append(str(id))
+	for id in merged:
+		if KernelScript.NULL_LINES.has(str(id)) and not str(id) in out.merged:
+			out.merged.append(str(id))
+	return out
+
+
+## The other players here and their pull-request answers (from their loadouts), for the KERNEL
+## card: [[name, colour, answers], ...], answers in KernelScript.NULL_LINES order ("" = not yet).
+## Only players who have root (any answer, or kernel lines) are listed.
+func party_answers() -> Array:
+	var out: Array = []
+	if not in_game:
+		return out
+	for id: int in _players:
+		var p = _players[id]
+		if not is_instance_valid(p) or not (p as Player).visible:
+			continue
+		var loadout: Dictionary = (roster.get(id, {}) as Dictionary).get("loadout", {})
+		var answers: Array = loadout.get("kernel_answers", [])
+		if answers.any(func(a) -> bool: return str(a) != "") or not (loadout.get("kernel", []) as Array).is_empty():
+			out.append([peer_name(id), player_colour(id), answers.map(func(a) -> String: return str(a))])
+	return out
+
+
+## The name of a player in this area with a card open (us first), or "" when nobody has one.
+func who_is_answering() -> String:
+	if answering:
+		return peer_name(my_id()) if in_game else "you"
+	for id: int in _answering:
+		if _answering[id] and _players.has(id) and is_instance_valid(_players[id]) and (_players[id] as Player).visible:
+			return peer_name(id)
+	return ""
+
+
 func _loadout_changed() -> void:
 	_loadout_send_in = LOADOUT_SEND_DELAY          # a burst of changes (swapping a whole set) sends once
 
@@ -489,9 +577,16 @@ func loadout_of(mine: Player) -> Dictionary:
 	out.erase("inventory")                         # the backpack is nobody else's business
 	out["script_routines"] = mine.skills.routines_to_list()
 	out["kernel"] = Array(mine.skills.kernel)
+	# Act V: the Null's lines this player merged run on the host's enemies too (party_kernel)
+	out["kernel_merged"] = KernelScript.null_running(mine.quests)
+	out["kernel_everywhere"] = Endings.runs_everywhere(mine.quests)    # after MERGE / OVERWRITE (Endings)
+	out["reboot"] = Reboot.count(mine.quests)          # the host's decides how tough enemies are (Reboot)
+	# ...and their answer to each request, for the partner marks on the KERNEL card
+	out["kernel_answers"] = KernelScript.NULL_LINES.keys().map(func(id: String) -> String:
+		return KernelScript.answer_of(mine.quests, id))
 	# Our rank and script budget: a copy has no quests, and would otherwise reject our scripts
 	out["limits"] = {"rank": mine.skills.rank(), "points": mine.skills.bonus_points(),
-			"steps": mine.skills.bonus_steps()}
+			"steps": mine.skills.bonus_steps(), "rules": mine.skills.bonus_rules()}
 	out["class_id"] = String(mine.class_data.id) if mine.class_data != null else ""
 	return out
 
@@ -597,7 +692,8 @@ func player_colour(id: int) -> Color:
 
 
 ## The other players' characters that are in this area now, for the minimap and the name plates:
-## [[Player, name, colour], ...]. Empty in single player.
+## [[Player, name, colour, answering], ...] (answering: their PullRequestCard is open). Empty in
+## single player.
 func others_here() -> Array:
 	var out: Array = []
 	if not in_game:
@@ -605,7 +701,7 @@ func others_here() -> Array:
 	for id: int in _players:
 		var p = _players[id]
 		if is_instance_valid(p) and (p as Player).visible:
-			out.append([p, peer_name(id), player_colour(id)])
+			out.append([p, peer_name(id), player_colour(id), bool(_answering.get(id, false))])
 	return out
 
 
@@ -646,6 +742,15 @@ func _host_travel(scene_path: String, spawn_id: StringName, dungeon_level: int, 
 	# Two players in the same doorway ask twice: the first one decides
 	if travelling or Time.get_ticks_msec() - _last_travel_msec < 1500:
 		return
+	# Someone is answering the Null (PullRequestCard): the party waits for them
+	var busy := who_is_answering()
+	if busy != "":
+		var text := "WAITING FOR %s\nThey're answering the Null's pull request." % busy.to_upper()
+		if asker == my_id():
+			QuestItems.toast(get_tree(), text, Color(1.0, 0.82, 0.30))
+		elif asker in multiplayer.get_peers():
+			_travel_held.rpc_id(asker, text)
+		return
 	if not scene_path.begins_with("res://") and not scene_path.begins_with("uid://"):
 		return
 	if not ResourceLoader.exists(scene_path):
@@ -660,6 +765,13 @@ func _host_travel(scene_path: String, spawn_id: StringName, dungeon_level: int, 
 		rng_seed = inst.rng_seed
 		killed = inst.killed.keys()
 	_travel.rpc(scene_path, spawn_id, clampi(dungeon_level, 0, 999), inst_id, rng_seed, killed, asker)
+
+
+## The host held our trip (someone is answering a pull request): say why.
+@rpc("authority", "call_remote", "reliable")
+func _travel_held(text: String) -> void:
+	if text.length() < 200:
+		QuestItems.toast(get_tree(), text, Color(1.0, 0.82, 0.30))
 
 
 ## `asker`: the player whose portal, waypoint map or route terminal started the trip.
@@ -843,9 +955,13 @@ func area_loaded(scene_path: String) -> void:
 # ---------- PLAYERS ----------
 ## `shielded`: the owner's character has a barrier or guard up now (HealthComponent.is_shielded).
 ## Their copy here says so too, for the host's HandshakeLock ("take its slam with a shield up").
+## `answering_now`: their PullRequestCard is open (travel waits; ANSWERING over their head).
 @rpc("any_peer", "call_remote", "unreliable_ordered")
-func _p_state(area: int, pos: Vector3, rot: float, vel: Vector3, walking: bool, shielded: bool) -> void:
+func _p_state(area: int, pos: Vector3, rot: float, vel: Vector3, walking: bool, shielded: bool,
+		answering_now: bool) -> void:
 	var id := multiplayer.get_remote_sender_id()
+	if roster.has(id):
+		_answering[id] = answering_now
 	if _player_goal.has(id) and pos.is_finite() and vel.is_finite() and is_finite(rot):
 		_player_goal[id] = {"area": area, "pos": pos, "rot": rot, "vel": vel.limit_length(60.0), "walking": walking}
 		var p := _players.get(id) as Player
@@ -1273,7 +1389,7 @@ func my_sheet() -> Dictionary:
 		stats[int(s)] = p.stats.get_stat(s)
 	var qm: QuestManager = p.get("quests")
 	return {"name": str(data.get("name", "Player")).left(24), "class_id": str(data.get("class_id", "")),
-			"level": int(data.get("level", 1)), "rank": Ranks.current(qm), "grade": Ranks.grade(qm),
+			"rank": Ranks.current(qm), "grade": Ranks.grade(qm),
 			"life": p.health.current_health, "stats": stats}
 
 
@@ -1778,7 +1894,7 @@ func _physics_process(delta: float) -> void:
 		var mine := _am.player
 		if is_instance_valid(mine):
 			_p_state.rpc(here, mine.global_position, mine.global_rotation.y, mine.velocity, mine.walking,
-					mine.health.is_shielded())
+					mine.health.is_shielded(), answering)
 	if not is_host() or not _area_live:
 		return
 	_send_where -= delta

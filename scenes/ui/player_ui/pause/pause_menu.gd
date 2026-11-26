@@ -19,7 +19,7 @@ const DEFAULT_FONT := "res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf"
 ## Esc closes these first (one per press, in this order). Each needs is_open() and close().
 ## The pause menu reads Esc in _input, before any panel sees it, so every panel that should
 ## close on Esc must be listed here, or Esc pauses the game instead.
-const PANEL_GROUPS := ["dialogue_panel", "shop_panel", "waypoint_panel", "party_menu", "npc_info", "skill_panel", "inventory_panel", "character_panel", "quest_log"]
+const PANEL_GROUPS := ["dialogue_panel", "shop_panel", "waypoint_panel", "tower_map", "party_menu", "npc_info", "skill_panel", "inventory_panel", "character_panel", "quest_log"]
 const COL_TEXT := Color(0.85, 0.96, 1.0)
 const COL_DIM := Color(0.55, 0.78, 0.85)
 const COL_WARN := Color(1.0, 0.30, 0.37)

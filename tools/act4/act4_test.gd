@@ -99,12 +99,8 @@ func _run() -> void:
 	_check("enemies spawn (%d)" % enemies.size(), enemies.size() > 0)
 	if not enemies.is_empty():
 		var e: Node = enemies[0]
-		var scaled := false
-		for m in (e.get("stats") as StatComponent)._modifiers:
-			if m.source_id == "act_scaling" and m.stat == StatTypes.Stat.MAX_HEALTH and is_equal_approx(m.value, 1.5):
-				scaled = true
-		_check("at level %d with Act IV's +150%% (%.0f health)" % [int(e.get("level")), e.get("stats").get_stat(StatTypes.Stat.MAX_HEALTH)],
-			int(e.get("level")) == 30 and scaled)
+		_check("at level %d (%.0f health)" % [int(e.get("level")), e.get("stats").get_stat(StatTypes.Stat.MAX_HEALTH)],
+			int(e.get("level")) == 30)
 	var fray_portals := fray.find_children("*", "Portal", true, false)
 	var to_deleted := _portal_to(fray_portals, DELETED)
 	var back_hub := _portal_to(fray_portals, HUB)

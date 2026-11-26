@@ -21,6 +21,11 @@ extends GameArea
 ## worn, the same skill gems on the same keys without supports, and no scripts. The real
 ## gear, backpack and skills are set aside on arrival and put back exactly on leaving; a save
 ## made in here stores the real ones (Player exam_save).
+##
+## A TRIAL (ExamSpec.trial: the Theorist's, from floor 10 of The Recursion) is sat differently:
+## your own gear, skills and scripts, no terminal and no spec. It starts by itself a few seconds
+## after the brief, and it's graded on the lowest life you dropped to. Dying fails it (the sandbox
+## pulls you out at 1 health).
 
 const SCENE := "res://scenes/map/exam/exam_chamber.tscn"
 const RADIUS := 11.0                     # metres: the arena floor
@@ -35,6 +40,9 @@ const TANK_HEIGHT := 2.2
 
 ## Which exam the next visit runs (set by enter()).
 static var pending_rank := "operator"
+
+## A trial starts this long after the brief goes up (on arriving, and on RETRY).
+const TRIAL_DELAY := 4.0
 
 ## AreaManager waits for this before fading in (like a dungeon's navmesh).
 var navigation_is_ready := false
@@ -59,6 +67,7 @@ var _rule_fires := {}                    # "gem#index" -> times
 var _routine_callers := {}               # the Engineer exam: skill gem id -> true, once its routine ran
 var _order := {"hit_in": 0, "hit_out": 0, "kill_out": 0}   # the Defragmenter exam: fragments (FragmentLock)
 var _ended := false
+var _lowest := 1.0                       # a trial: the lowest life reached, as a fraction of max
 var _real_loadout := {}                  # what the player walked in with (_enter_sandbox)
 var _ring_mat: StandardMaterial3D
 var _tanks: Array[Dictionary] = []        # for each wave: {"fill": MeshInstance3D, "light": OmniLight3D}
@@ -110,11 +119,23 @@ func get_spawn_position(_spawn_id: StringName = DEFAULT_SPAWN) -> Vector3:
 
 func on_player_arrived(player: Node3D) -> void:
 	_player = player
+	if spec != null and spec.trial:
+		(player.get("health") as HealthComponent).heal(player.get("stats").get_stat(StatTypes.Stat.MAX_HEALTH))
+		_hud.show_brief()
+		_start_trial_soon()
+		return
 	_enter_sandbox()
 	if spec != null and not spec.lends.is_empty():
 		Ranks.lent = PackedStringArray(spec.lends)
 		_refresh_skills()
 	_hud.show_brief()
+
+
+## A trial has no terminal: it starts by itself once the brief has been up a moment.
+func _start_trial_soon() -> void:
+	await get_tree().create_timer(TRIAL_DELAY, false).timeout
+	if is_inside_tree() and _state == State.BRIEF:
+		try_start()
 
 
 # ---------- THE EXAM LOADOUT ----------
@@ -164,7 +185,7 @@ func _leave_sandbox() -> void:
 func try_start() -> void:
 	if _state == State.RUNNING or spec == null:
 		return
-	var missing := _spec_problem()
+	var missing := "" if spec.trial else _spec_problem()
 	if missing != "":
 		_hud.refuse(missing)
 		return
@@ -220,6 +241,7 @@ func _reset_run() -> void:
 	_routine_callers.clear()
 	_order = {"hit_in": 0, "hit_out": 0, "kill_out": 0}
 	_ended = false
+	_lowest = 1.0
 	var health: HealthComponent = _player.get("health")
 	_max_health = health.stats.get_stat(StatTypes.Stat.MAX_HEALTH)
 	health.heal(_max_health)
@@ -243,6 +265,11 @@ func _process(delta: float) -> void:
 	if _time >= spec.time_limit:
 		_finish("TIME OUT")
 		return
+	if spec.trial:
+		var health: HealthComponent = _player.get("health")
+		_hud.update_trial(_wave, spec.wave_sizes.size(), _time, spec.time_limit,
+				health.current_health / _max_health, _lowest)
+		return
 	_hud.update_run(_wave, spec.wave_sizes.size(), _time, spec.time_limit, _fires,
 			spec.required_fires, _damage / _max_health)
 
@@ -263,8 +290,8 @@ func _next_wave() -> void:
 	for i in count:
 		var a := turn + TAU * i / count
 		var at := Vector3(cos(a), 0.0, sin(a)) * minf(spec.spawn_radius, RADIUS - 1.0) + Vector3.UP * 0.1
-		var e := EnemySpawner.spawn_enemy(wave_def, "normal", _enemies_root, to_global(at),
-				spec.enemy_level, mods)
+		var e := EnemySpawner.spawn_enemy(wave_def, spec.wave_rarity(_wave - 1), _enemies_root, to_global(at),
+				spec.enemy_level + (_wave - 1 if spec.trial else 0), mods, spec.trial)   # a trial: a level per wave, and its rarity's own rolled modifiers too
 		e.ai.aggro_range = RADIUS * 3.0          # they all come for you
 		_holo(e, tint)
 		_alive.append(e)
@@ -337,6 +364,14 @@ func _on_player_hurt(amount: float) -> void:
 		return
 	_damage += amount
 	var health: HealthComponent = _player.get("health")
+	if spec.trial:
+		if health.current_health <= 0.0:
+			health.current_health = 1.0          # before HealthComponent sees it: the sandbox, not death
+			_lowest = 0.0
+			_finish("PROCESS TERMINATED")
+			return
+		_lowest = minf(_lowest, health.current_health / _max_health)
+		return
 	if health.current_health < _max_health * spec.fail_health:
 		_finish("PROCESS TERMINATED")
 
@@ -357,7 +392,7 @@ func _finish(fail: String) -> void:
 		fail = "SPEC NOT MET"
 	if fail == "" and spec.required_routine and _routine_callers.size() < _callers_needed():
 		fail = "SPEC NOT MET"	# the routine ran, but not from enough skills
-	var r := _result(fail)
+	var r := _trial_result(fail) if spec.trial else _result(fail)
 	if r["passed"]:
 		var qm: QuestManager = _player.get("quests")
 		r["new_best"] = qm.record_exam(spec.rank_id, r["grade"])
@@ -378,6 +413,15 @@ func _result(fail: String) -> Dictionary:
 		"fires": _fires, "casts": _casts, "waves": _wave, "rule_fires": _rule_fires.duplicate(),
 		"callers": _routine_callers.size(), "callers_needed": _callers_needed() if spec.required_routine else 0,
 		"order_hits": _order["hit_in"], "misorder_hits": _order["hit_out"], "misorder_kills": _order["kill_out"],
+		"new_best": false, "first_pass": false,
+	}
+
+
+## A trial's result: graded on the lowest life reached (ExamSpec.trial_grade).
+func _trial_result(fail: String) -> Dictionary:
+	return {
+		"passed": fail == "", "fail": fail, "grade": spec.trial_grade(_lowest), "lowest": _lowest,
+		"time": _time, "waves": _wave, "damage": _damage / _max_health, "trial": true,
 		"new_best": false, "first_pass": false,
 	}
 
@@ -476,6 +520,8 @@ func _any_applied(check: Callable) -> bool:
 func retry() -> void:
 	_state = State.BRIEF
 	_hud.show_brief()
+	if spec.trial:
+		_start_trial_soon()
 
 
 func leave() -> void:
@@ -552,10 +598,11 @@ func _build_arena() -> void:
 	ring_vis.position.y = 0.03
 	add_child(ring_vis)
 
-	var terminal := _Terminal.new()
-	terminal.chamber = self
-	terminal.position = TERMINAL_AT
-	add_child(terminal)
+	if spec == null or not spec.trial:          # a trial starts by itself
+		var terminal := _Terminal.new()
+		terminal.chamber = self
+		terminal.position = TERMINAL_AT
+		add_child(terminal)
 
 
 ## An exam's own tiles: a paved bay, lanes crossing at the terminal, walled in beyond the rim, and

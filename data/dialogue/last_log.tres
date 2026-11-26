@@ -33,9 +33,9 @@ The Last Log: The Gatekeeper was ours too. We left it to keep the Null safe, unt
 The Last Log: It was not keeping you out. It was making sure that whoever came in had to choose. You have.
 > turn_in q08_null_gatekeeper
 The Last Log: Two things still stand between you and the Core. The first is already loading.
-The Last Log: One more thing. You have root here. Open your scripts: there is a file called kernel.gd.
-The Last Log: Its lines don't belong to a skill. They belong to the place. Down here, you can write the rules the Core runs on.
-The Last Log: So can the Null. It will write into the same file, as you go deeper. Overwrite it, or leave it running. Either way, it is a record.
+The Last Log: One more thing. You have root here. So does the Null, and it will ask you for the Core, one floor at a time.
+The Last Log: On every floor down it will want to run a line of its own. Merge it, overwrite it with yours, or terminate it.
+The Last Log: Your scripts keep the record, in a file called kernel.gd. Answer carefully. I will read it back.
 -> start
 
 ~ offer_q09_core_sentinel
@@ -96,15 +96,16 @@ The Last Log: The choice is yours, Executor. Before you make it, I have read you
 -> read_terminate
 
 ~ read_overwrite
-The Last Log: You overwrote its lines. One after another, at a cost you could have spent on yourself. You have been patching AXIOM all along.
+The Last Log: You overwrote it. Floor after floor, wherever it asked to run, you wrote yourself in instead. You have been patching AXIOM all along.
 -> choice
 
 ~ read_merge
-The Last Log: You left its lines running. You fought beside what it wrote, and never took it out. You have been sharing the Core with it already.
+The Last Log: You merged it. You let its lines run, took what it offered, and fought beside what it wrote. You have been sharing the Core with it already.
 -> choice
 
 ~ read_terminate
-The Last Log: Your kernel says very little about the Null. Perhaps that is an answer too. Some processes are simply meant to stop.
+The Last Log: You terminated it. Every time it asked, you shut it down, and fought what came for you after. Not a patch. Not a partner. A hand on the switch.
+The Last Log: Perhaps that is an answer too. Some processes are simply meant to stop.
 -> choice
 
 ~ choice
@@ -132,9 +133,28 @@ The Last Log: Shutdown confirmed. Goodbye, Executor.
 -> end
 
 ~ after_ending
-The Last Log: The choice is written. It can be written again, if you need to see another ending.
-* CHOOSE AGAIN -> choice
+@ deed:ending_now:merge -> after_merge
+@ deed:ending_now:terminate -> after_terminate
+The Last Log: The choice is written. It stays written. That was the point of asking only once.
+* READ THE EPILOGUE AGAIN -> epilogue
 * LEAVE -> end
+
+# After MERGE, Vesper is in the Core's voice: she answers through the terminal
+~ after_merge
+The Last Log: The choice is written.
+Vesper: ...and it reads well, from in here. Don't look for me by the pillars. I'm the one finishing its sentences now.
+Vesper: You don't get to take it back. Neither do I. I find I don't want to.
+* READ THE EPILOGUE AGAIN -> epilogue
+* LEAVE -> end
+
+~ after_terminate
+The Last Log: Shutdown is holding. This terminal is the last process I keep running, so that someone can still read what happened.
+* READ THE EPILOGUE AGAIN -> epilogue
+* LEAVE -> end
+
+~ epilogue
+> epilogue
+-> end
 
 ~ offer_words
 The Last Log: Parts of me are missing. Three logs. The Core is replaying them in the Stack Trace, carried by processes that don't know what they hold.

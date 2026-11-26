@@ -22,6 +22,8 @@ var instance: DungeonInstance
 ## Dungeons are dark (GameArea.light_scale), lit mostly by the player's own light, their
 ## skills and the tiles' glowing trims; a scene can still set its own.
 const DUNGEON_LIGHT := 0.08
+## Times the usual number of Null stains on the floor (TowerFloor: a Null floor is covered in them).
+var null_decal_mult := 1.0
 
 
 func _init() -> void:
@@ -31,6 +33,7 @@ func _init() -> void:
 func _ready() -> void:
 	instance = WorldState.begin_visit(scene_file_path, dungeon_level)
 	dungeon_level = instance.level
+	_on_instance()                          # a scene that dresses itself per instance (TowerFloor)
 	# The seed must be set BEFORE generating: the director's rng also picks the extra
 	# corridors, and the populator keeps using it for who spawns where and their rarity.
 	director.use_random_seed = false
@@ -51,11 +54,19 @@ func _ready() -> void:
 	sleeper.enemies_root = $Enemies
 	add_child(sleeper)
 	_bind_minimap()
-	if KernelScript.is_zone(scene_file_path):     # Act V: kernel.gd runs on this zone
-		var kernel := KernelDirector.new()
-		kernel.name = "KernelDirector"
-		add_child(kernel)
+	# kernel.gd: Act V's zones, and every dungeon after MERGE or OVERWRITE (Endings.runs_everywhere).
+	# The director looks once the player is here, and leaves if there's nothing for it to run.
+	# (KernelDirector._begin)
+	var kernel := KernelDirector.new()
+	kernel.name = "KernelDirector"
+	add_child(kernel)
 	await _bake_navigation()
+
+
+## Called once the instance is known and before anything is generated. TowerFloor sets its level
+## and its look here.
+func _on_instance() -> void:
+	pass
 
 
 func _exit_tree() -> void:
@@ -75,6 +86,7 @@ func _spawn_enemies() -> void:
 			skip.append(r)
 	populator.populate(dungeon_level, skip, _is_floor, _grid_to_world)
 	populator.spawn_marked(director.layout.enemies, dungeon_level, _is_floor, _grid_to_world)
+	_add_reboot_echoes()
 	var echoes := get_node_or_null("NullEchoes") as NullEchoDirector   # Act IV: the Null copies you
 	if echoes != null:
 		populator.place_echoes(echoes, _is_floor, _grid_to_world)
@@ -82,6 +94,19 @@ func _spawn_enemies() -> void:
 	populator.place_salvage(scene_file_path, _is_floor, _grid_to_world)   # convoy stops only
 	populator.place_queued_crates(scene_file_path, _is_floor, _grid_to_world)   # the Sweep only (YardCrates)
 	populator.place_props(_is_floor, _grid_to_world)    # breakable barrels and supply caches
+
+## REBOOT: the Null remembers you, and copies you from Act II (Reboot.early_echoes).
+func _add_reboot_echoes() -> void:
+	if get_node_or_null("NullEchoes") != null:
+		return
+	var act := Waypoints.act_of_scene(scene_file_path)
+	if act == null or not Reboot.early_echoes(act.act_number):
+		return
+	var echoes := NullEchoDirector.new()
+	echoes.name = "NullEchoes"
+	echoes.rebooted = true
+	add_child(echoes)
+
 
 ## Null corruption stains on the floor, more of them the deeper the dungeon (see NullDecals).
 ## Own seed from the instance, so rejoining shows the same stains without touching the
@@ -94,7 +119,7 @@ func _scatter_null_decals() -> void:
 	var rooms: Array[Rect2i] = []
 	for r: RoomData in director.rooms:
 		rooms.append(r.rect)
-	NullDecals.scatter(self, cells, _grid_to_world, NullDecals.count_for_level(dungeon_level, cells.size()),
+	NullDecals.scatter(self, cells, _grid_to_world, roundi(NullDecals.count_for_level(dungeon_level, cells.size()) * null_decal_mult),
 			instance.rng_seed ^ 0x5EED, director.dungeon_theme.cell_size.x, rooms, dungeon_level)
 
 

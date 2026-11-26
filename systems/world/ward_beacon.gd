@@ -31,7 +31,7 @@ const READOUT_HEIGHT := 2.7                # metres: where the readout sits over
 @export var wave_sizes: Array[int] = [8, 13, 18]
 ## Every wave is tougher than the last, like DockDefense: wave n gets +100 x n health and
 ## armour (flat, on the base), then +25% x n of both, and +12% damage per wave after the first.
-## All on top of the dungeon's level.
+## All on top of the dungeon's level. (Act I's beacons are softer: ACT_1_TUNING.)
 @export var wave_health_flat := 100.0
 @export var wave_armour_flat := 100.0
 @export var wave_health_growth := 0.25
@@ -40,6 +40,20 @@ const READOUT_HEIGHT := 2.7                # metres: where the readout sits over
 ## Where waves come from: floor this far from the beacon (metres).
 @export var spawn_min := 8.0
 @export var spawn_max := 13.0
+
+## Act I's ward beacons (ids "beacon_..."; Act III's shards keep the defaults above): a
+## shorter reboot and smaller, softer waves. The flat bonuses above dwarf Act I's enemies
+## (a glitchling has 8 life), so they're cut the most. spawn() applies these.
+const ACT_1_PREFIX := "beacon_"
+const ACT_1_TUNING := {
+	"boot_time": 16.0,
+	"wave_sizes": [6, 9, 12],
+	"wave_health_flat": 20.0,
+	"wave_armour_flat": 15.0,
+	"wave_health_growth": 0.10,
+	"wave_armour_growth": 0.10,
+	"wave_damage_growth": 0.05,
+}
 
 enum State { DARK, BOOTING, CLEARING, LIT }
 var state := State.DARK
@@ -164,6 +178,12 @@ static func spawn(parent: Node, pos: Vector3, id: String) -> WardBeacon:
 	var b := WardBeacon.new()
 	b.beacon_id = id
 	b.name = "WardBeacon"
+	if id.begins_with(ACT_1_PREFIX):
+		for prop in ACT_1_TUNING:
+			if prop == "wave_sizes":
+				b.wave_sizes = Array(ACT_1_TUNING[prop], TYPE_INT, &"", null)
+			else:
+				b.set(prop, ACT_1_TUNING[prop])
 	parent.add_child(b)
 	b.global_position = pos
 	return b

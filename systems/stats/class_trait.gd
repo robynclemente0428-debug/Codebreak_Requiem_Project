@@ -17,7 +17,7 @@ static func for_class(class_id: String) -> ClassTrait:
 @export_group("Program knobs")
 ## Points every knob step costs (and drawbacks pay back), x this. Raider: 1.5
 @export var knob_cost_mult: float = 1.0
-## How much every knob step changes, x this. Raider: 2.5
+## How much every knob step changes, x this. Raider: 3.0
 @export var knob_effect_mult: float = 1.0
 ## Extra program points on every skill. Enchanter: 3
 @export var extra_points: float = 0.0
@@ -40,13 +40,20 @@ static func for_class(class_id: String) -> ClassTrait:
 @export var per_hit_any_knob: bool = false
 
 @export_group("Stats")
-## Increased armour for each ALWAYS rule in your applied programs. Paladin: 0.10
+## Increased armour for each ALWAYS rule in your applied programs. (Not used by any class now:
+## Paladin's armour comes from blocks, below.)
 @export var armour_per_always_rule: float = 0.0
+## Increased armour for each block your applied programs use (the editor's "blocks" count, every
+## skill added up). Paladin: 0.10
+@export var armour_per_block: float = 0.0
 ## Increased armour for a few seconds each time a WHEN rule fires. Paladin: 0.10
 @export var armour_per_when_fire: float = 0.0
 @export var when_buff_seconds: float = 4.0
 ## Increased skill damage for every full 10 armour you have, read on each cast. Paladin: 0.01
 @export var damage_per_10_armour: float = 0.0
+## Added damage (to both ends of the range: 1 - 1) for every full 10 armour you have, read on
+## each cast, before the increases. Paladin: 1.0
+@export var flat_damage_per_10_armour: float = 0.0
 ## Flat movement speed for each rule in your applied programs. (Not used by any class right now.)
 @export var move_speed_per_rule: float = 0.0
 ## Flat movement speed for each knob step in your applied programs (every step of every
@@ -115,15 +122,19 @@ func adjust_knob(k: SkillKnob) -> SkillKnob:
 # ---------- RUNTIME EFFECTS ----------
 const RULES_SOURCE := "class_trait_rules"
 
-## Paladin / Rogue: stat bonuses from how many rules your applied programs have.
+## Paladin / Rogue: stat bonuses from how many rules (and blocks) your applied programs have.
 ## SkillComponent calls this whenever a socket or program changes.
-func apply_rule_bonuses(stats: StatComponent, always_rules: int, total_rules: int, knob_steps: int = 0) -> void:
+func apply_rule_bonuses(stats: StatComponent, always_rules: int, total_rules: int, knob_steps: int = 0,
+		blocks: int = 0) -> void:
 	if stats == null:
 		return
 	stats.remove_by_source(RULES_SOURCE)
 	if armour_per_always_rule > 0.0 and always_rules > 0:
 		stats.add_modifier(_mod(StatTypes.Stat.ARMOUR, Modifier.ModOp.PERCENT_ADD,
 				armour_per_always_rule * always_rules, RULES_SOURCE))
+	if armour_per_block > 0.0 and blocks > 0:
+		stats.add_modifier(_mod(StatTypes.Stat.ARMOUR, Modifier.ModOp.PERCENT_ADD,
+				armour_per_block * blocks, RULES_SOURCE))
 	if move_speed_per_rule > 0.0 and total_rules > 0:
 		stats.add_modifier(_mod(StatTypes.Stat.MOVE_SPEED, Modifier.ModOp.FLAT_ADD,
 				move_speed_per_rule * total_rules, RULES_SOURCE))
@@ -138,6 +149,14 @@ func armour_damage_increase(caster_stats: StatComponent) -> float:
 	if damage_per_10_armour <= 0.0 or caster_stats == null:
 		return 0.0
 	return damage_per_10_armour * floorf(maxf(caster_stats.get_stat(StatTypes.Stat.ARMOUR), 0.0) / 10.0)
+
+
+## Paladin: added damage from current armour (every full 10), on both ends of the range: added to
+## a cast's effective stats by SkillInstance.build_effective_stats.
+func armour_flat_damage(caster_stats: StatComponent) -> float:
+	if flat_damage_per_10_armour <= 0.0 or caster_stats == null:
+		return 0.0
+	return flat_damage_per_10_armour * floorf(maxf(caster_stats.get_stat(StatTypes.Stat.ARMOUR), 0.0) / 10.0)
 
 
 ## Paladin: a WHEN rule fired. Its armour buff starts, or restarts if it was still running.
@@ -195,10 +214,14 @@ func summary() -> PackedStringArray:
 		out.append("per-hit rules can change any flag knob, and attack speed for your next attack")
 	if armour_per_always_rule > 0.0:
 		out.append("+%d%% armour per ALWAYS rule" % roundi(armour_per_always_rule * 100.0))
+	if armour_per_block > 0.0:
+		out.append("+%d%% armour per block in your programs" % roundi(armour_per_block * 100.0))
 	if armour_per_when_fire > 0.0:
 		out.append("+%d%% armour for %ds when a WHEN rule fires" % [roundi(armour_per_when_fire * 100.0), roundi(when_buff_seconds)])
 	if damage_per_10_armour > 0.0:
 		out.append("%s%% increased damage per 10 armour" % _n(damage_per_10_armour * 100.0))
+	if flat_damage_per_10_armour > 0.0:
+		out.append("adds %s - %s damage per 10 armour" % [_n(flat_damage_per_10_armour), _n(flat_damage_per_10_armour)])
 	if move_speed_per_rule > 0.0:
 		out.append("+%s movement speed per rule" % _n(move_speed_per_rule))
 	if move_speed_per_knob_step > 0.0:

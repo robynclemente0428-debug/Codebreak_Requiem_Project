@@ -162,7 +162,9 @@ func _on_canvas_draw() -> void:
 		var at: Vector2 = pr["pos"]
 		if minimap != null and minimap.visible and minimap.get_global_rect().has_point(at):
 			continue
-		_draw_player_tag(str(o[1]), o[2], at)
+		# Answering the Null's pull request (their card is open, the party waits for them: Coop)
+		var answering: bool = o.size() > 3 and bool(o[3])
+		_draw_player_tag(str(o[1]) + ("  // ANSWERING..." if answering else ""), o[2], at)
 
 	if _hover_portal != null and is_instance_valid(_hover_portal):
 		_draw_portal_card(_hover_portal)

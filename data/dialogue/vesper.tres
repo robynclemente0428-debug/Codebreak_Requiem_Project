@@ -131,8 +131,9 @@ Vesper: Don't choose for me. I chose when I walked out of that cell. Choose for 
 -> end
 
 ~ after_ending
-@ deed:ending:merge -> after_merge
-@ deed:ending:overwrite -> after_overwrite
+@ deed:ending_now:merge -> after_merge
+@ deed:ending_now:overwrite -> after_overwrite
+@ deed:ending_now:terminate -> after_terminate
 Vesper: Whatever you chose, you chose it awake. That's more than the Architects did.
 -> end
 
@@ -143,6 +144,11 @@ Vesper: Whatever you chose, you chose it awake. That's more than the Architects 
 
 ~ after_overwrite
 Vesper: It's gone quiet. Properly quiet. I'll miss it. Don't tell anyone that.
+Vesper: Whatever you chose, you chose it awake. That's more than the Architects did.
+-> end
+
+~ after_terminate
+Vesper: Everything's stopping. I asked the Last Log to leave me till last. Someone should hear the end.
 Vesper: Whatever you chose, you chose it awake. That's more than the Architects did.
 -> end
 

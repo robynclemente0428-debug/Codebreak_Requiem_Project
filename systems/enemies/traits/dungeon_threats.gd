@@ -68,6 +68,8 @@ static func for_scene(scene_path: String) -> PackedStringArray:
 ## The threats of one instance: the fixed ones plus the random roll. The same seed always
 ## gives the same threats. WorldState calls this when it opens an instance.
 static func roll_for(scene_path: String, rng_seed: int) -> PackedStringArray:
+	if Tower.is_tower(scene_path):
+		return Tower.threats_of_seed(rng_seed)     # a tower floor's come from its seed alone
 	var w := Waypoints.for_scene(scene_path)
 	if w == null:
 		return PackedStringArray()
@@ -95,6 +97,8 @@ static func roll_for(scene_path: String, rng_seed: int) -> PackedStringArray:
 ## What to show for a trip to a dungeon (portal cards, the waypoint map): the open instance's
 ## threats if the trip rejoins one, otherwise the fixed threats plus RANDOM when more will roll.
 static func preview(scene_path: String, level: int, new_instance := false) -> PackedStringArray:
+	if Tower.is_tower(scene_path):
+		return Tower.threats_of_seed(Tower.seed_of(level))   # `level` is the floor
 	var w := Waypoints.for_scene(scene_path)
 	if w == null:
 		return PackedStringArray()

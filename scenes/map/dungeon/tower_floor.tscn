@@ -1,0 +1,94 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/map/dungeon/tower_floor.gd" id="1_dun"]
+[ext_resource type="PackedScene" uid="uid://djui5jrkh67r3" path="res://scenes/map/map_management/portal.tscn" id="2_portal"]
+[ext_resource type="Script" uid="uid://b5gwgfu4bdnrx" path="res://dungeon_generation/dungeon_director.gd" id="3_dir"]
+[ext_resource type="Resource" path="res://dungeon_generation/rendering/mesh_library/resources/stack_trace.tres" id="4_theme"]
+[ext_resource type="Script" uid="uid://gvonfu37eay0" path="res://dungeon_generation/population/dungeon_populator.gd" id="5_pop"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act5_stack_meshes.tres" id="6_mesh"]
+[ext_resource type="Script" uid="uid://5iqyjjqg3pro" path="res://dungeon_generation/layout/portal_marker.gd" id="7_portalm"]
+[ext_resource type="Script" uid="uid://drtmekm517kgm" path="res://dungeon_generation/layout/spawn_marker.gd" id="8_spawnm"]
+[ext_resource type="Script" uid="uid://c5hhflptas7h1" path="res://dungeon_generation/layout/room_marker.gd" id="9_roomm"]
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_1"]
+agent_height = 1.8
+agent_radius = 0.3
+
+[node name="TowerFloor" type="Node3D"]
+metadata/_note = "The Recursion (Tower): one scene for all 50 floors. The instance's level is the floor number; TowerFloor sets the real level and puts on the floor's look (a campaign DungeonTheme) before generating. The theme set here is only the default for running the scene on its own."
+script = ExtResource("1_dun")
+dungeon_level = 1
+respawn_spawn_id = &"tower_in"
+portal_scene = ExtResource("2_portal")
+
+[node name="DungeonDirector" type="Node" parent="." node_paths=PackedStringArray("grid_map", "layout_root")]
+script = ExtResource("3_dir")
+grid_width = 100
+grid_height = 100
+corridor_width = 2
+min_room_size = 6
+max_room_size = 9
+room_interval = 8
+num_branch_rooms = 3
+grid_map = NodePath("../NavigationRegion3D/GridMap")
+dungeon_theme = ExtResource("4_theme")
+layout_root = NodePath("../Layout")
+loop_connections = 1
+straight_corridors = false
+filler_rooms = true
+random_rooms = 5
+random_room_spread = 12
+
+[node name="DungeonPopulator" type="Node" parent="." node_paths=PackedStringArray("director", "enemies_root", "loot_root")]
+script = ExtResource("5_pop")
+director = NodePath("../DungeonDirector")
+enemies_root = NodePath("../Enemies")
+loot_root = NodePath("../Loot")
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_1")
+
+[node name="GridMap" type="GridMap" parent="NavigationRegion3D"]
+mesh_library = ExtResource("6_mesh")
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Loot" type="Node3D" parent="."]
+
+[node name="Layout" type="Node3D" parent="."]
+
+[node name="PortalBack" type="Marker3D" parent="Layout"]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 10, 1, 100)
+script = ExtResource("7_portalm")
+target_area = "res://scenes/map/town/act_5_core.tscn"
+target_spawn = &"from_tower"
+arrival_spawn_id = &"tower_in"
+room_size = Vector2i(3, 3)
+metadata/_note = "Back to the Core, by the tower terminal."
+
+[node name="SpawnIn" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 0, 100)
+script = ExtResource("8_spawnm")
+spawn_id = &"tower_in"
+create_room = false
+
+[node name="Room1" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 60, 0, 80)
+script = ExtResource("9_roomm")
+room_size = Vector2i(8, 7)
+
+[node name="Room2" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 110, 0, 120)
+script = ExtResource("9_roomm")
+room_size = Vector2i(8, 7)
+
+[node name="Room3" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 150, 0, 90)
+script = ExtResource("9_roomm")
+room_size = Vector2i(9, 8)
+
+[node name="FarRoom" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 180, 0, 100)
+script = ExtResource("9_roomm")
+room_size = Vector2i(10, 9)
+metadata/_note = "The far end. Boss floors (every tenth) will put their boss here (phase 2)."

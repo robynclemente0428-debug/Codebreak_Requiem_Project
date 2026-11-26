@@ -30,6 +30,8 @@ var rank := 0
 var bonus_points := 0.0
 ## Steps every knob got past its own limits (ScriptBudget: exam DISTINCTIONs), already applied.
 var bonus_steps := 0
+## Rules on top of the rank's: MERGE's violet slot (Endings.MERGE_RULES), shown violet in the editor.
+var bonus_rules := 0
 
 
 ## The character's routines (SkillComponent.routines, ProgramRoutine), for the  call  lines of a
@@ -62,7 +64,7 @@ func knobs_for(owner_id: String) -> Array[SkillKnob]:
 ## Everything shares one point budget, block limit and set of tiers. `rank` (Ranks.LADDER index)
 ## adds the rank's extra rules and blocks, `bonus_points` / `bonus_steps` the player's ScriptBudget.
 static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: ClassTrait = null, rank := 0,
-		bonus_points := 0.0, bonus_steps := 0) -> SkillProgramLimits:
+		bonus_points := 0.0, bonus_steps := 0, bonus_rules := 0) -> SkillProgramLimits:
 	var base := gem.program_limits if gem != null else null
 	if base == null:
 		return null
@@ -71,7 +73,8 @@ static func for_socket(gem: SkillGemDefinition, supports: Array, trait_res: Clas
 	out.point_budget = base.point_budget + bonus_points
 	out.bonus_points = bonus_points
 	out.max_actions = base.max_actions
-	out.max_rules = base.max_rules + int(Ranks.perk(rank, "rules"))
+	out.max_rules = base.max_rules + int(Ranks.perk(rank, "rules")) + maxi(bonus_rules, 0)
+	out.bonus_rules = maxi(bonus_rules, 0)
 	out.max_actions += int(Ranks.perk(rank, "blocks"))
 	out.tiers = raised_tiers(base.tiers, int(Ranks.perk(rank, "tier_blocks")))
 	out.rank = rank

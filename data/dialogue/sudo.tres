@@ -14,6 +14,7 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 @ crate_news:CargoB -> loss_archive
 @ quest_active:q06c_root_access -> coming_along
 @ quest_ready:guild_expedition -> ready_guild
+@ quest_ready:exam_theorist -> pass_theorist
 @ quest_ready:exam_defragmenter -> pass_defragmenter
 @ quest_ready:time_slice -> ready_slice
 @ quest_ready:exam_engineer -> pass_engineer
@@ -22,6 +23,7 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 @ quest_ready:exam_strategist -> pass_strategist
 # A save that passed the old Defragmenter checklist holds the rank with no grade: the exam was rewritten
 @ exam_ungraded:defragmenter -> rewritten_defragmenter
+@ quest_active:exam_theorist -> ready_theorist
 @ quest_active:exam_defragmenter -> ready_defragmenter
 @ quest_active:exam_engineer -> ready_engineer
 @ quest_active:exam_operator -> ready_operator
@@ -36,6 +38,8 @@ source = "# Examiner Sudo: rank examiner. Dry, patient.
 @ can_start:exam_strategist -> offer_strategist
 @ can_start:guild_expedition -> offer_guild
 @ quest_active:guild_expedition -> remind_guild
+@ quest_done:exam_theorist -> retake_theorist
+@ can_start:exam_theorist -> hint_theorist
 @ quest_done:exam_defragmenter -> retake_defragmenter
 @ quest_done:exam_engineer -> retake_engineer
 @ quest_done:exam_strategist -> retake_strategist
@@ -203,6 +207,32 @@ Sudo: Sorting is yours now. The Stack Trace is open: every pack in there is in p
 Sudo: Whatever you decide at the bottom of all this, decide it efficiently.
 -> end
 
+~ hint_theorist
+Sudo: I said there was nothing left for me to grade. The Recursion disagrees.
+Sudo: Floor ten has a gate in it I didn't build. A trial, not an exam. It doesn't read your scripts. It reads whether you're still standing at the end.
+Sudo: Climb to it. Clear the floor, and the gate opens.
+* OTHER EXAMS -> retake_defragmenter
+* LEAVE -> end
+
+~ ready_theorist
+Sudo: The gate's on floor ten. No terminal, no spec. Your own build against five waves.
+Sudo: I grade the lowest you fall to, not where you finish. A stim at the end won't fix a bad middle.
+* OTHER EXAMS -> retake_defragmenter
+* LEAVE -> end
+
+~ retake_theorist
+Sudo: Theorist. There's no rank above it. There's only the climb.
+Sudo: The gate on floor ten stays open, if you want a better grade.
+* OTHER EXAMS -> retake_defragmenter
+* LEAVE -> end
+
+~ pass_theorist
+> turn_in exam_theorist
+> report rank_up theorist
+Sudo: You went in with your own build and came out on your feet. I didn't grade the script. I didn't have to.
+Sudo: Theorist. The last rank I can write on anyone. Everything above floor ten is yours to work out.
+-> end
+
 ~ offer_engineer
 Sudo: You've seen what it does. The Mimic. The husks. A convoy deleted in one book and inbound in another. The Null copies.
 Sudo: Past The Threshold it copies you. Your skills, your scripts. Copies drift: change yours and theirs don't know.
@@ -265,13 +295,13 @@ Sudo: If you're in the Sweep anyway, it'll be in a cage with my name on it. I'd 
 
 ~ offer_slice
 Sudo: The last floor before the Kernel. The Scheduler. The Null decides what runs next in there, and you can't go round it.
-Sudo: It writes into your kernel.gd while you stand in it. A new line every forty-five seconds. It's the only exam the Null ever set, and it doesn't grade on a curve.
+Sudo: Everything you turned down on the way, it runs in there anyway. One line at a time, forty-five seconds each. It's the only exam the Null ever set, and it doesn't grade on a curve.
 * ACCEPT -> accept_slice
 * DECLINE -> end
 
 ~ accept_slice
 > start_quest time_slice
-Sudo: Clear it. Write your kernel for all four of its lines, not the one you're looking at.
+Sudo: Clear it. Plan for every line you said no to, not the one you're looking at.
 -> end
 
 ~ remind_slice

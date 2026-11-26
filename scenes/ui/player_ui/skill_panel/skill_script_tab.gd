@@ -76,6 +76,7 @@ const COL_BUFF := Color(0.30, 0.95, 0.60)       # gutter "+": costs points
 const COL_DRAW := Color(1.0, 0.45, 0.45)        # gutter "-": pays points
 const COL_OK := Color(0.30, 0.95, 0.60)
 const COL_PENDING := Color(1.0, 0.85, 0.35)
+const COL_VIOLET := Color(0.72, 0.42, 1.0)       # MERGE's violet rule slot
 const COL_NEW := Color(1.0, 0.86, 0.25)         # the NEW badge on a snippet a rank just unlocked (NewBlocks)
 const CODE_SIZE := 13
 ## Hints: every control here sets plain tooltip_text; ScriptTooltip shows it formatted (a title,
@@ -116,6 +117,7 @@ var _issue_line: Dictionary = {}  # index in _validation.issues -> editor line n
 var _rule_line: Dictionary = {}    # ProgramRule -> its first editor line
 var _snippets: Dictionary = {}     # "cond:<type id>" / "knob:<knob id>" -> snippet in SNIPPETS
 var _skill_file_btn: Dictionary = {}  # socket -> the skill's file button in the explorer
+var _kernel_file_btn: Button           # kernel.gd's file button in the explorer (Act V), for the tutorial
 var _effect_num: Dictionary = {}   # ProgramEffect -> its editable number
 var _new_rule_ctrl: Control        # the "drop a snippet here to start a new rule" line
 var _cond_nums: Dictionary = {}    # ProgramCondition -> [its editable numbers]
@@ -519,21 +521,27 @@ func _kernel_qm() -> QuestManager:
 	return player.get("quests") as QuestManager if player != null else null
 
 
-## kernel.gd, open: your root lines and the Null's, grouped by trigger, one line each.
+## kernel.gd, open: a READ-ONLY record of the Null's pull requests (KernelScript). What runs, by
+## trigger (your root lines gold, the Null's merged lines violet), then each request's answer.
 ##   when enemy_spotted:
-##       registry.add(target)        # 1 root point                       [del]
-##     N target.armour += 40%        # the Null wrote this, x1.3           [overwrite 3]
+##       registry.add(target)        # root: the Null's gift (merged)
+##     N target.armour += 40%        # the Null's, merged on The Stack Trace
+##   # overwritten on Sentinel's Hall: when life_below(50%): mana.drain(25%)
 func _kernel_lines() -> void:
 	var qm := _kernel_qm()
 	var lines: Array = Array(_skills().kernel)
 	var running := KernelScript.null_running(qm)
-	_comment_line("# root: these lines run on the zone, whatever you cast: every Act V zone past the Core")
-	_comment_line("# root points %d/%d used  //  CORE STABILITY %d%%  //  the Null's lines run x%.1f" % [
-		KernelScript.used(lines, qm), KernelScript.MAX_POINTS, roundi(KernelScript.stability(lines, qm) * 100.0),
-		KernelScript.null_scale(lines, qm)])
+	var editable := Endings.kernel_editable(qm)
+	if editable:
+		_comment_line("# kernel.gd: yours. You patched AXIOM: up to %d root lines, any you like, and the Null's never run." % Endings.MAX_ROOT_LINES)
+		_comment_line("# these lines run on the zone, whatever you cast, in every dungeon")
+	else:
+		_comment_line("# kernel.gd: read only. The Null asks on every floor down; your answers are written here.")
+		_comment_line("# these lines run on the zone, whatever you cast: %s" % (
+			"in every dungeon (merged)" if Endings.runs_everywhere(qm) else "every Act V zone past the Core"))
 	var any := false
 	for trigger in KernelScript.TRIGGERS:
-		var mine: Array = lines.filter(func(id: String) -> bool: return KernelScript.LINES[id]["trigger"] == trigger)
+		var mine: Array = lines.filter(func(id: String) -> bool: return KernelScript.LINES.has(id) and KernelScript.LINES[id]["trigger"] == trigger)
 		var theirs: Array = running.filter(func(id: String) -> bool: return KernelScript.NULL_LINES[id]["trigger"] == trigger)
 		if mine.is_empty() and theirs.is_empty():
 			continue
@@ -547,66 +555,87 @@ func _kernel_lines() -> void:
 			var parts := _code_line(null)
 			var code: HBoxContainer = parts[1]
 			code.add_child(_tok("    " + str(KernelScript.LINES[id]["code"]), COL_KERNEL))
-			var cost := int(KernelScript.LINES[id]["cost"])
-			code.add_child(_comment_tok("%d root point%s" % [cost, "" if cost == 1 else "s"], str(KernelScript.LINES[id]["tip"])))
-			var del := _code_button("del", "Take this line out of kernel.gd (its root points come back).")
-			del.pressed.connect(func() -> void:
-				_skills().kernel.erase(id)
-				panel._notify("KERNEL: LINE REMOVED")
-				_queue_rebuild())
-			code.add_child(del)
+			code.add_child(_comment_tok("root: " + _kernel_source(qm, id), str(KernelScript.LINES[id]["tip"])))
+			if editable:
+				var del := _code_button("del", "Take this line out of kernel.gd.")
+				del.pressed.connect(func() -> void:
+					_skills().kernel.erase(id)
+					Coop.kernel_changed()
+					panel._notify("KERNEL: LINE REMOVED")
+					_queue_rebuild())
+				code.add_child(del)
 		for id in theirs:
 			var parts := _code_line(null, "N", KernelScript.COL_NULL)
 			var code: HBoxContainer = parts[1]
 			code.add_child(_tok("    " + str(KernelScript.NULL_LINES[id]["code"]), KernelScript.COL_NULL))
-			code.add_child(_comment_tok("the Null wrote this, x%.1f at your stability" % KernelScript.null_scale(lines, qm),
-				str(KernelScript.NULL_LINES[id]["tip"])))
-			var can := KernelScript.free_points(lines, qm) >= KernelScript.OVERWRITE_COST
-			var ow := _code_button("overwrite %d" % KernelScript.OVERWRITE_COST,
-				"Overwrite the Null's line for good: it stops running, and %d root points are spent on it for good.%s" % [
-					KernelScript.OVERWRITE_COST, "" if can else "\nNot enough root points free: take out one of your lines first."])
-			ow.disabled = not can
-			ow.pressed.connect(func() -> void:
-				GameEvents.report(KernelScript.OVERWRITE_DEED, id)
-				panel._notify("NULL LINE OVERWRITTEN")
-				_queue_rebuild())
-			code.add_child(ow)
+			code.add_child(_comment_tok("the Null's, merged on " + _kernel_floor(id), str(KernelScript.NULL_LINES[id]["tip"])))
+	var answered := false
 	for id in KernelScript.NULL_LINES:
-		if KernelScript.is_overwritten(qm, id):
-			if not any:
-				_blank_line(null)
-			any = true
-			_comment_line("# overwritten: %s" % KernelScript.code_of(id))
-	if not any:
+		var a := KernelScript.answer_of(qm, id)
+		if a == "" or a == "merge":
+			continue
+		if not answered:
+			_blank_line(null)
+			answered = true
+		_comment_line("# %s on %s: %s" % ["overwritten" if a == "overwrite" else "terminated", _kernel_floor(id), KernelScript.code_of(id)])
+	if not any and not answered:
 		_blank_line(null)
-		_comment_line("# empty: add root lines from SNIPPETS. The Null will write its own here as you go deeper.")
+		_comment_line("# empty: the Null's first pull request waits in the Stack Trace.")
 
 
-## SNIPPETS while kernel.gd is open: every root line you can add, with its cost. Click to add.
+## Where a root line came from, for its comment: a merge's gift or an overwrite's pick (older saves
+## may hold lines from before the pull requests: just "yours").
+func _kernel_source(qm: QuestManager, line_id: String) -> String:
+	for id in KernelScript.NULL_LINES:
+		var a := KernelScript.answer_of(qm, id)
+		if a == "merge" and KernelScript.NULL_LINES[id]["gift"] == line_id:
+			return "the Null's gift (merged on %s)" % _kernel_floor(id)
+		if a == "overwrite" and line_id in KernelScript.NULL_LINES[id]["offers"]:
+			return "yours, over the Null's on %s" % _kernel_floor(id)
+	return "yours"
+
+
+func _kernel_floor(null_id: String) -> String:
+	var w := Waypoints.for_scene("res://scenes/map/dungeon/%s.tscn" % KernelScript.NULL_LINES[null_id]["zone"])
+	return w.display_name if w != null else str(KernelScript.NULL_LINES[null_id]["zone"])
+
+
+## SNIPPETS while kernel.gd is open: what the answers mean. After OVERWRITE (Endings), every root
+## line instead, to add by hand (up to Endings.MAX_ROOT_LINES, OVERWRITE's reward).
 func _kernel_palette() -> void:
 	var qm := _kernel_qm()
-	var lines: Array = Array(_skills().kernel)
-	_pal_add(_comment_tok("root lines  (%d/%d points free)" % [KernelScript.free_points(lines, qm), KernelScript.MAX_POINTS],
-		"root lines\nThey run on the zone in every Act V zone past the Core, whatever you cast.\nEach costs root points; what's left is CORE STABILITY. The lower it is, the stronger the Null's own lines run.\nNOTE: changes apply at once"))
-	for id in KernelScript.LINES:
-		var d: Dictionary = KernelScript.LINES[id]
-		var b := _code_button("when %s: %s  (%d)" % [d["trigger"], d["code"], d["cost"]], str(d["tip"]))
-		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		b.clip_text = true
-		b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		if id in lines:
-			b.disabled = true
-			b.tooltip_text += "\nAlready in kernel.gd."
-		elif not KernelScript.can_add(lines, qm, id):
-			b.disabled = true
-			b.tooltip_text += "\nNot enough root points free."
-		b.pressed.connect(func() -> void:
-			if KernelScript.can_add(Array(_skills().kernel), qm, id):
-				_skills().kernel.append(id)
-				panel._notify("KERNEL: LINE ADDED")
-				_queue_rebuild())
-		_pal_add(b)
+	if Endings.kernel_editable(qm):
+		var lines: Array = Array(_skills().kernel)
+		_pal_add(_comment_tok("root lines  (%d/%d)" % [lines.size(), Endings.MAX_ROOT_LINES],
+			"root lines\nYou patched AXIOM: kernel.gd is yours. Pick up to %d; they run in every dungeon, whatever you cast.\nNOTE: changes apply at once" % Endings.MAX_ROOT_LINES))
+		for id in KernelScript.LINES:
+			var d: Dictionary = KernelScript.LINES[id]
+			var b := _code_button("when %s: %s" % [d["trigger"], d["code"]], str(d["tip"]))
+			b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+			b.clip_text = true
+			b.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			if id in lines:
+				b.disabled = true
+				b.tooltip_text += "\nAlready in kernel.gd."
+			elif lines.size() >= Endings.MAX_ROOT_LINES:
+				b.disabled = true
+				b.tooltip_text += "\nkernel.gd is full: take a line out first."
+			b.pressed.connect(func() -> void:
+				var now: Array[String] = _skills().kernel
+				if not id in now and now.size() < Endings.MAX_ROOT_LINES:
+					now.append(id)
+					Coop.kernel_changed()
+					panel._notify("KERNEL: LINE ADDED")
+					_queue_rebuild())
+			_pal_add(b)
+		return
+	_pal_add(_comment_tok("read only",
+		"kernel.gd is a record\nOn every floor down, the Null submits a pull request: a line it wants to run on the Core.\n"
+		+ "MERGE: its line runs, and it gives you a root line.\nOVERWRITE: yours runs instead.\n"
+		+ "TERMINATE: neither runs, and a champion comes for you.\nThe answer you gave most is what your kernel leans toward."))
+	for a in KernelScript.ANSWERS:
+		_pal_add(_comment_tok("%s: %d" % [a, int(KernelScript.tally(_kernel_qm())[a])], ""))
 
 
 ## The file whose knobs a file's lines use: routines use the skill's own.
@@ -678,9 +707,14 @@ func guide_open() -> bool:
 	return _guide != null and _guide.is_open()
 
 
+## kernel.gd is the file open in the editor (the tutorial's KERNEL.GD lesson).
+func kernel_open() -> bool:
+	return _owner == KERNEL_FILE
+
+
 ## Called by SkillPanel when the tab is shown or the skills change.
 ## Controls the tutorial hints can outline (see SkillPanel.tutorial_target).
-## ids: script_palette / palette, script_apply / apply, output, skill_file,
+## ids: script_palette / palette, script_apply / apply, output, skill_file, kernel_file,
 ##      cond:<condition id>, knob:<knob id> (snippets), rule_line:<condition id>
 func tutorial_target(id: String) -> Array[Control]:
 	var out: Array[Control] = []
@@ -703,6 +737,9 @@ func tutorial_target(id: String) -> Array[Control]:
 		"skill_file":
 			if _skill_file_btn.has(_socket):
 				out.append(_skill_file_btn[_socket])
+		"kernel_file":
+			if is_instance_valid(_kernel_file_btn) and _kernel_file_btn.is_visible_in_tree():
+				out.append(_kernel_file_btn)
 		"new_rule":
 			if _new_rule_ctrl != null and is_instance_valid(_new_rule_ctrl):
 				out.append(_new_rule_ctrl)
@@ -1130,11 +1167,11 @@ func _build_gem_list() -> void:
 		var running := KernelScript.null_running(_kernel_qm()).size()
 		var kb := _file_button(KernelScript.FILE_NAME + (" !" if running > 0 else ""), _socket, KERNEL_FILE,
 			KernelScript.COL_NULL if running > 0 else COL_KERNEL, 0)
-		kb.tooltip_text = "kernel.gd: root lines. Their subject is the zone, not a skill, and they run in every Act V zone past the Core."
+		kb.tooltip_text = "kernel.gd: the record of the Null's pull requests and your answers (read only). Its lines run on the zone, in every Act V zone past the Core."
 		if running > 0:
-			kb.tooltip_text += "
-The Null has written %d line%s into it." % [running, "" if running == 1 else "s"]
+			kb.tooltip_text += "\nYou merged %d of the Null's lines: they run too." % running
 		_gem_list.add_child(kb)
+		_kernel_file_btn = kb
 	if not any:
 		_gem_list.add_child(panel._label("// socket a skill first", _sz(12), COL_COMMENT))
 
@@ -1198,7 +1235,8 @@ func _build_rules() -> void:
 	elif _owner == ROUTINES_FILE:
 		_title.text = "routines.gd  (every skill)"
 	elif _owner == KERNEL_FILE:
-		_title.text = "kernel.gd  (root: the zone)"
+		_title.text = "kernel.gd  (yours: patched)" if Endings.kernel_editable(_kernel_qm()) \
+			else "kernel.gd  (read only: the Null's pull requests)"
 		_selected = null
 		_line_no = 0
 		_kernel_lines()
@@ -3003,6 +3041,9 @@ func _update_status() -> void:
 		_errors_console.text = _c("// nothing to compile", COL_COMMENT)
 		_set_output_alert(0)
 		return
+	if _owner == KERNEL_FILE:
+		_kernel_status()                         # the Null's requests, not the skill's points
+		return
 
 	var draft := _draft()
 	var v := _validation if _validation != null else _skills().preview_program(_socket, draft, _routines())
@@ -3023,8 +3064,9 @@ func _update_status() -> void:
 	if limits.bonus_points > 0.0:
 		lines.append("%s bonus   %s %s" % [_c(">", COL_GUTTER), _c("+%s points" % String.num(limits.bonus_points, 1), COL_OK),
 			_c("// " + _bonus_sources(), COL_COMMENT)])
-	lines.append("%s blocks  %d/%d   rules %d/%d" % [_c(">", COL_GUTTER), v.actions_used, v.max_actions,
-		draft.rules.size(), limits.max_rules])
+	lines.append("%s blocks  %d/%d   rules %d/%d%s" % [_c(">", COL_GUTTER), v.actions_used, v.max_actions,
+		draft.rules.size(), limits.max_rules,
+		("   " + _c("+%d violet rule: merged" % limits.bonus_rules, COL_VIOLET)) if limits.bonus_rules > 0 else ""])
 	if limits.class_trait != null:
 		lines.append("%s trait   %s %s" % [_c(">", COL_GUTTER), _c(limits.class_trait.display_name.to_lower(), COL_KEYWORD),
 			_c("// " + ", ".join(limits.class_trait.summary()), COL_COMMENT)])
@@ -3085,6 +3127,44 @@ func _update_status() -> void:
 	_set_output_alert(0 if v.valid else v.error_count())
 	_apply_btn.tooltip_text = "Run this program on the skill." if v.valid \
 		else "Fix the errors in OUTPUT first (red lines in the code)."
+
+
+## OUTPUT with kernel.gd open: the Null's pull requests and your answers, instead of the skill's
+## points. Nothing is edited here, so there's nothing to apply(), revert() or clear().
+##   > requests  3/4 answered   merge 1  overwrite 1  terminate 1
+##   > running   2 root lines, 1 of the Null's
+##   > leans     merge  // the answer you gave most (a tie: the deepest)
+func _kernel_status() -> void:
+	var qm := _kernel_qm()
+	var lines: Array = Array(_skills().kernel)
+	var t := KernelScript.tally(qm)
+	var answered := int(t["merge"]) + int(t["overwrite"]) + int(t["terminate"])
+	var out: Array[String] = []
+	out.append("%s requests  %s   %s  %s  %s" % [_c(">", COL_GUTTER),
+		_c("%d/%d answered" % [answered, KernelScript.NULL_LINES.size()], SkillPanel.COL_TEXT),
+		_c("merge %d" % int(t["merge"]), KernelScript.COL_NULL), _c("overwrite %d" % int(t["overwrite"]), COL_KERNEL),
+		_c("terminate %d" % int(t["terminate"]), KernelScript.COL_TERMINATE)])
+	out.append("%s running   %s %s" % [_c(">", COL_GUTTER),
+		_c("%d root line%s, %d of the Null's" % [lines.size(), "" if lines.size() == 1 else "s", KernelScript.null_running(qm).size()], SkillPanel.COL_TEXT),
+		_c("// in every %s" % ("dungeon" if Endings.runs_everywhere(qm) else "Act V zone past the Core"), COL_COMMENT)])
+	var ending := Endings.current(qm)
+	if ending != "":
+		out.append("%s ending    %s %s" % [_c(">", COL_GUTTER), _c(str(Endings.TITLES[ending]).to_lower(), Endings.COLOURS[ending]),
+			_c("// the Last Log can show the others", COL_COMMENT)])
+	else:
+		out.append("%s leans     %s %s" % [_c(">", COL_GUTTER), _c(KernelScript.lean(qm) if answered > 0 else "nothing yet", COL_KEYWORD),
+			_c("// the answer you gave most (a tie: the deepest). The Last Log reads it back", COL_COMMENT)])
+	var editable := Endings.kernel_editable(qm)
+	out.append(_c("ok: ", COL_OK) + _c("yours to edit: up to %d root lines, they apply at once" % Endings.MAX_ROOT_LINES if editable
+		else "read only. answer the Null on each floor down", Color(COL_OK, 0.85)))
+	_console.text = "\n".join(out)
+	_errors_console.text = _c("// no errors", COL_COMMENT)
+	_apply_btn.disabled = true
+	_revert_btn.disabled = true
+	_clear_btn.disabled = not editable or lines.is_empty()
+	_apply_btn.tooltip_text = "kernel.gd's lines apply as soon as they're added." if editable \
+		else "kernel.gd is a record: answer the Null's pull requests on each floor down."
+	_set_output_alert(0)
 
 
 ## Marks an editor line that has problems: red background and border, "!" in the gutter, the
@@ -3228,6 +3308,13 @@ func _revert() -> void:
 
 
 func _clear_gem() -> void:
+	if _owner == KERNEL_FILE:                    # a record: nothing to clear, until OVERWRITE makes it yours
+		if Endings.kernel_editable(_kernel_qm()):
+			_skills().kernel.clear()
+			Coop.kernel_changed()
+			panel._notify("KERNEL: LINES REMOVED")
+			_queue_rebuild()
+		return
 	if _owner == ROUTINES_FILE:                  # clear() in routines.gd empties every routine
 		for rt in _routines():
 			(rt as ProgramRoutine).body.effects.clear()
