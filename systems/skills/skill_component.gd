@@ -121,17 +121,28 @@ func bonus_steps() -> int:
 	return ScriptBudget.steps(get_parent().get("quests") as QuestManager)
 
 
+## Rules on top of the rank's: MERGE's violet slot (Endings.bonus_rules). None in the sandbox.
+func bonus_rules() -> int:
+	if not remote_limits.is_empty():
+		return int(remote_limits.get("rules", 0))
+	if sandbox_locked:
+		return 0
+	return Endings.bonus_rules(get_parent().get("quests") as QuestManager)
+
+
 ## Re-checks every skill's program with the current rank's limits: programs that didn't fit
 ## before (too many rules for a lower rank) apply now.
 func refresh_rank() -> void:
 	var r := rank()
 	var bonus := bonus_points()
 	var steps := bonus_steps()
+	var rules := bonus_rules()
 	for s in sockets:
 		if s.skill != null:
 			s.skill.rank = r
 			s.skill.bonus_points = bonus
 			s.skill.bonus_steps = steps
+			s.skill.bonus_rules = rules
 	_apply_set()
 	changed.emit()
 
@@ -669,6 +680,7 @@ func _rebuild(s: Socket) -> void:
 	skill.rank = rank()
 	skill.bonus_points = bonus_points()
 	skill.bonus_steps = bonus_steps()
+	skill.bonus_rules = bonus_rules()
 	skill.owner_ref = weakref(get_parent())         # its weapon can add to the mana cost (the sniper)
 	skill.rebuild()
 	s.skill = skill
@@ -691,10 +703,12 @@ func _apply_trait_rule_bonuses() -> void:
 	var always_rules := 0
 	var total_rules := 0
 	var knob_steps := 0
+	var blocks := 0
 	for sock in sockets:
 		if sock.skill == null or sock.program == null or sock.skill.program_validation == null \
 				or not sock.skill.program_validation.valid:
 			continue
+		blocks += sock.skill.program_validation.actions_used    # the editor's "blocks" count
 		var limits := sock.skill.get_program_limits()
 		for r in sock.program.rules:
 			total_rules += 1
@@ -706,4 +720,4 @@ func _apply_trait_rule_bonuses() -> void:
 				var k := limits.get_knob(e.knob)
 				if k != null and k.cost_for(e.steps) > 0.0:   # only buff steps (cost points)
 					knob_steps += absi(e.steps)
-	t.apply_rule_bonuses(stats, always_rules, total_rules, knob_steps)
+	t.apply_rule_bonuses(stats, always_rules, total_rules, knob_steps, blocks)

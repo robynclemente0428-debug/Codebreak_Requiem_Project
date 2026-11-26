@@ -320,11 +320,11 @@ func _check(cond: String) -> bool:
 			"exam_ungraded":                      # @ exam_ungraded:defragmenter: the rank's exam quest is
 				# done but no sandbox grade was ever recorded: passed before the exam was a sandbox one
 				result = _quests.is_completed("exam_" + arg) and _quests.exam_grade(arg) < 0
-			"kernel_leans":                       # @ kernel_leans:merge: what kernel.gd leans toward
+			"kernel_leans":                       # @ kernel_leans:merge: the answer given most (KernelScript.lean)
 				result = KernelScript.lean(_quests) == arg   # (KernelScript.lean)
-			"kernel_overwrites":                  # @ kernel_overwrites:2: at least that many Null lines overwritten
-				result = KernelScript.overwrites(_quests) >= int(arg)
-			"kernel_kept":                        # @ kernel_kept:2: at least that many Null lines still running
+			"kernel_overwrites":                  # @ kernel_overwrites:2: at least that many pull requests overwritten
+				result = int(KernelScript.tally(_quests)["overwrite"]) >= int(arg)
+			"kernel_kept":                        # @ kernel_kept:2: at least that many pull requests merged (running)
 				result = KernelScript.null_running(_quests).size() >= int(arg)
 			"crate_news":                         # @ crate_news:CargoD: a Yard Sweep deleted it, and
 				result = YardCrates.has_news(_quests, arg)   # its owner hasn't said so yet (YardCrates)
@@ -383,9 +383,15 @@ func _do(e: Dictionary) -> String:
 			return "end"
 		"ending":                                # > ending merge: the ending card (EndingCard)
 			if args.size() > 0:
-				GameEvents.report("ending", args[0])    # saved as a deed: ending:merge
+				var chosen := Endings.choose(_quests, args[0])   # final: refused once one is chosen
 				close()
-				load("res://scenes/ui/ending/ending_card.gd").show_ending(get_tree(), args[0])
+				if chosen:
+					load("res://scenes/ui/ending/ending_card.gd").show_ending(get_tree(), args[0])
+			return "end"
+		"epilogue":                              # > epilogue: the chosen ending's card, read again
+			close()
+			if Endings.current(_quests) != "":
+				load("res://scenes/ui/ending/ending_card.gd").show_ending(get_tree(), Endings.current(_quests))
 			return "end"
 		"open_shop":
 			if _npc is ShopNPC:

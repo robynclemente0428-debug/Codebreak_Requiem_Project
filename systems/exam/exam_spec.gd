@@ -36,6 +36,15 @@ extends Resource
 ## its registry and read a place in it (registry.sort, registry[...]), and each fragment killed in
 ## order counts as a fire. A kill out of order refragments the pack. The Defragmenter exam.
 @export var required_order := false
+## A TRIAL instead of a scripting exam (the Theorist's, entered from The Recursion): no exam
+## loadout (your own gear, skills and scripts), no terminal and no script spec. It starts on its
+## own, and it's graded only on the LOWEST life you dropped to (trial_merit, trial_distinction).
+## Dying fails it: the sandbox pulls you out at 1 health instead.
+@export var trial := false
+@export var trial_merit := 0.4                     # lowest life (fraction of max) for MERIT
+@export var trial_distinction := 0.7               # ... and for DISTINCTION
+## The rarity each wave spawns at ("normal", "magic", "rare", "champion"). Empty = normal.
+@export var wave_rarities: Array[String] = []
 ## Perks the sandbox lends during this exam (Ranks.PERKS flag keys), so an exam can ask for what
 ## its own rank unlocks: the Architect exam lends "loops".
 @export var lends: Array[String] = []
@@ -86,6 +95,15 @@ func mods_for_wave(index: int) -> Array:
 			if threat != null:
 				out.append(threat)
 	return out
+
+
+func wave_rarity(index: int) -> String:
+	return wave_rarities[index] if index >= 0 and index < wave_rarities.size() and wave_rarities[index] != "" else "normal"
+
+
+## A trial's grade from the lowest life reached (fraction of max): 0 PASS, 1 MERIT, 2 DISTINCTION.
+func trial_grade(lowest: float) -> int:
+	return 2 if lowest >= trial_distinction else (1 if lowest >= trial_merit else 0)
 
 
 func wave_name(index: int) -> String:

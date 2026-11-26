@@ -678,6 +678,7 @@ func tutorial_state() -> Dictionary:
 
 ## Controls the tutorial hints can outline. Empty while closed.
 ## ids: picker, empty_socket, filled_socket, empty_support, filled_support, tab_sockets, tab_script, script_palette,
+##      script:<SkillScriptTab id> (e.g. script:kernel_file),
 ##      script_apply, hotkey_<action> (e.g. hotkey_attack)
 func tutorial_target(id: String) -> Array[Control]:
 	var out: Array[Control] = []
@@ -734,6 +735,11 @@ func open_script_guide(page := "") -> void:
 
 func script_guide_open() -> bool:
 	return _built and _open and _script_page.guide_open()
+
+
+## kernel.gd is open in the SCRIPTING tab (the tutorial's KERNEL.GD lesson).
+func script_kernel_open() -> bool:
+	return _built and _open and _tab == "scripting" and _script_page.kernel_open()
 
 
 # ---------- CLICKING ----------

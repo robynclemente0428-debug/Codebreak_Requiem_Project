@@ -181,7 +181,7 @@ func _refresh_room() -> void:
 		if id == me:
 			tags.append("YOU")
 		var row := _row(str(info.get("name", "Player")),
-				"%s   ·   Level %d" % [str(info.get("class_id", "")).capitalize(), int(info.get("level", 1))],
+				"%s   ·   %s" % [str(info.get("class_id", "")).capitalize(), Coop.rank_name(id).capitalize()],
 				"  ".join(tags), false)
 		row.focus_mode = Control.FOCUS_NONE
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE      # a card, not a button
@@ -226,8 +226,8 @@ func _build() -> void:
 	box.add_child(head)
 	head.add_child(_text("CO-OP LOBBY", 44, ACCENT))
 	var me := Coop.my_info()
-	_subtitle = _text("Playing as %s   ·   %s   ·   Level %d" % [
-			me.get("name", "?"), str(me.get("class_id", "")).capitalize(), int(me.get("level", 1))], 20, TEXT_SOFT)
+	_subtitle = _text("Playing as %s   ·   %s   ·   %s" % [
+			me.get("name", "?"), str(me.get("class_id", "")).capitalize(), str(me.get("rank", "")).capitalize()], 20, TEXT_SOFT)
 	head.add_child(_subtitle)
 	var rule := ColorRect.new()
 	rule.color = Color(ACCENT, 0.3)

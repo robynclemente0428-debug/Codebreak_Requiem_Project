@@ -19,6 +19,8 @@
 [ext_resource type="PackedScene" path="res://scenes/loot/shop_npc/armour_vendor.tscn" id="amodel"]
 [ext_resource type="Resource" path="res://data/shops/gem_vendor.tres" id="gshop"]
 [ext_resource type="Resource" path="res://data/dialogue/gem_vendor.tres" id="gdlg"]
+[ext_resource type="Script" path="res://scenes/map/town/core_ending.gd" id="core_end"]
+[ext_resource type="PackedScene" path="res://scenes/props/tower_terminal/tower_terminal.tscn" id="tower_term"]
 
 [sub_resource type="NavigationMesh" id="Nav"]
 
@@ -91,8 +93,16 @@ spawn_id = &"from_hall"
 create_room = false
 metadata/_note = "Where you come back up: the exit at the bottom of The Kernel leads here."
 
+[node name="from_tower" type="Marker3D" parent="Layout"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33, 0, 28.5)
+script = ExtResource("spawn")
+spawn_id = &"from_tower"
+create_room = false
+metadata/_note = "Back down from The Recursion: in front of the tower terminal."
+
 [node name="Vesper" parent="." instance=ExtResource("vesper")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31, 1.1, 33)
+hidden_by_ending = "merge"
 
 [node name="LastLog" parent="." instance=ExtResource("log")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 40, 1.1, 27)
@@ -158,3 +168,11 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 44, 4, 30)
 light_color = Color(0.72, 0.25, 1, 1)
 light_energy = 2.5
 omni_range = 14.0
+
+[node name="TowerTerminal" parent="." instance=ExtResource("tower_term")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 33, 1.1, 25.5)
+metadata/_note = "The way up into The Recursion (Tower), the endgame: it opens once an ending is chosen."
+
+[node name="CoreEnding" type="Node" parent="."]
+script = ExtResource("core_end")
+metadata/_note = "Relights the Core for the ending chosen (Endings.current): violet, gold, or dark but for the Last Log."

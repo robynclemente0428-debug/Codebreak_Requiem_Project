@@ -19,24 +19,19 @@ const LEVEL_FLAT := {
 	StatTypes.Stat.ARMOUR: 3.0,
 }
 
-## Health and armour for each act after the first: +50% in Act II, +100% in Act III. By the scene an
-## enemy spawns in, so places that aren't in an act (the exam sandbox) aren't scaled.
-const ACT_SCALING := 0.5
-const ACT_STATS: Array[StatTypes.Stat] = [StatTypes.Stat.MAX_HEALTH, StatTypes.Stat.ARMOUR]
+## What a REBOOT makes tougher (Reboot.enemy_bonus).
+const REBOOT_STATS: Array[StatTypes.Stat] = [StatTypes.Stat.MAX_HEALTH, StatTypes.Stat.MIN_ATTACK_DAMAGE,
+		StatTypes.Stat.MAX_ATTACK_DAMAGE]
 
 
-static func act_multiplier_of_scene(scene_path: String) -> float:
-	var act := Waypoints.act_of_scene(scene_path)
-	return 1.0 + ACT_SCALING * maxi(act.act_number - 1, 0) if act != null else 1.0
-
-
-## The multiplier for an enemy spawning under `node`: the first scene above it that's in an act.
-static func _act_multiplier(node: Node) -> float:
+## True when `node` is in an act's area or the tower (not a sandbox or test scene).
+static func _in_world(node: Node) -> bool:
 	while node != null:
-		if node.scene_file_path != "" and Waypoints.act_of_scene(node.scene_file_path) != null:
-			return act_multiplier_of_scene(node.scene_file_path)
+		if node.scene_file_path != "" and (Waypoints.act_of_scene(node.scene_file_path) != null
+				or Tower.is_tower(node.scene_file_path)):
+			return true
 		node = node.get_parent()
-	return 1.0
+	return false
 
 
 ## forced_mods:   null = roll the modifiers as usual (every existing call does this).
@@ -93,15 +88,16 @@ static func spawn_enemy(def: EnemyDefinition, rarity: String, parent: Node,
 			flat_mod.source_id = "dungeon_level"
 			enemy.stats.add_modifier(flat_mod)
 
-	var act_mult := _act_multiplier(parent)
-	if act_mult > 1.0:
-		for stat in ACT_STATS:
-			var act_mod := Modifier.new()
-			act_mod.stat = stat
-			act_mod.op = Modifier.ModOp.PERCENT_MULT
-			act_mod.value = act_mult - 1.0
-			act_mod.source_id = "act_scaling"
-			enemy.stats.add_modifier(act_mod)
+	# REBOOT (TERMINATE's new game plus): tougher everywhere in the world, not in Sudo's sandbox
+	var reboot := Reboot.enemy_bonus() if _in_world(parent) else 0.0
+	if reboot > 0.0:
+		for stat in REBOOT_STATS:
+			var rb_mod := Modifier.new()
+			rb_mod.stat = stat
+			rb_mod.op = Modifier.ModOp.PERCENT_MULT
+			rb_mod.value = reboot
+			rb_mod.source_id = "reboot"
+			enemy.stats.add_modifier(rb_mod)
 
 	var mods: Array = []
 	if forced_mods == null:

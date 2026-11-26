@@ -172,13 +172,13 @@ Vesper: You held on to all of it. Something still points at them now. That's eno
 
 ~ scheduler
 @ quest_done:time_slice -> scheduler_after
-Vesper: It's writing into your kernel. A new line, then another. Not against you, exactly. It's taking turns.
+Vesper: It's running what you turned down. One line, then another. Not against you, exactly. It's taking turns.
 Vesper: I can hear which line it'll pick before it picks it. I'm not going to pretend that doesn't frighten me.
 * TELL ME WHICH -> scheduler_tell
 * LET'S GO -> end
 
 ~ scheduler_tell
-Vesper: All of them. Round and round. Write for every one, not the one you're looking at.
+Vesper: Every one you said no to. Round and round. Plan for all of them, not the one you're looking at.
 -> end
 
 ~ scheduler_after

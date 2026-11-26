@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="ExamSpec" format=3]
+
+[ext_resource type="Script" path="res://systems/exam/exam_spec.gd" id="1_spec"]
+[ext_resource type="Resource" path="res://data/enemies/loop_hound.tres" id="2_hound"]
+[ext_resource type="Resource" path="res://data/enemies/null_weaver.tres" id="3_weaver"]
+[ext_resource type="Resource" path="res://data/enemies/mirror_husk.tres" id="4_husk"]
+[ext_resource type="Resource" path="res://data/enemies/trilobite.tres" id="5_trilo"]
+[ext_resource type="Resource" path="res://data/enemies/raider_boss.tres" id="6_raider"]
+[ext_resource type="MeshLibrary" path="res://dungeon_generation/rendering/mesh_library/act5_stack_meshes.tres" id="7_tiles"]
+[ext_resource type="Script" uid="uid://cq4kgpb23i5ty" path="res://systems/enemies/enemy_definition.gd" id="8_def"]
+
+[resource]
+script = ExtResource("1_spec")
+rank_id = "theorist"
+title = "THEORIST TRIAL"
+brief = Array[String](["No script check. Your own gear, your own skills, your own scripts: the build you climbed The Recursion with.", "Five waves, each harder than the last: more of them, rarer, a level higher every wave, and the last two carry tower threats. The fifth is a single champion.", "Graded on the LOWEST life you drop to, not what you finish with: MERIT above 40%, DISTINCTION above 70%. Stims won't save a grade you already lost.", "Die and the trial fails: the sandbox pulls you out at the last moment. Retake it as often as you like."])
+required_condition_label = ""
+required_fires = 0
+time_limit = 300.0
+par_time = 300.0
+par_damage = 1.0
+fail_health = 0.0
+wave_enemy = ExtResource("2_hound")
+wave_sizes = Array[int]([8, 8, 6, 4, 1])
+wave_enemies = Array[ExtResource("8_def")]([ExtResource("2_hound"), ExtResource("3_weaver"), ExtResource("4_husk"), ExtResource("5_trilo"), ExtResource("6_raider")])
+wave_mods = Array[String](["", "", "", "firewalled", "firewalled,reflector"])
+enemy_level = 52
+spawn_radius = 8.5
+trial = true
+trial_merit = 0.4
+trial_distinction = 0.7
+wave_rarities = Array[String](["normal", "magic", "magic", "rare", "champion"])
+arena_tiles = ExtResource("7_tiles")
+wave_names = Array[String](["AXIOMS", "LEMMAS", "COUNTEREXAMPLES", "THE PROOF", "Q.E.D."])
+wave_notes = Array[String](["Eight hounds. Where every proof starts.", "Weavers, magic. They build on what came before.", "Husks, magic. Every theory meets one.", "Rare, and firewalled. Break the shell first.", "One champion. Firewalled, and it reflects. Finish it."])
+wave_tints = Array[Color]([Color(1, 0.85, 0.45, 1), Color(1, 0.72, 0.35, 1), Color(1, 0.58, 0.3, 1), Color(1, 0.45, 0.3, 1), Color(1, 0.95, 0.75, 1)])

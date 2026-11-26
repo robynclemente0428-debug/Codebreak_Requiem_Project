@@ -447,6 +447,9 @@ func _refresh_header() -> void:
 
 	var player := get_tree().get_first_node_in_group("players")
 	var qm: QuestManager = player.get("quests") if player != null else null
+	var ending := Endings.current(qm)
+	if ending != "" and _inspect.is_empty():       # after Act V: MERGED, PATCHED or LAST ENTRY (Endings)
+		_sub_label.text += "  ·  %s" % Endings.TITLES[ending]
 	var next_rank := Ranks.next(qm)
 	_rank_label.text = "RANK  %s" % Ranks.current(qm)
 	var grade := Ranks.grade(qm)
@@ -495,7 +498,7 @@ func _refresh_inspect_header() -> void:
 			class_text = c.display_name
 			_portrait.texture = c.icon
 			_name_label.add_theme_color_override("font_color", c.accent_color)
-	_sub_label.text = "%s  ·  LV %d  ·  ANOTHER PLAYER" % [class_text.to_upper(), int(_inspect.get("level", 1))]
+	_sub_label.text = "%s  ·  ANOTHER PLAYER" % class_text.to_upper()
 	_rank_label.text = "RANK  %s" % str(_inspect.get("rank", "?"))
 	if str(_inspect.get("grade", "")) != "":
 		_rank_label.text += " (%s)" % str(_inspect.get("grade", ""))

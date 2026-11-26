@@ -118,6 +118,9 @@ var _dungeon_overlay_px := -1.0        # the player's full-map zoom for dungeons
 var _npcs: Array = []                  # Node3D (DialogueNPC) shown as gold markers
 var _terminals: Array = []             # RouteTerminal: an "R" badge
 var _systems: Array = []               # DeckSystem: a diamond with its letter, in its state's colour
+## Special gates added after the area is bound (add_gate): [Node3D, glyph, name, Color]. A badge
+## in the gate's colour, always shown (a rim arrow when off the map), its name on the full map.
+var _gates: Array = []
 var _last_cell := Vector2i(-99999, -99999)
 var _center := Vector2.ZERO            # player position in (float) cell coordinates
 var _facing := Vector2.UP
@@ -289,6 +292,7 @@ func bind_dungeon(director: DungeonDirector, grid_map: GridMap, enemies_root: No
 	_npcs = options.get("npcs", [])
 	_terminals = options.get("terminals", [])
 	_systems = options.get("systems", [])
+	_gates = []                            # a new area: its own gates get added again
 	# Towns are small: their full-screen map zooms in to fit the screen. Dungeons get back the
 	# zoom the player had there.
 	if _town:
@@ -629,6 +633,7 @@ func _paint(c: Control, full := false) -> void:
 	_paint_npcs(c, rot, full)
 	_paint_terminals(c, rot, full)
 	_paint_systems(c, rot, full)
+	_paint_gates(c, rot, full)
 	_paint_others(c, rot, full)
 	_paint_player(c)
 	_paint_rim_arrows(c, rot)
@@ -880,6 +885,32 @@ func _paint_systems(c: Control, rot: float, full: bool) -> void:
 		if full:
 			var name_ := str(sys.get("npc_name")).to_upper() + ("  OFFLINE" if offline else "")
 			_upright_tag(c, screen + Vector2(0.0, -16.0), name_, col, rot)
+
+
+## Marks a gate that opens after the area is built (TowerFloor: the Theorist trial's gold gate).
+## Forgotten when the next area is bound, or when the node goes.
+func add_gate(node: Node3D, glyph: String, gate_name: String, col: Color) -> void:
+	for g in _gates:
+		if g[0] == node:
+			return
+	_gates.append([node, glyph, gate_name, col])
+
+
+func _paint_gates(c: Control, rot: float, full: bool) -> void:
+	var half := c.size * 0.5 - Vector2(16.0, 16.0)
+	for g in _gates:
+		var node := g[0] as Node3D
+		if node == null or not is_instance_valid(node) or not node.is_inside_tree():
+			continue
+		var col: Color = g[3]
+		var pos := (_to_cell_f(node.global_position) - _center) * _px
+		var screen := pos.rotated(rot)
+		if absf(screen.x) > half.x or absf(screen.y) > half.y:
+			_rim.append([screen, col])
+			continue
+		_diamond_badge(c, screen, str(g[1]), col, false)
+		if full:
+			_upright_tag(c, screen + Vector2(0.0, -16.0), str(g[2]), col, rot)
 
 
 ## A diamond badge with a letter, upright (`at` is screen space round the map's centre).

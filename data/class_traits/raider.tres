@@ -5,6 +5,6 @@
 [resource]
 script = ExtResource("1_trait")
 display_name = "Brute Force"
-description = "Every knob step in your skill programs costs 1.5x the points, but changes 2.5x as much."
+description = "Every knob step in your skill programs costs 1.5x the points, but changes 3x as much."
 knob_cost_mult = 1.5
-knob_effect_mult = 2.5
+knob_effect_mult = 3.0

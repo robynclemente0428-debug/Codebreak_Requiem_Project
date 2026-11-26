@@ -25,7 +25,9 @@ func _load_affixes(path: String) -> void:
 				all_affixes.append(res)
 				_affix_by_id[res.id] = res
 
-func generate_item(def: ItemDefinition, drop_level: int, rarity: String) -> ItemInstance:
+## top_tier (The Recursion's FRAGMENTED reward, Tower.REWARDS): the first modifier is picked only
+## from the highest tier of each stat that the item level allows.
+func generate_item(def: ItemDefinition, drop_level: int, rarity: String, top_tier := false) -> ItemInstance:
 	# The item's own level counts too, so a high-level base item can roll high-level affixes.
 	if def.skill_gem != null:
 		rarity = "skill_gem"
@@ -62,6 +64,10 @@ func generate_item(def: ItemDefinition, drop_level: int, rarity: String) -> Item
 					return false
 			return true
 		)
+		if top_tier and i == 0:
+			var tops := _top_tiers(pool)
+			if not tops.is_empty():
+				pool = tops
 		if pool.is_empty(): break
 		var chosen = _weighted_pick(pool)
 		used_ids[chosen.id] = true
@@ -92,6 +98,23 @@ func generate_item(def: ItemDefinition, drop_level: int, rarity: String) -> Item
 		
 	return instance
 	
+
+## The affixes in `pool` that are the highest tier of their family (exclusivity key) in it.
+func _top_tiers(pool: Array) -> Array[AffixDefinition]:
+	var best_level: Dictionary = {}
+	for a: AffixDefinition in pool:
+		for key in _exclusivity_keys(a):
+			best_level[key] = maxi(int(best_level.get(key, 0)), a.min_item_level)
+	var out: Array[AffixDefinition] = []
+	for a: AffixDefinition in pool:
+		var top := true
+		for key in _exclusivity_keys(a):
+			if a.min_item_level < int(best_level[key]):
+				top = false
+		if top:
+			out.append(a)
+	return out
+
 
 func _roll_affix_count(rarity: String) -> int:
 	match rarity:

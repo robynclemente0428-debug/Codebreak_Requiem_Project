@@ -135,7 +135,8 @@ func _create(scene_path: String, level: int) -> DungeonInstance:
 	_next_id += 1
 	inst.scene_path = scene_path
 	inst.level = level
-	inst.rng_seed = randi()
+	# The Recursion: `level` is the floor, and the floor's saved roll is the seed (Tower)
+	inst.rng_seed = Tower.run_seed(level) if Tower.is_tower(scene_path) else randi()
 	inst.threats = DungeonThreats.roll_for(scene_path, inst.rng_seed)
 	inst.created_msec = Time.get_ticks_msec()
 	inst.empty_since_msec = inst.created_msec     # a prepared but never entered instance also expires

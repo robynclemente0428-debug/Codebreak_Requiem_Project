@@ -38,6 +38,9 @@ var remote_damage := Callable()
 ## Co-op, on a copy of another player's character: their barrier or guard is up on their machine
 ## (Coop._p_state), which is where those live. is_shielded() answers with this on a copy.
 var remote_shielded := false
+## Co-op: this player is answering a card the game can't pause for (the Null's PullRequestCard),
+## so nothing lands on them until it's closed. Single player pauses instead.
+var untouchable := false            # (KernelDirector sets it on this machine's own player)
 
 
 ## Co-op: a hit on this copy that the owner's machine applied, for the feedback only (damage
@@ -89,6 +92,8 @@ func take_damage(amount: float, ignore_armour := false) -> float:
 	if remote_damage.is_valid():        # co-op: not ours to hurt, the owner's machine decides
 		remote_damage.call(amount, ignore_armour)
 		return amount if ignore_armour else mitigate(amount, stats.get_stat(StatTypes.Stat.ARMOUR))
+	if untouchable:
+		return 0.0
 	var now := Time.get_ticks_msec()
 	if guard > 0.0 and now < _guard_until:
 		amount *= 1.0 - guard

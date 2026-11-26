@@ -248,6 +248,12 @@ const FEED_SEPARATION := 6                # px between lines (also in _fit_feed'
 const FEED_HOLD := 2.4
 const FEED_HOLD_PER_LINE := 0.8
 const FEED_FADE := 0.6
+## A line wider than this wraps, in a column centred on the screen. It leaves room for the HUD's
+## corner cards (the threats on the left, the minimap and this tracker on the right), so it never
+## runs under them or off the screen's edges.
+const FEED_WRAP_MAX := 760.0
+const FEED_WRAP_MIN := 420.0
+const FEED_CORNER_ROOM := 400.0           # px kept clear on each side of the column
 
 
 ## The feed sits where Announcer says (under the tutorial banner, or under a headline such as
@@ -452,6 +458,7 @@ func _show_toast(text: String, colour: Color) -> void:
 	l.add_theme_constant_override("outline_size", 6)
 	if _font:
 		l.add_theme_font_override("font", _font)
+	_wrap_if_wide(l)
 	_feed.add_child(l)
 	_hold(l)
 	# Past FEED_MAX the oldest leave at once (the rest move up into their place)
@@ -461,6 +468,25 @@ func _show_toast(text: String, colour: Color) -> void:
 	# Fitted now, not next frame: a toast sent after this frame's _process (a timer, a signal)
 	# would otherwise show for a frame where there's no room for it
 	_fit_feed(Announcer.column_bottom() - (global_position.y + _feed.offset_top))
+
+
+## A line too wide for the centre column wraps there instead of running off the screen: it keeps
+## to a fixed width, centred (the feed itself spans the screen, so a plain line would stretch
+## past the corner cards).
+func _wrap_if_wide(l: Label) -> void:
+	var screen := Announcer.screen_size()
+	var width := clampf(screen.x - FEED_CORNER_ROOM * 2.0, FEED_WRAP_MIN, FEED_WRAP_MAX)
+	var font := l.get_theme_font("font")
+	var size_px := l.get_theme_font_size("font_size")
+	var widest := 0.0
+	for part in l.text.split("\n"):
+		widest = maxf(widest, font.get_string_size(part, HORIZONTAL_ALIGNMENT_LEFT, -1, size_px).x if font else 0.0)
+	if widest <= width:
+		return
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.custom_minimum_size.x = width
+	l.size.x = width                              # its height is known now, for _fit_feed's room
+	l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 
 
 ## Shows `l` fully, holds it (again, if it was already up), fades it out and frees it.

@@ -65,8 +65,8 @@ func generate_map(a: Vector2i, b: Vector2i, max_retries: int = 5) -> bool:
 		rooms += BranchGenerator.generate(grid, path, rng, num_branch_rooms, min_room_size, max_room_size, rooms, room_min_gap)
 		
 		if ConnectivityChecker.validate(grid, a, b):
-			_paint()
-		
+			return _paint()
+
 		push_warning("Dungeon generation attempt %d failed connectivity check, retrying..." % (attempt + 1))
 	
 	push_error("Dungeon generation failed after %d attempts." % max_retries)

@@ -6,8 +6,8 @@ extends RefCounted
 ## Exams sat in Sudo's sandbox (ExamChamber) also keep a grade: QuestManager.exam_grade(id).
 ##
 ## One rank per act, two in the last: Operator (I), Architect (II), Strategist (III),
-## Engineer (IV), Defragmenter (V) and Theorist (after the campaign). Quests that don't exist
-## yet simply can't be completed, so those ranks wait until their act is built.
+## Engineer (IV), Defragmenter (V) and Theorist (after the campaign: a trial on floor 10 of The
+## Recursion, TowerFloor, sat with your own build and graded on the lowest life you fell to).
 
 const LADDER := [
 	{"name": "INITIATE", "exam": "", "id": ""},
@@ -200,6 +200,24 @@ static func is_exam(quest_id: String) -> bool:
 		if r["exam"] == quest_id:
 			return true
 	return false
+
+
+## The rank a save slot holds, read from its saved quests: for screens with no Player yet
+## (the co-op lobby). Same rule as index_of: every exam up to it turned in.
+static func name_of_save(data: Dictionary) -> String:
+	var quests = data.get("quests", {})
+	var done: Array = quests.get("completed", []) if quests is Dictionary else []
+	var best := 0
+	for i in range(1, LADDER.size()):
+		if not done.has(LADDER[i]["exam"]):
+			break
+		best = i
+	return LADDER[best]["name"]
+
+
+## A rank's name by its LADDER index, clamped (a loadout's limits carry the index).
+static func name_at(index: int) -> String:
+	return LADDER[clampi(index, 0, LADDER.size() - 1)]["name"]
 
 
 static func current(qm: QuestManager) -> String:

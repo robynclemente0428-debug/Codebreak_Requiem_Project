@@ -6,6 +6,8 @@ extends RefCounted
 
 
 static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
+	if spec.trial:
+		return trial_lines(spec, r)
 	var out := PackedStringArray()
 	var cond := spec.required_condition_label
 	var fires: int = r["fires"]
@@ -116,6 +118,28 @@ static func lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
 		if not r["unhurt"]:
 			out.append("You lost %d%% of your health. Keep it under %d%% for the last point." \
 					% [roundi(r["damage"] * 100.0), roundi(spec.par_damage * 100.0)])
+	return out
+
+
+## A trial (the Theorist's): no script to read, only how close it came.
+static func trial_lines(spec: ExamSpec, r: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	var lowest: float = r.get("lowest", 0.0)
+	var waves: int = r.get("waves", 0)
+	match r["fail"]:
+		"TIME OUT":
+			out.append("Out of time on wave %d. A theory that takes forever to prove isn't one." % waves)
+		"PROCESS TERMINATED":
+			out.append("I pulled you out on wave %d of %d. In there that was the end of you." % [waves, spec.wave_sizes.size()])
+			out.append("Your build has a gap the later waves find. Find it before they do.")
+		_:
+			out.append(["You finished. Not by much.", "You finished with room to spare.", "You finished as if it were a proof you already knew."][r["grade"]])
+	if r["passed"]:
+		out.append("The lowest you went was %d%% of your life." % roundi(lowest * 100.0))
+		if r["grade"] < 2:
+			out.append("Keep it above %d%% the whole way and I'll call it a distinction." % roundi(spec.trial_distinction * 100.0))
+		else:
+			out.append("Theorist. Everything above this is yours to work out.")
 	return out
 
 

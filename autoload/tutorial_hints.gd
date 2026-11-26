@@ -17,6 +17,8 @@ extends CanvasLayer
 ##                  editor; the lesson waits until it's closed.
 ##   AREA CLEARS    in a dungeon, once training is done: clearing every enemy in an area gives
 ##                  every skill a script point (ScriptBudget). Shown for CLEAR_HINT_TIME seconds.
+##   KERNEL.GD      once the Last Log gives root (Act V): open kernel.gd, then what the Null's pull
+##                  requests are and how they lean the ending. Ends when the editor is closed after.
 ## Shows a banner with the next thing to do and a second line saying why, outlines the UI to
 ## click, and points an arrow at things in the world (Warden Brack, a dungeon portal).
 ## The step shown is the quest's first objective that isn't done yet, and the scripting steps
@@ -39,6 +41,7 @@ const LESSON_ROUTE := "route_terminal"
 const LESSON_CLEARS := "area_clears"
 const LESSON_GUIDE := "script_guide"       # the SCRIPTING GUIDE opened once, at the scripting lesson
 const LESSON_LOOT := "loot_pickup"
+const LESSON_KERNEL := "kernel_gd"         # what kernel.gd is, after the Last Log gives root
 const CLEAR_HINT_TIME := 12.0             # seconds the area-clear lesson stays up
 const LOOT_ARROW_HEIGHT := 1.6            # metres: over a drop and its name
 const LOOT_HINT_RANGE := 14.0              # metres: a drop this close starts the loot lesson
@@ -87,6 +90,7 @@ var _support_lesson_shown := false        # the "socket your support gem" steps 
 var _quest_log_seen := false               # the quest lesson's log step was reached
 var _route_map_seen := false               # the route lesson's map step was reached
 var _clear_hint_until := -1.0              # when the area-clear lesson goes away (-1 = not shown yet)
+var _kernel_explained := false             # the kernel.gd lesson's explanation step was shown
 
 
 func _ready() -> void:
@@ -226,6 +230,11 @@ func _current_hint() -> Dictionary:
 	if not support_hint.is_empty():
 		return support_hint
 
+	# Act V: the Last Log just gave root. What kernel.gd is, once
+	var kernel_hint := _kernel_hint(qm)
+	if not kernel_hint.is_empty():
+		return kernel_hint
+
 	var basics := qm.get_def(QUEST_BASICS)
 	if basics != null and not qm.is_completed(QUEST_BASICS):
 		var s: QuestState = qm.get_state(QUEST_BASICS)
@@ -249,6 +258,45 @@ func _current_hint() -> Dictionary:
 			return {}
 		return _quest_hint(s, "Lesson complete. Return to Warden Brack")
 	return _exam_hint(qm)
+
+
+# ---------- THE KERNEL.GD LESSON ----------
+## Once the Last Log has given root (KernelScript.unlocked): open kernel.gd in the script editor,
+## then a short word on what it is. Ends when the editor is closed after the explanation. The
+## first step waits for the Core (a town) so it never nags mid-fight; with the editor open it
+## shows anywhere. A save that already has kernel lines has found it: skipped.
+func _kernel_hint(qm: QuestManager) -> Dictionary:
+	if _lesson_seen(LESSON_KERNEL) or not KernelScript.unlocked(qm):
+		return {}
+	var sp := get_tree().get_first_node_in_group("skill_panel") as SkillPanel
+	var sp_open := sp != null and sp.is_open()
+	if _kernel_explained and not sp_open:
+		_mark_lesson_seen(LESSON_KERNEL)               # read it and closed the editor: done
+		return {}
+	var player := _get_player()
+	var skills: SkillComponent = player.get("skills") if player != null else null
+	if not _kernel_explained and skills != null and not skills.kernel.is_empty():
+		_mark_lesson_seen(LESSON_KERNEL)               # they found it by themselves
+		return {}
+	var dialogue := get_tree().get_first_node_in_group("dialogue_panel") as DialoguePanel
+	if dialogue != null and dialogue.is_open():
+		return {}
+	if sp != null and sp.script_kernel_open():
+		_kernel_explained = true
+		return {"text": "kernel.gd: rules for the Core itself, not for a skill",
+			"sub": "Its lines run in every zone below the Core, whatever you cast. On each floor down the Null asks "
+				+ "to run a line of its own: MERGE it (and get a line too), OVERWRITE it with yours, or TERMINATE it "
+				+ "(and fight what comes). This file keeps the record. The answer you give most leans the ending."}   # (the card asks on each floor)
+	if not sp_open and not _in_town():
+		return {}
+	var sp_key := OS.get_keycode_string(sp.toggle_key) if sp != null else "K"
+	var targets: Array[Control] = []
+	if sp_open:
+		var on_script: bool = sp.tutorial_state().get("tab", "") == "scripting"
+		targets = sp.tutorial_target("script:kernel_file" if on_script else "tab_script")
+	return {"text": "You have root: open kernel.gd in your scripts [%s]" % sp_key,
+		"sub": "It's on the SCRIPTING tab, after your skills' files.",
+		"targets": targets}
 
 
 # ---------- THE AREA CLEAR LESSON ----------

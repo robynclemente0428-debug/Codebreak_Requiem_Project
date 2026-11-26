@@ -8,6 +8,7 @@ const MAX_SLOTS := 10         # one per card on the Character Select screen
 const MAX_PLAYERS := 4        # most characters that can be seated at once (1 for now)
 const SAVE_VERSION := 1
 const GAME_SCENE := "res://scenes/map/main.tscn"
+const AUTOSAVE_SECONDS := 120.0
 ## Save key holding the scene path of the last town visited (written by TownArea).
 const LAST_TOWN_KEY := 'last_town'
 
@@ -17,6 +18,8 @@ var party: Array[int] = []          # slot index per seat, in seat order
 var creating_slot: int = -1         # empty slot being filled by Class Select
 var _loaded: Dictionary = {}        # slot -> save Dictionary for this party
 var _quit_dialog: ConfirmationDialog
+var _play_accum := 0.0              # seconds played since the last save_party()
+var _autosave_timer: Timer
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(SAVE_DIR)
@@ -34,10 +37,40 @@ func _ready() -> void:
 	_quit_dialog.process_mode = Node.PROCESS_MODE_ALWAYS   # still clickable while the game is paused
 	_quit_dialog.confirmed.connect(_on_quit_confirmed)
 	add_child(_quit_dialog)
+	_autosave_timer = Timer.new()
+	_autosave_timer.wait_time = AUTOSAVE_SECONDS
+	_autosave_timer.autostart = true
+	_autosave_timer.timeout.connect(_autosave)
+	add_child(_autosave_timer)
+
+func _autosave() -> void:
+	if _quitting or party.is_empty():
+		return
+	if get_tree().get_first_node_in_group('players') == null:
+		return                          # on Character Select, nothing to save yet
+	save_party()
+
+func _process(delta: float) -> void:
+	if party.is_empty():
+		return
+	if get_tree().get_first_node_in_group('players') == null:
+		return                          # still on Character Select / menus
+	_play_accum += delta
+
+func _flush_playtime() -> void:
+	var whole := int(_play_accum)
+	if whole <= 0:
+		return
+	_play_accum -= whole
+	for slot in party:
+		var d: Dictionary = _loaded[slot]
+		d['playtime_seconds'] = int(d.get('playtime_seconds', 0)) + whole
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		request_quit()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_autosave()
 
 ## Call this from any "Quit Game" button too, so every exit path behaves the same.
 func request_quit() -> void:
@@ -87,6 +120,11 @@ func slot_exists(slot: int) -> bool:
 
 # ---------- CREATE ----------
 func create_character(slot: int, char_name: String, class_data: ClassData) -> bool:
+	return save_slot(slot, new_character_data(char_name, class_data))
+
+
+## A new character's save, not written anywhere (create_character writes it; REBOOT builds on it).
+func new_character_data(char_name: String, class_data: ClassData) -> Dictionary:
 	# Starting gear goes into the backpack; the player equips and sockets it themselves.
 	var inventory: Array = []
 	if class_data.starting_weapon:
@@ -99,8 +137,6 @@ func create_character(slot: int, char_name: String, class_data: ClassData) -> bo
 		'version': SAVE_VERSION,
 		'name': char_name.strip_edges(),
 		'class_id': String(class_data.id),
-		'level': 1,
-		'xp': 0,
 		'attributes': class_data.get_attributes(),
 		'equipment': {},
 		'skills': [],
@@ -108,11 +144,12 @@ func create_character(slot: int, char_name: String, class_data: ClassData) -> bo
 		'playtime_seconds': 0,
 		'created_at': int(Time.get_unix_time_from_system()),
 	}
-	return save_slot(slot, data)
+	return data
 
 
 # ---------- WRITE ----------
 func save_slot(slot: int, data: Dictionary) -> bool:
+	data['saved_at'] = int(Time.get_unix_time_from_system())
 	var tmp := _path(slot) + '.tmp'
 	var f := FileAccess.open(tmp, FileAccess.WRITE)
 	if f == null:
@@ -120,7 +157,10 @@ func save_slot(slot: int, data: Dictionary) -> bool:
 		return false
 	f.store_string(JSON.stringify(data, '\t'))
 	f.close()
+
 	# Write to a temp file first so a crash mid-save can't corrupt the real one
+	if FileAccess.file_exists(_path(slot)):
+		DirAccess.copy_absolute(_path(slot), _path(slot) + '.bak')
 	if DirAccess.rename_absolute(tmp, _path(slot)) != OK:
 		push_error('Could not finalize save for slot %d' % slot)
 		return false
@@ -129,17 +169,23 @@ func save_slot(slot: int, data: Dictionary) -> bool:
 
 # ---------- READ ----------
 func load_slot(slot: int) -> Dictionary:
-	if not slot_exists(slot):
+	var data := _read_json(_path(slot))
+	if data.is_empty():
+		data = _read_json(_path(slot) + '.bak')
+		if not data.is_empty():
+			push_warning('Slot %d was damaged, loaded its backup' % slot)
+	return _migrate(data) if not data.is_empty() else {}
+
+
+func _read_json(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
 		return {}
-	var f := FileAccess.open(_path(slot), FileAccess.READ)
+	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return {}
 	var parsed = JSON.parse_string(f.get_as_text())
 	f.close()
-	if typeof(parsed) != TYPE_DICTIONARY:
-		push_warning('Slot %d is corrupted' % slot)
-		return {}
-	return _migrate(parsed)
+	return parsed if typeof(parsed) == TYPE_DICTIONARY else {}
 
 
 ## Add a step here when SAVE_VERSION goes up. Old fields from the first slot guide
@@ -158,6 +204,8 @@ func delete_slot(slot: int) -> void:
 		return
 	if slot_exists(slot):
 		DirAccess.remove_absolute(_path(slot))
+	if FileAccess.file_exists(_path(slot) + '.bak'):
+		DirAccess.remove_absolute(_path(slot) + '.bak')
 
 
 # ---------- MOVE ----------
@@ -187,6 +235,9 @@ func swap_slots(a: int, b: int) -> bool:
 	if has_a and DirAccess.rename_absolute(tmp, _path(b)) != OK:
 		push_error('Could not finish moving slot %d (it is in %s)' % [a, tmp])
 		return false
+	for s in [a, b]:
+		if FileAccess.file_exists(_path(s) + '.bak'):
+			DirAccess.remove_absolute(_path(s) + '.bak')  
 	return true
 
 
@@ -199,6 +250,7 @@ func begin_session(count: int = 1) -> void:
 	party.clear()
 	_loaded.clear()
 	creating_slot = -1
+	_play_accum = 0.0
 
 
 func add_to_party(slot: int) -> bool:
@@ -207,6 +259,7 @@ func add_to_party(slot: int) -> bool:
 	var data := load_slot(slot)
 	if data.is_empty():
 		return false
+	_play_accum = 0.0
 	party.append(slot)
 	_loaded[slot] = data
 	return true
@@ -254,6 +307,7 @@ func save_party() -> void:
 	for node in get_tree().get_nodes_in_group('players'):
 		if node.has_method('write_save'):
 			node.write_save()
+	_flush_playtime()
 	for slot in party:
 		save_slot(slot, _loaded[slot])
 

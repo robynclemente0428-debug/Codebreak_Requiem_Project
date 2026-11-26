@@ -27,6 +27,8 @@ var rank := 0
 var bonus_points := 0.0
 ## Extra knob steps from ScriptBudget (exam DISTINCTIONs; set by SkillComponent).
 var bonus_steps := 0
+## Extra rules (MERGE's violet slot, Endings.bonus_rules; set by SkillComponent; 0 for enemies).
+var bonus_rules := 0
 ## Whose skill this is (set by SkillComponent; null for enemies): its equipped weapon type can add
 ## to the mana cost (WeaponTypeDefinition.skill_mana_cost). Weak, so the skill never keeps it alive.
 var owner_ref: WeakRef
@@ -133,7 +135,7 @@ func get_program_limits() -> SkillProgramLimits:
 	for support in supports:
 		if _tags_compatible(support.allowed_tags, gem.tags):
 			active.append(support)
-	var limits := SkillProgramLimits.for_socket(gem, active, class_trait, rank, bonus_points, bonus_steps)
+	var limits := SkillProgramLimits.for_socket(gem, active, class_trait, rank, bonus_points, bonus_steps, bonus_rules)
 	if limits != null:
 		limits.routines = routines
 	return limits
@@ -164,6 +166,15 @@ func build_effective_stats(caster_stats: StatComponent) -> StatComponent:
 			m.value = inc
 			m.source_id = "class_trait_armour_damage"
 			_effective.add_modifier(m)
+		var flat := class_trait.armour_flat_damage(caster_stats)    # Paladin: 1 - 1 per 10 armour
+		if flat > 0.0:
+			for stat in [StatTypes.Stat.MIN_ATTACK_DAMAGE, StatTypes.Stat.MAX_ATTACK_DAMAGE]:
+				var f := Modifier.new()
+				f.stat = stat
+				f.op = Modifier.ModOp.FLAT_ADD
+				f.value = flat
+				f.source_id = "class_trait_armour_flat"
+				_effective.add_modifier(f)
 	return _effective
 
 ## Which clip to use for the next swing. Doesn't advance the combo.

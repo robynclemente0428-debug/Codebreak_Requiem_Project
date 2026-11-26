@@ -1,4 +1,4 @@
-[gd_resource type="MeshLibrary" format=3]
+[gd_resource type="MeshLibrary" format=3 uid="uid://ck70a8xc3ikxx"]
 
 [sub_resource type="Shader" id="Shader_jb42q"]
 code = "shader_type spatial;
@@ -257,6 +257,14 @@ void fragment() {
 render_priority = 0
 shader = SubResource("Shader_jb42q")
 shader_parameter/piece = 0
+shader_parameter/steel = Color(0.22, 0.235, 0.26, 1)
+shader_parameter/soot = Color(0.035, 0.035, 0.045, 1)
+shader_parameter/rust = Color(0.36, 0.17, 0.08, 1)
+shader_parameter/paint = Color(0.17, 0.29, 0.29, 1)
+shader_parameter/amber = Color(1, 0.6, 0.15, 1)
+shader_parameter/ward = Color(0.2, 0.85, 1, 1)
+shader_parameter/surge_col = Color(1, 0.16, 0.24, 1)
+shader_parameter/chalk = Color(0.78, 0.77, 0.72, 1)
 shader_parameter/glow = 1.0
 shader_parameter/surge = 0.22
 shader_parameter/cutaway_radius = 3.2
@@ -273,6 +281,14 @@ data = PackedVector3Array(-1, 0.099999994, 1, 1, 0.099999994, 1, -1, -0.09999999
 render_priority = 0
 shader = SubResource("Shader_jb42q")
 shader_parameter/piece = 2
+shader_parameter/steel = Color(0.22, 0.235, 0.26, 1)
+shader_parameter/soot = Color(0.035, 0.035, 0.045, 1)
+shader_parameter/rust = Color(0.36, 0.17, 0.08, 1)
+shader_parameter/paint = Color(0.17, 0.29, 0.29, 1)
+shader_parameter/amber = Color(1, 0.6, 0.15, 1)
+shader_parameter/ward = Color(0.2, 0.85, 1, 1)
+shader_parameter/surge_col = Color(1, 0.16, 0.24, 1)
+shader_parameter/chalk = Color(0.78, 0.77, 0.72, 1)
 shader_parameter/glow = 1.0
 shader_parameter/surge = 0.22
 shader_parameter/cutaway_radius = 3.2
@@ -289,6 +305,14 @@ data = PackedVector3Array(-1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1, 1, -1, 1, -1, -
 render_priority = 0
 shader = SubResource("Shader_jb42q")
 shader_parameter/piece = 1
+shader_parameter/steel = Color(0.22, 0.235, 0.26, 1)
+shader_parameter/soot = Color(0.035, 0.035, 0.045, 1)
+shader_parameter/rust = Color(0.36, 0.17, 0.08, 1)
+shader_parameter/paint = Color(0.17, 0.29, 0.29, 1)
+shader_parameter/amber = Color(1, 0.6, 0.15, 1)
+shader_parameter/ward = Color(0.2, 0.85, 1, 1)
+shader_parameter/surge_col = Color(1, 0.16, 0.24, 1)
+shader_parameter/chalk = Color(0.78, 0.77, 0.72, 1)
 shader_parameter/glow = 1.0
 shader_parameter/surge = 0.22
 shader_parameter/cutaway_radius = 3.2
