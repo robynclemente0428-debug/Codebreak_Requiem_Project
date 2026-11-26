@@ -183,7 +183,7 @@ Component, data-driven design, strategy, hook chain (decorator-like), observer /
 | Part | State |
 |---|---|
 | Acts I–III | Built: towns, dungeons, bosses with locks, exams, side quests |
-| Acts IV–V | Playable prototypes. Act V has an automated test scene but has not been playtested by hand |
+| Acts IV–V | Playable now. Act V has an automated test scene and has been tested by hand |
 | Endings | All three built with epilogues; **credits still missing** |
 | LAN co-op | Lobby, shared travel, host-run enemies, boss locks, shared events and trading (`feature/lan-coop`) |
 | Theorist rank | After the campaign; final and endgame content |
