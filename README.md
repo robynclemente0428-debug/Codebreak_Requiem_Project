@@ -1,4 +1,4 @@
-[Release]()
+[Release](https://github.com/robynclemente0428-debug/Codebreak_Requiem_Project/releases/tag/Final)
 
 # CodeBreak: Requiem
 
