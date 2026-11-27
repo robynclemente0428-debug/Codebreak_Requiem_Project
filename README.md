@@ -210,4 +210,4 @@ Component, data-driven design, strategy, hook chain (decorator-like), observer /
 | KayKit: Fantasy Weapons Bits (free version) | Kay Lousberg (KayKit) | https://kaylousberg.itch.io/fantasy-weapons-bits | CC0 |
 | Dire Wolf Lite | Literock Studios | https://literock-studios.itch.io/direwolf-lite | Free for personal and commercial use; credit appreciated; no re-upload or resale |
 | Low Poly Sci-Fi Melee Asset Pack | thytardigrade | https://thytardigrade.itch.io/low-poly-sci-fi-melee-asset-pack | No license stated on the source page |
-| Retro Screen FX Free (sampler) | heyheythere | https://heyheythere.itch.io/retro-screen-fx-free | See source page <!-- confirm license on the free page --> |
+| Retro Screen FX Free (sampler) | heyheythere | https://heyheythere.itch.io/retro-screen-fx-free | Use in unlimited commercial and non-commercial games. No attribution required. Don't resell or redistribute the shader itself as an asset. <!-- confirm license on the free page --> |
