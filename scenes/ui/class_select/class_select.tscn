@@ -8,7 +8,7 @@
 [ext_resource type="Script" uid="uid://dj0ktnv8eva86" path="res://scenes/ui/design/cyber_back_button.gd" id="5_g885k"]
 [ext_resource type="FontFile" uid="uid://cwuudm0bjtvk4" path="res://scenes/ui/font/Courier_Prime/CourierPrime-Bold.ttf" id="6_a4beg"]
 [ext_resource type="Shader" uid="uid://kfcd702mcvha" path="res://assets/shaders/materials/game_shaders/hologram_glitch.gdshader" id="9_8yee1"]
-[ext_resource type="Script" uid="uid://byuuabq4t0m3n" path="res://assets/textures/retro_screen.gd" id="10_8yee1"]
+[ext_resource type="Script" uid="uid://byuuabq4t0m3n" path="res://assets/textures/retro_screen_shader/retro_screen.gd" id="10_8yee1"]
 [ext_resource type="Shader" uid="uid://c6j74g7ux17v4" path="res://assets/shaders/materials/game_shaders/orb_arcane.gdshader" id="10_ufxba"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_ufxba"]
@@ -273,7 +273,6 @@ theme_override_constants/separation = 20
 
 [node name="NameTitle" type="Label" parent="Content/RootVBox/Footer" unique_id=1845871479]
 layout_mode = 2
-size_flags_vertical = 4
 theme_override_font_sizes/font_size = 32
 text = "Name"
 vertical_alignment = 1
@@ -290,7 +289,6 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(80, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-size_flags_vertical = 4
 theme_override_colors/font_color = Color(1, 0.45, 0.4, 1)
 theme_override_font_sizes/font_size = 20
 vertical_alignment = 1

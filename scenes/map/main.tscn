@@ -21,7 +21,7 @@
 [ext_resource type="Script" uid="uid://bk24qx5e1ywyl" path="res://systems/dialogue/dialogue_panel.gd" id="16_fec4r"]
 [ext_resource type="Script" uid="uid://1kxsrjsipw7i" path="res://scenes/ui/player_ui/pause/death_menu.gd" id="17_78a88"]
 [ext_resource type="Script" uid="uid://c534ulgsd4gmi" path="res://systems/skills/scenes/projectile_swarm/blast_swarm.gd" id="19_808uu"]
-[ext_resource type="Script" uid="uid://byuuabq4t0m3n" path="res://assets/textures/retro_screen.gd" id="21_1cbjo"]
+[ext_resource type="Script" uid="uid://byuuabq4t0m3n" path="res://assets/textures/retro_screen_shader/retro_screen.gd" id="21_1cbjo"]
 [ext_resource type="Script" uid="uid://t0thxo572do0" path="res://scenes/ui/player_ui/menu_tray/menu_tray.gd" id="40_tray"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_4bbo7"]
